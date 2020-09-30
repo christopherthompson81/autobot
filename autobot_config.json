@@ -1,0 +1,7 @@
+{
+	"host": "localhost",
+	"port": 25565,
+	"username": "autoBot",
+	"password": null,
+	"serverVersion": "1.16.2"
+}
