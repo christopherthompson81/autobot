@@ -157,6 +157,7 @@ class autoBot {
 		}
 		if (!item) {
 			console.log(`Fail. No ${itemName} found in inventory.`);
+			this.bot.hand = null;
 			callback();
 		}
 		else {
@@ -778,16 +779,24 @@ class autoBot {
 	equipAxe(callback) {
 		//console.log(this.bot.inventory);
 		this.equipByName("axe", () => {
-			console.log("Hand: ", this.bot.hand.displayName);
-			const regex = RegExp(`axe$`, "i");
-			const axes = this.listItemsByRegEx(regex);
-			if (!axes.includes(this.bot.hand.type)) {
+			const hand = this.bot.inventory.slots[36];
+			if (!hand) {
 				this.autoCraft(586, 1, () => {
 					sleep(350).then(() => { this.equipByName("axe", callback); });
 				});
 			}
 			else {
-				callback();
+				console.log("Hand: ", hand.displayName);
+				const regex = RegExp(`axe$`, "i");
+				const axes = this.listItemsByRegEx(regex);
+				if (!axes.includes(hand.type)) {
+					this.autoCraft(586, 1, () => {
+						sleep(350).then(() => { this.equipByName("axe", callback); });
+					});
+				}
+				else {
+					callback();
+				}
 			}
 		});
 	}
