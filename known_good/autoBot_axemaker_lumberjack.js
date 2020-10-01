@@ -28,7 +28,7 @@ const pathfinder = require('mineflayer-pathfinder').pathfinder;
 const Movements = require('mineflayer-pathfinder').Movements;
 const { GoalBlock, GoalNear, GoalGetToBlock } = require('mineflayer-pathfinder').goals;
 const fs = require('fs');
-let config = JSON.parse(fs.readFileSync('lookerConfig.json'));
+let config = JSON.parse(fs.readFileSync('autobot_config.json'));
 const minecraftData = require('minecraft-data');
 const { exit } = require('process');
 const { timeStamp } = require('console');
@@ -66,7 +66,7 @@ class autoBot {
 		// lumberjack-Bot Code
 		// Wait two seconds before starting to make sure blocks are loaded
 		sleep(2000).then(() => {
-			console.log(this.bot.inventory);
+			//console.log(this.bot.inventory);
 			this.harvestNearestTree(); 
 		});
 		// Collect broken blocks
@@ -157,6 +157,7 @@ class autoBot {
 		}
 		if (!item) {
 			console.log(`Fail. No ${itemName} found in inventory.`);
+			this.bot.hand = null;
 			callback();
 		}
 		else {
@@ -470,10 +471,10 @@ class autoBot {
 			let recipe = current.recipe;
 			if (!recipe) {
 				recipe = this.findUsableRecipe(current.id);
-				if (recipe.result) {
-					if (recipe.result.id == 586) {
-						recipe.inShape = recipe.inShape.reverse();
-					}
+				// Fix for minecraft-data bug #231
+				//https://github.com/PrismarineJS/minecraft-data/issues/231
+				if (recipe.inShape) {
+					recipe.inShape = recipe.inShape.reverse();
 				}
 				//console.log(JSON.stringify(recipe));
 			}
@@ -492,7 +493,7 @@ class autoBot {
 					});
 					return;
 				}
-				console.log("Found one:", craftingTable);
+				console.log("Found one:", craftingTable.position);
 				const p = craftingTable.position;
 				const goal = new GoalGetToBlock(p.x, p.y, p.z);
 				this.currentTask = "crafting";
@@ -503,8 +504,8 @@ class autoBot {
 							exit();
 						}
 						else {
-							console.log("Theoretical success!", this.bot.inventory.items());
-							console.log(JSON.stringify(recipe), current.count, craftingTable);
+							console.log("Theoretical success!", this.bot.inventory.items().map(x => { return {name: x.name, count: x.count}; }));
+							//console.log(JSON.stringify(recipe), current.count, craftingTable);
 						}
 						if (remainder.length > 0) {
 							this.autoCraftNext(remainder, callback)
@@ -778,10 +779,25 @@ class autoBot {
 	equipAxe(callback) {
 		//console.log(this.bot.inventory);
 		this.equipByName("axe", () => {
-			console.log("Hand: ", this.bot.hand);
-			this.autoCraft(586, 1, () => {
-				this.equipByName("axe", callback);
-			});
+			const hand = this.bot.inventory.slots[36];
+			if (!hand) {
+				this.autoCraft(586, 1, () => {
+					sleep(350).then(() => { this.equipByName("axe", callback); });
+				});
+			}
+			else {
+				console.log("Hand: ", hand.displayName);
+				const regex = RegExp(`axe$`, "i");
+				const axes = this.listItemsByRegEx(regex);
+				if (!axes.includes(hand.type)) {
+					this.autoCraft(586, 1, () => {
+						sleep(350).then(() => { this.equipByName("axe", callback); });
+					});
+				}
+				else {
+					callback();
+				}
+			}
 		});
 	}
 
@@ -795,10 +811,12 @@ class autoBot {
 			});
 		}
 		else {
-			console.log('Finished cutting.');
-			console.log('Picking up uncollected blocks.');
+			console.log('Finished cutting. Waiting for drops.');
 			this.currentTask = null;
-			this.pickUpBrokenBlocks();
+			sleep(1000).then(() => {
+				console.log('Picking up uncollected blocks.');
+				this.pickUpBrokenBlocks();
+			});
 		}
 	}
 
@@ -864,7 +882,7 @@ class autoBot {
 		const current = drops[0];
 		this.remainder = drops.slice(1, drops.length);
 		if (current) {
-			console.log(`Picking Up:`, current);
+			console.log(`Picking Up:`, this.mcData.items[current.entityType].displayName);
 			const p = current.position;
 			const goal = new GoalBlock(p.x, p.y, p.z);
 			this.bot.pathfinder.setGoal(goal);

@@ -902,6 +902,21 @@ class autoBot {
 		this.remainder = drops;
 		this.pickUpNext(drops);
 	}
+
+	/**************************************************************************
+	 * 
+	 * Stash Inventory
+	 * 
+	 * * Check if any slots remain open (dump if no)
+	 * 		* Possibly do this sooner - dump unneeded full stacks
+	 * * Find chests
+	 * * Craft & place chests
+	 * * Empty unneeded items into chests
+	 * * Optimize and stort chest storage
+	 * * Minimize chest diversity
+	 * * Label single-type chests with a sign using the displayName for that item type
+	 * 
+	 **************************************************************************/
 }
 
 module.exports = autoBot;
