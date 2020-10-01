@@ -811,10 +811,12 @@ class autoBot {
 			});
 		}
 		else {
-			console.log('Finished cutting.');
-			console.log('Picking up uncollected blocks.');
+			console.log('Finished cutting. Waiting for drops.');
 			this.currentTask = null;
-			this.pickUpBrokenBlocks();
+			sleep(1000).then(() => {
+				console.log('Picking up uncollected blocks.');
+				this.pickUpBrokenBlocks();
+			});
 		}
 	}
 
