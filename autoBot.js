@@ -567,7 +567,8 @@ class autoBot {
 					this.bot.craft(recipe, current.count, craftingTable, (err) => {
 						if (err) {
 							console.log(err, JSON.stringify(recipe), current.count, craftingTable);
-							exit();
+							callback();
+							return;
 						}
 						else {
 							console.log("Theoretical success!", this.bot.inventory.items().map(x => { return {name: x.name, count: x.count}; }));
