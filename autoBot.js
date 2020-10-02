@@ -533,6 +533,10 @@ class autoBot {
 			let recipe = current.recipe;
 			if (!recipe) {
 				recipe = this.findUsableRecipe(current.id);
+				if (!recipe) {
+					callback();
+					return;
+				}
 				// Fix for minecraft-data bug #231
 				//https://github.com/PrismarineJS/minecraft-data/issues/231
 				if (recipe.inShape) {
@@ -1096,7 +1100,7 @@ class autoBot {
 			else {
 				console.log("No chest located. Autocrafting.");
 				const chestId = this.listItemsByRegEx(/^chest$/)[0];
-				this.autoCraft(chest, 1, () => {
+				this.autoCraft(chestId, 1, () => {
 					sleep(350).then(() => {
 						const chest = this.getInventoryItemById(chestId);
 						const placementVector = this.findPlacementVector();
