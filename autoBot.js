@@ -32,7 +32,61 @@ let config = JSON.parse(fs.readFileSync('autobot_config.json'));
 const minecraftData = require('minecraft-data');
 const { exit } = require('process');
 const { timeStamp } = require('console');
+const { SlowBuffer } = require('buffer');
 const Vec3 = require('vec3').Vec3
+
+const armorSlots = {
+    head: 5,
+    torso: 6,
+    legs: 7,
+	feet: 8,
+	offHand: 45,
+};
+
+const essentialItems = [
+	{type: 'regex', regex: new RegExp('sword$', 'i'), maxSlots: 2},
+	{type: 'regex', regex: new RegExp('pick$', 'i'), maxSlots: 2},
+	{type: 'regex', regex: new RegExp('axe$', 'i'), maxSlots: 2},
+	{type: 'regex', regex: new RegExp('shovel$', 'i'), maxSlots: 2},
+	{type: 'regex', regex: new RegExp('hoe$', 'i'), maxSlots: 2},
+	{type: 'name', name: 'stick', maxSlots: 1},
+	{type: 'regex', regex: new RegExp('planks$', 'i'), maxSlots: 1},
+	{type: 'nameList', list: ['dirt', 'cobblestone'], maxSlots: 1},
+	{type: 'name', name: 'torch', maxSlots: 1},
+	{type: 'name', name: 'coal', maxSlots: 1},
+	{type: 'nameList', list: ['bucket', 'water_bucket', 'lava_bucket'], maxSlots: 1},
+	{type: 'name', name: 'clock', maxSlots: 1},
+	{
+		type: 'nameList',
+		list: [
+			'apple',
+			'baked_potato',
+			'beetroot_soup',
+			'bread',
+			'carrot',
+			'cooked_chicken',
+			'cooked_cod',
+			'cooked_mutton',
+			'cooked_porkchop',
+			'cooked_rabbit',
+			'cooked_salmon',
+			'dried_kelp',
+			'honey_bottle',
+			'melon_slice',
+			'mushroom_stew',
+			'pumpkin_pie',
+			'rabbit_stew',
+			'steak',
+			'sweet_berries'
+		],
+		maxSlots: 1
+	},
+	{type: 'regex', regex: new RegExp('helmet$', 'i'), maxSlots: 1, requiredSlot: armorSlots.head},
+	{type: 'regex', regex: new RegExp('chestplate$', 'i'), maxSlots: 1, requiredSlot: armorSlots.torso},
+	{type: 'regex', regex: new RegExp('leggings$', 'i'), maxSlots: 1, requiredSlot: armorSlots.legs},
+	{type: 'regex', regex: new RegExp('boots$', 'i'), maxSlots: 1, requiredSlot: armorSlots.feet},
+	{type: 'name', name: 'shield', maxSlots: 1, requiredSlot: armorSlots.offHand},
+];
 
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
@@ -67,16 +121,21 @@ class autoBot {
 		// Wait two seconds before starting to make sure blocks are loaded
 		sleep(2000).then(() => {
 			//console.log(this.bot.inventory);
-			this.harvestNearestTree(); 
+			//this.harvestNearestTree(); 
+			this.stashNonEssentialInventory();
 		});
 		// Collect broken blocks
 		//this.pickUpBrokenBlocks();
 	}
 
 	onGoalReached (goal) {
-		console.log("Goal Reached!", goal, this.currentTask);
+		console.log("Goal Reached!", goal, this.currentTask, this.bot.entity.position);
+		const goalVec3 = new Vec3(goal.x, goal.y, goal.z);
+		if (goalVec3.distanceTo(this.bot.entity.position) > goal.rangeSq) {
+			console.log("An error happened in attempting to reach the goal.");
+			this.harvestNearestTree();
+		}
 		if (this.currentTask === 'cutTree') {
-			console.log(`Path followed to one block from ${goal.position}.`);
 			console.log(`Cutting tree from bottom up.`);
 			this.cutTreeNext(this.remainder);
 		}
@@ -84,7 +143,10 @@ class autoBot {
 			sleep(350).then(() => { this.pickUpNext(this.remainder); });
 		}
 		else if (this.currentTask === 'crafting') {
-			sleep(350).then(() => { this.callback(); } );
+			sleep(350).then(() => { this.callback(); });
+		}
+		else if (this.currentTask === 'stashing') {
+			sleep(350).then(() => { this.callback(); });
 		}
 	}
 
@@ -495,7 +557,7 @@ class autoBot {
 				}
 				console.log("Found one:", craftingTable.position);
 				const p = craftingTable.position;
-				const goal = new GoalGetToBlock(p.x, p.y, p.z);
+				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				this.currentTask = "crafting";
 				this.callback = () => {
 					this.bot.craft(recipe, current.count, craftingTable, (err) => {
@@ -737,14 +799,29 @@ class autoBot {
 			new Vec3(0, 0, 1),
 			new Vec3(0, 0, -1)
 		];
+		let crown = true;
+		// Check above the top
 		for (var s = 0; s < sides.length; s++) {
-			point = top.clone().add(sides[s]);
+			point = top.clone().offset(0, 1, 0).add(sides[s]);
 			const block = this.bot.blockAt(point);
 			//console.log(`Checking if ${block.name} is not like '%_leaves'`);
 			if (!block.name.match(/_leaves$/)) {
 				console.log(`Block: ${p} is not a tree because it does not have leaves surrounding it's crown`);
-				return false;
+				crown = false;
+				break;
 			}
+		}
+		// do a double-check at the top if there's a problem
+		if (!crown) {
+			for (var s = 0; s < sides.length; s++) {
+				point = top.clone().add(sides[s]);
+				const block = this.bot.blockAt(point);
+				//console.log(`Checking if ${block.name} is not like '%_leaves'`);
+				if (!block.name.match(/_leaves$/)) {
+					console.log(`Block: ${p} is not a tree because it does not have leaves surrounding it's crown`);
+					return false;
+				}
+			}	
 		}
 		const tree = Array();
 		for (var i = bottom.y; i <= top.y; i++) {
@@ -891,7 +968,7 @@ class autoBot {
 			console.log('Finished picking up drops.');
 			//console.log('Stopping.');
 			this.currentTask = null;
-			sleep(350).then(this.harvestNearestTree);
+			sleep(350).then(this.stashNonEssentialInventory);
 		}
 	}
 
@@ -917,6 +994,136 @@ class autoBot {
 	 * * Label single-type chests with a sign using the displayName for that item type
 	 * 
 	 **************************************************************************/
+
+	listNonEssentialInventory() {
+		// Return a list of items in inventory that are non-essential (so as to stash them)
+		// Deductive. Get inventory and then remove essential items.
+		let inventory = this.bot.inventory.items();
+		for (const eItem of essentialItems) {
+			const filtered = [];
+			let count = 0;
+			for (const item of inventory) {
+				let essential = false;
+				if (eItem.type === 'regex') {
+					essential = item.name.match(eItem.regex);
+				}
+				else if (eItem.type === 'name') {
+					essential = item.name === eItem.name;
+				}
+				else if (eItem.type === 'nameList') {
+					essential = eItem.list.includes(item.name);
+				}
+				if (essential && count < eItem.maxSlots) {
+					count++;
+				}
+				else {
+					filtered.push(item);
+				}
+			}
+			inventory = filtered;
+		}
+		return inventory;
+	}
+	
+	checkInventoryToStash() {
+		// This returns true when a non-essential item type shows as a full stack and therefore should be stashed
+		//
+		// revision or parameters might be useful, like:
+		// * requiring no empty slots (that can be arbitrarily filled)
+		// * requiring a certain number of full stacks
+		const nonEssentialInventory = this.listNonEssentialInventory();
+		//console.log(nonEssentialInventory);
+		if (nonEssentialInventory.length > 0) {
+			for (const item of nonEssentialInventory) {
+				if (item.count === item.stackSize) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	stashNext(chest, stashList) {
+		const current = stashList[0];
+		const remainder = stashList.slice(1, stashList.length);
+		if (current) {
+			chest.deposit(current.type, null, current.count, (err) => {
+				if (err) {
+					console.log(`Unable to stash ${current.count} ${current.name}`);
+				} else {
+					console.log(`Stashed ${current.count} ${current.name}`);
+				}
+				this.stashNext(chest, remainder);
+			});
+		}
+		else {
+			chest.close();
+			console.log('Finished stashing.');
+			this.currentTask = null;
+			sleep(1000).then(() => {
+				console.log('Returning to cutting trees.');
+				this.harvestNearestTree();
+			});
+		}
+	}
+
+	stashNonEssentialInventory() {
+		if (this.checkInventoryToStash()) {
+			console.log("Stashing non-essential inventory");
+			const chestToOpen = this.bot.findBlock({
+				matching: this.listBlocksByRegEx(/^chest$/),
+				maxDistance: 128,
+				count: 10
+			});
+			if (chestToOpen) {
+				console.log("Chest found. Moving to: ", chestToOpen.position);
+				this.currentTask = 'stashing';
+				const p = chestToOpen.position;
+				const goal = new GoalNear(p.x, p.y, p.z, 3);
+				this.callback = () => {
+					console.log('Stashing callback.');
+					const chest = this.bot.openChest(chestToOpen);
+					chest.on('open', () => {
+						const itemsToStash = this.listNonEssentialInventory();
+						this.stashNext(chest, itemsToStash);
+					});
+					chest.on('close', () => {
+						console.log('Chest closed');
+					});
+				}
+				this.bot.pathfinder.setGoal(goal);
+			}
+			else {
+				console.log("No chest located. Autocrafting.");
+				const chestId = this.listItemsByRegEx(/^chest$/)[0];
+				this.autoCraft(chest, 1, () => {
+					sleep(350).then(() => {
+						const chest = this.getInventoryItemById(chestId);
+						const placementVector = this.findPlacementVector();
+						const referenceBlock = this.bot.blockAt(this.bot.entity.position.offset(
+							placementVector.x || 0,
+							placementVector.y || 0,
+							placementVector.z || 0,
+						));
+						this.bot.equip(
+							chest,
+							'hand',
+							() => {
+								this.bot.placeBlock(
+									referenceBlock,
+									placementVector,
+									() => { this.stashNonEssentialInventory(); }
+								)
+							}
+						);
+					});
+				});
+			}
+		}
+		else {
+			this.harvestNearestTree();
+		}
+	}
 }
 
 module.exports = autoBot;
