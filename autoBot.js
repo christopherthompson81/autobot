@@ -30,7 +30,7 @@ const { GoalBlock, GoalNear, GoalGetToBlock } = require('mineflayer-pathfinder')
 const fs = require('fs');
 let config = JSON.parse(fs.readFileSync('autobot_config.json'));
 const minecraftData = require('minecraft-data');
-const { exit } = require('process');
+const { exit, nextTick } = require('process');
 const { timeStamp } = require('console');
 const { SlowBuffer } = require('buffer');
 const Vec3 = require('vec3').Vec3
@@ -45,8 +45,8 @@ const armorSlots = {
 
 const essentialItems = [
 	{type: 'regex', regex: new RegExp('sword$', 'i'), maxSlots: 2},
-	{type: 'regex', regex: new RegExp('pick$', 'i'), maxSlots: 2},
-	{type: 'regex', regex: new RegExp('axe$', 'i'), maxSlots: 2},
+	{type: 'regex', regex: new RegExp('pickaxe$', 'i'), maxSlots: 2},
+	{type: 'regex', regex: new RegExp('_axe$', 'i'), maxSlots: 2},
 	{type: 'regex', regex: new RegExp('shovel$', 'i'), maxSlots: 2},
 	{type: 'regex', regex: new RegExp('hoe$', 'i'), maxSlots: 2},
 	{type: 'name', name: 'stick', maxSlots: 1},
@@ -88,6 +88,23 @@ const essentialItems = [
 	{type: 'name', name: 'shield', maxSlots: 1, requiredSlot: armorSlots.offHand},
 ];
 
+// reversable compressable items will cause an infinite recipe loop, so detect and break on them
+const compressableItems = [
+	'bone_meal',
+	'coal',
+	'diamond',
+	'dried_kelp',
+	'emerald',
+	'gold_ingot',
+	'gold_nugget',
+	'iron_ingot',
+	'iron_nugget',
+	'lapis_lazuli',
+	'nether_wart',
+	'redstone',
+	'wheat',
+];
+
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -107,6 +124,7 @@ class autoBot {
 		this.currentTask = null;
 		this.bot.once('spawn', this.botLoop);
 		this.bot.on('goal_reached', this.onGoalReached);
+		this.chestMap = {};
 	};
 
 	botLoop() {
@@ -121,7 +139,7 @@ class autoBot {
 		// Wait two seconds before starting to make sure blocks are loaded
 		sleep(2000).then(() => {
 			//console.log(this.bot.inventory);
-			//this.harvestNearestTree(); 
+			//this.harvestNearestTree();
 			this.stashNonEssentialInventory();
 		});
 		// Collect broken blocks
@@ -252,6 +270,9 @@ class autoBot {
 			//console.log(recipe);
 			for (const row of recipe.inShape) {
 				for (const item of row) {
+					if (item.id < 0) {
+						continue;
+					}
 					if (ingredientDict[item.id] === undefined) {
 						ingredientDict[item.id] = item.count;
 					}
@@ -304,7 +325,9 @@ class autoBot {
 		// Get a list of recipes
 		const recipes = this.recipe.find(itemId);
 		//console.log(`Has ${recipes.length} recipes`);
-		if (recipes.length == 0) {
+		// Treat compressables as having no recipe
+		//console.log(compressableItems.includes(this.mcData.items[itemId].name), this.mcData.items[itemId].name);
+		if (recipes.length == 0 || compressableItems.includes(this.mcData.items[itemId].name)) {
 			// No recipe means the item needs to be acquired
 			//console.log(`${this.mcData.items[itemId].name} must be acquired.`);
 			const disposition = this.haveIngredient(itemId, count) ? "possess" : "missing";
@@ -319,6 +342,7 @@ class autoBot {
 		}
 		else {
 			//console.log(`${this.mcData.items[itemId].name} can be crafted.`);
+			//console.log(`${this.mcData.items[itemId].displayName} has ${recipes.length} recipes`);
 			for (const recipe of recipes) {
 				let queueBranch = Array();
 				const ingredients = this.getIngredients(recipe);
@@ -534,7 +558,7 @@ class autoBot {
 			if (!recipe) {
 				recipe = this.findUsableRecipe(current.id);
 				if (!recipe) {
-					callback();
+					callback(false);
 					return;
 				}
 				// Fix for minecraft-data bug #231
@@ -567,7 +591,7 @@ class autoBot {
 					this.bot.craft(recipe, current.count, craftingTable, (err) => {
 						if (err) {
 							console.log(err, JSON.stringify(recipe), current.count, craftingTable);
-							callback();
+							callback(false);
 							return;
 						}
 						else {
@@ -578,7 +602,7 @@ class autoBot {
 							this.autoCraftNext(remainder, callback)
 						}
 						else {
-							callback();
+							callback(true);
 						}
 					});
 				}
@@ -591,12 +615,12 @@ class autoBot {
 					this.autoCraftNext(remainder, callback)
 				}
 				else {
-					callback();
+					callback(true);
 				}
 			});
 		}
 		else {
-			callback();
+			callback(true);
 		}
 	}
 
@@ -1129,6 +1153,78 @@ class autoBot {
 			this.harvestNearestTree();
 		}
 	}
+
+	/**************************************************************************
+	 * 
+	 * Fill out inventory with essentials
+	 * 
+	 *  - This approach doesn't work very well.
+	 * 
+	 **************************************************************************/
+
+	craftEssentialNext(neededEssentials, callback) {
+		const current = neededEssentials[0];
+		const remainder = neededEssentials.slice(1, neededEssentials.length);
+		if (current) {
+			console.log(current);
+			let itemList = [];
+			if (current.type === 'regex') {
+				itemList = this.listItemsByRegEx(current.regex);
+			}
+			else if (current.type === 'name') {
+				const regex = new RegExp(`^${current.name}$`, "i");
+				itemList.push(this.listItemsByRegEx(regex)[0]);
+			}
+			else if (current.type === 'nameList') {
+				itemList = current.list.map(x => {
+					const regex = new RegExp(`^${x}$`, 'i')
+					return this.listItemsByRegEx()[0];
+				});
+			}
+			this.autoCraft(itemList[0], 1, (success) => {
+				sleep(350).then(() => {
+					this.craftEssentialNext(remainder, callback);
+				});
+			});	
+		}
+		else {
+			callback(true);
+		}
+	}
+
+	getNeededEssentials(callback) {
+		let inventory = this.bot.inventory.items();
+		const neededEssentials = [];
+		for (const eItem of essentialItems) {
+			const filtered = [];
+			let count = 0;
+			for (const item of inventory) {
+				let essential = false;
+				if (eItem.type === 'regex') {
+					essential = item.name.match(eItem.regex);
+				}
+				else if (eItem.type === 'name') {
+					essential = item.name === eItem.name;
+				}
+				else if (eItem.type === 'nameList') {
+					essential = eItem.list.includes(item.name);
+				}
+				if (essential && count < eItem.maxSlots) {
+					count++;
+					filtered.push(item);
+				}
+			}
+			if (filtered.length === 0) {
+				neededEssentials.push(eItem);
+			}
+		}
+		if (neededEssentials.length > 0) {
+			this.craftEssentialNext(neededEssentials, callback);
+		}
+		else {
+			callback();
+		}
+	 }
 }
 
 module.exports = autoBot;

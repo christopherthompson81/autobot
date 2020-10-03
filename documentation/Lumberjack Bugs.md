@@ -13,3 +13,17 @@
 	* Sometimes drowns when goals are near water
 	* Fences are treated as open
 	* Gets stuck going upstream in flowing water
+* Full on bug while in a village - Could not navigate to inside hut
+	/Users/christhompson/Actual_Documents/Programming/autobot/node_modules/mineflayer-pathfinder/index.js:103
+		if (!block || block.shapes.length === 0) return null
+								^
+
+	TypeError: Cannot read property 'length' of undefined
+		at getPositionOnTopOf (/Users/christhompson/Actual_Documents/Programming/autobot/node_modules/mineflayer-pathfinder/index.js:103:32)
+		at Bot.monitorMovement (/Users/christhompson/Actual_Documents/Programming/autobot/node_modules/mineflayer-pathfinder/index.js:267:27)
+		at Bot.emit (events.js:198:13)
+		at Timeout.doPhysics [as _onTimeout] (/Users/christhompson/Actual_Documents/Programming/autobot/node_modules/mineflayer/lib/plugins/physics.js:62:13)
+		at ontimeout (timers.js:436:11)
+		at tryOnTimeout (timers.js:300:5)
+		at listOnTimeout (timers.js:263:5)
+		at Timer.processTimers (timers.js:223:10)
