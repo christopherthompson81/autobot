@@ -1381,10 +1381,19 @@ class autoBot {
 		});
 	}
 
+	havePickaxe() {
+		const pickaxeIds = this.listItemsByRegEx(/pickaxe$/);
+		const inventoryDict = this.getInventoryDictionary();
+		if (Object.keys(inventoryDict).some(id => id.match(/pickaxe$/))) {
+			return true;
+		}
+		return false;
+	}
+
 	mineVeinNext(vein) {
 		const current = vein[0];
 		this.remainder = vein.slice(1, vein.length);
-		if (current) {
+		if (current && this.havePickaxe()) {
 			//console.log(`Current:`, current);
 			this.equipPickaxe(() => {
 				if (this.bot.entity.position.distanceTo(current.position) > 3) {
