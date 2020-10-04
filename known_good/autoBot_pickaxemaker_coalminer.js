@@ -52,6 +52,7 @@ const essentialItems = [
 	{type: 'regex', regex: new RegExp('hoe$', 'i'), maxSlots: 2},
 	{type: 'name', name: 'stick', maxSlots: 1},
 	{type: 'regex', regex: new RegExp('planks$', 'i'), maxSlots: 1},
+	{type: 'regex', regex: new RegExp('_log$', 'i'), maxSlots: 1},
 	{type: 'nameList', list: ['dirt', 'cobblestone'], maxSlots: 1},
 	{type: 'name', name: 'torch', maxSlots: 1},
 	{type: 'name', name: 'coal', maxSlots: 1},
@@ -141,8 +142,8 @@ class autoBot {
 		sleep(2000).then(() => {
 			//console.log(this.bot.inventory);
 			//this.harvestNearestTree();
-			//this.stashNonEssentialInventory();
-			this.mineNearestCoalVein();
+			//this.mineNearestCoalVein();
+			this.stashNonEssentialInventory();
 		});
 		// Collect broken blocks
 		//this.pickUpBrokenBlocks();
@@ -735,6 +736,8 @@ class autoBot {
 			console.log(`No path to craft a ${this.mcData.items[itemId].displayName} due to lack of acquisition-obligate resources.`);
 			const missing = this.getMissing(itemId);
 			console.log("List of missing acquisition-obligate resources:", missing);
+			const inventoryDict = this.getInventoryDictionary();
+			console.log(inventoryDict);
 			const blocks = this.findMissingItemsNearby(missing);
 			if (blocks.length > 0) {
 				const blockObj = this.bot.blockAt(blocks[0]);
@@ -1095,9 +1098,18 @@ class autoBot {
 			console.log('Finished stashing.');
 			this.currentTask = null;
 			sleep(1000).then(() => {
-				console.log('Returning to cutting trees.');
-				//this.harvestNearestTree();
-				this.mineNearestCoalVein();
+				// If we have logs, mine, if we don't lumberjack
+				const inventoryDict = this.getInventoryDictionary();
+				const logIds = this.listItemsByRegEx(/_log/);
+				if (Object.keys(inventoryDict).some(id => logIds.includes(id))) {
+					console.log('Returning to mining.');
+					this.mineNearestCoalVein();
+				}
+				else {
+					//console.log(inventoryDict);
+					console.log('Returning to cutting trees.');
+					this.harvestNearestTree();
+				}
 			});
 		}
 	}
@@ -1105,11 +1117,19 @@ class autoBot {
 	stashNonEssentialInventory() {
 		if (this.checkInventoryToStash()) {
 			console.log("Stashing non-essential inventory");
-			const chestToOpen = this.bot.findBlock({
+			const chestsToOpen = this.bot.findBlocks({
 				matching: this.listBlocksByRegEx(/^chest$/),
 				maxDistance: 128,
 				count: 10
 			});
+			// Only stash to surface / near surface chests
+			let chestToOpen = null;
+			for (const point of chestsToOpen) {
+				if (point.y >= 60) {
+					chestToOpen = this.bot.blockAt(point);
+					break;
+				}
+			}
 			if (chestToOpen) {
 				console.log("Chest found. Moving to: ", chestToOpen.position);
 				this.currentTask = 'stashing';
@@ -1135,6 +1155,10 @@ class autoBot {
 					sleep(350).then(() => {
 						const chest = this.getInventoryItemById(chestId);
 						const placementVector = this.findPlacementVector();
+						if (!placementVector) {
+							this.harvestNearestTree();
+							return;
+						}
 						const referenceBlock = this.bot.blockAt(this.bot.entity.position.offset(
 							placementVector.x || 0,
 							placementVector.y || 0,
@@ -1156,8 +1180,19 @@ class autoBot {
 			}
 		}
 		else {
-			//this.harvestNearestTree();
-			this.mineNearestCoalVein();
+			// If we have logs, mine, if we don't lumberjack
+			const inventoryDict = this.getInventoryDictionary();
+			console.log(inventoryDict, Object.keys(inventoryDict));
+			const logIds = this.listItemsByRegEx(/_log$/);
+			if (Object.keys(inventoryDict).some(id => id.match(/_log$/))) {
+				console.log('Returning to mining.');
+				this.mineNearestCoalVein();
+			}
+			else {
+				//console.log(inventoryDict);
+				console.log('Returning to cutting trees.');
+				this.harvestNearestTree();
+			}
 		}
 	}
 
@@ -1236,7 +1271,7 @@ class autoBot {
 
 	/**************************************************************************
 	 * 
-	 * Miner Prepare for Descent
+	 * Miner - Prepare for Descent
 	 * 
 	 **************************************************************************/
 
@@ -1295,25 +1330,38 @@ class autoBot {
 	}
 
 	findNearestCoalVein() {
-		const coalBlocks = this.bot.findBlocks({
-			matching: this.listBlocksByRegEx(/^coal_ore$/),
+		let coalBlocks = this.bot.findBlocks({
+			matching: this.listBlocksByRegEx(/coal_ore$/),
 			maxDistance: 128,
-			count: 10
+			count: 100
 		});
 		//console.log('Nearby coal ore blocks are: ', coalBlocks);
 		// If no coal ore was found, return false
 		if (coalBlocks.length === 0) {
 			return false;
 		}
+		// Resort by Y highest to lowest.
+		coalBlocks = coalBlocks.sort((a, b) => { b.y - a.y});
 		return this.blockToVein(coalBlocks[0], [this.bot.blockAt(coalBlocks[0])]);
 	}
 
 	equipPickaxe(callback) {
 		// There needs to be a way to prefer iron, to stone, to wood by inventory
+		const inventoryDictionary = this.getInventoryDictionary();
+		let preferredPickaxe = 585;
+		if (Object.keys(inventoryDictionary).includes('iron_ingot')) {
+			preferredPickaxe = this.listItemsByRegEx(/iron_pickaxe/)[0];
+		}
+		else if (Object.keys(inventoryDictionary).includes('cobblestone')) {
+			preferredPickaxe = this.listItemsByRegEx(/stone_pickaxe/)[0];
+		}
+		else {
+			preferredPickaxe = this.listItemsByRegEx(/wooden_pickaxe/)[0];
+		}
 		this.equipByName("pickaxe", () => {
 			const hand = this.bot.inventory.slots[36];
 			if (!hand) {
-				this.autoCraft(585, 1, () => {
+				this.autoCraft(preferredPickaxe, 1, () => {
 					sleep(350).then(() => { this.equipByName("pickaxe", callback); });
 				});
 			}
@@ -1322,7 +1370,7 @@ class autoBot {
 				const regex = RegExp(`pickaxe$`, "i");
 				const axes = this.listItemsByRegEx(regex);
 				if (!axes.includes(hand.type)) {
-					this.autoCraft(585, 1, () => {
+					this.autoCraft(preferredPickaxe, 1, () => {
 						sleep(350).then(() => { this.equipByName("pickaxe", callback); });
 					});
 				}
@@ -1335,12 +1383,20 @@ class autoBot {
 
 	mineVeinNext(vein) {
 		const current = vein[0];
-		const remainder = vein.slice(1, vein.length);
+		this.remainder = vein.slice(1, vein.length);
 		if (current) {
 			//console.log(`Current:`, current);
 			this.equipPickaxe(() => {
+				if (this.bot.entity.position.distanceTo(current.position) > 3) {
+					console.log("The bot is too far from the object block to mine.");
+					this.currentTask = 'mineVein';
+					const p = current.position;
+					const goal = new GoalGetToBlock(p.x, p.y, p.z);
+					this.bot.pathfinder.setGoal(goal);
+					return;
+				}
 				this.bot.dig(current, true, (err) => {
-					this.mineVeinNext(remainder);
+					this.mineVeinNext(this.remainder);
 				});	
 			});
 		}
