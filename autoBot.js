@@ -1086,7 +1086,7 @@ class autoBot {
 		if (current) {
 			chest.deposit(current.type, null, current.count, (err) => {
 				if (err) {
-					console.log(`Unable to stash ${current.count} ${current.name}`);
+					console.log(`Unable to stash ${current.count} ${current.name}`, err);
 				} else {
 					console.log(`Stashed ${current.count} ${current.name}`);
 				}
@@ -1341,7 +1341,7 @@ class autoBot {
 			return false;
 		}
 		// Resort by Y highest to lowest.
-		coalBlocks = coalBlocks.sort((a, b) => { b.y - a.y});
+		coalBlocks = coalBlocks.sort((a, b) => { return b.y - a.y });
 		return this.blockToVein(coalBlocks[0], [this.bot.blockAt(coalBlocks[0])]);
 	}
 
