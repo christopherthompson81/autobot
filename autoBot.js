@@ -1345,24 +1345,43 @@ class autoBot {
 		return this.blockToVein(coalBlocks[0], [this.bot.blockAt(coalBlocks[0])]);
 	}
 
+	havePickaxe() {
+		const inventoryDict = this.getInventoryDictionary();
+		if (Object.keys(inventoryDict).some(id => id.match(/pickaxe$/))) {
+			return true;
+		}
+		return false;
+	}
+
 	equipPickaxe(callback) {
 		// There needs to be a way to prefer iron, to stone, to wood by inventory
 		const inventoryDictionary = this.getInventoryDictionary();
-		let preferredPickaxe = 585;
+		let craftPickaxe = 585;
 		if (Object.keys(inventoryDictionary).includes('iron_ingot')) {
-			preferredPickaxe = this.listItemsByRegEx(/iron_pickaxe/)[0];
+			craftPickaxe = this.listItemsByRegEx(/iron_pickaxe/)[0];
 		}
 		else if (Object.keys(inventoryDictionary).includes('cobblestone')) {
-			preferredPickaxe = this.listItemsByRegEx(/stone_pickaxe/)[0];
+			craftPickaxe = this.listItemsByRegEx(/stone_pickaxe/)[0];
 		}
 		else {
-			preferredPickaxe = this.listItemsByRegEx(/wooden_pickaxe/)[0];
+			craftPickaxe = this.listItemsByRegEx(/wooden_pickaxe/)[0];
 		}
-		this.equipByName("pickaxe", () => {
+		let pickaxe = "pickaxe";
+		if (Object.keys(inventoryDictionary).includes('iron_pickaxe')) {
+			pickaxe = "iron_pickaxe";
+		}
+		else if (Object.keys(inventoryDictionary).includes('stone_pickaxe')) {
+			pickaxe = "stone_pickaxe";
+		}
+		else {
+			pickaxe = "pickaxe";
+		}
+		this.equipByName(pickaxe, () => {
 			const hand = this.bot.heldItem;
+			console.log(this.bot.heldItem);
 			if (!hand) {
-				this.autoCraft(preferredPickaxe, 1, () => {
-					sleep(350).then(() => { this.equipByName("pickaxe", callback); });
+				this.autoCraft(craftPickaxe, 1, () => {
+					sleep(350).then(() => { this.equipByName(this.mcData.items[craftPickaxe].name, callback); });
 				});
 			}
 			else {
@@ -1370,8 +1389,8 @@ class autoBot {
 				const regex = RegExp(`pickaxe$`, "i");
 				const axes = this.listItemsByRegEx(regex);
 				if (!axes.includes(hand.type)) {
-					this.autoCraft(preferredPickaxe, 1, () => {
-						sleep(350).then(() => { this.equipByName("pickaxe", callback); });
+					this.autoCraft(craftPickaxe, 1, () => {
+						sleep(350).then(() => { this.equipByName(this.mcData.items[craftPickaxe].name, callback); });
 					});
 				}
 				else {
@@ -1381,19 +1400,10 @@ class autoBot {
 		});
 	}
 
-	havePickaxe() {
-		const pickaxeIds = this.listItemsByRegEx(/pickaxe$/);
-		const inventoryDict = this.getInventoryDictionary();
-		if (Object.keys(inventoryDict).some(id => id.match(/pickaxe$/))) {
-			return true;
-		}
-		return false;
-	}
-
 	mineVeinNext(vein) {
 		const current = vein[0];
 		this.remainder = vein.slice(1, vein.length);
-		if (current && this.havePickaxe()) {
+		if (current) {
 			//console.log(`Current:`, current);
 			this.equipPickaxe(() => {
 				if (this.bot.entity.position.distanceTo(current.position) > 3) {
