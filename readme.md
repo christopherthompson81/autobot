@@ -1,6 +1,6 @@
 # Autobot
 
-Autobot is intended to be a Minecraft player simulator. It is functionally an ore mining bot that can solve crafting for axes and pickaxes (cuts down trees as needed) and will self-equip with a appropriate tools.
+Autobot is intended to be a Minecraft player simulator. It is functionally an ore mining bot that can solve crafting for axes and pickaxes (cuts down trees as needed) and will self-equip with appropriate tools.
 
 Autobot currently only implements the following behaviours:
 

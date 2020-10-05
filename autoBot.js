@@ -1428,17 +1428,15 @@ class autoBot {
 	}
 
 	mineNearestCoalVein() {
-		this.equipPickaxe(() => {
-			this.currentTask = 'mineVein';
-			const vein = this.findNearestCoalVein();
-			if (vein) {
-				console.log("Mining Vein: ", vein[0].position);
-				this.mineVein(vein);
-			}
-			else {
-				console.log("No valid coal veins found.");
-			}
-		});
+		this.currentTask = 'mineVein';
+		const vein = this.findNearestCoalVein();
+		if (vein) {
+			console.log("Mining Vein: ", vein[0].position);
+			this.mineVein(vein);
+		}
+		else {
+			console.log("No valid coal veins found.");
+		}
 	}
 }
 
