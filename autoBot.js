@@ -893,7 +893,7 @@ class autoBot {
 	equipAxe(callback) {
 		//console.log(this.bot.inventory);
 		this.equipByName("_axe", () => {
-			const hand = this.bot.inventory.slots[36];
+			const hand = this.bot.heldItem;
 			if (!hand) {
 				this.autoCraft(586, 1, () => {
 					sleep(350).then(() => { this.equipByName("_axe", callback); });
@@ -1359,7 +1359,7 @@ class autoBot {
 			preferredPickaxe = this.listItemsByRegEx(/wooden_pickaxe/)[0];
 		}
 		this.equipByName("pickaxe", () => {
-			const hand = this.bot.inventory.slots[36];
+			const hand = this.bot.heldItem;
 			if (!hand) {
 				this.autoCraft(preferredPickaxe, 1, () => {
 					sleep(350).then(() => { this.equipByName("pickaxe", callback); });

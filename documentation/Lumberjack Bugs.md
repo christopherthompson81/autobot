@@ -4,6 +4,7 @@
 # Dependency Bugs - mineflayer-pathfinder
 * Bot path-finds through glass, cobblestone, and crops (i.e. vandalization). A whole lot of block types should be avoided by the pathfinder
 * Closed doors are non-navigable?
+* Rapid cycling of held item when no good option exists in inventory. Resets breaking on target block on every change.
 * Pathfinder can change what is equipped - equip after arriving at goals
 * Pathfinder can stall out - Added some code to log a message to the console if a goal reached event is emitted, but the bot is nowhere near it.
 * Dumb paths sometimes, not determined by travel time where breaking time is calculated:
@@ -27,3 +28,5 @@
 		at tryOnTimeout (timers.js:300:5)
 		at listOnTimeout (timers.js:263:5)
 		at Timer.processTimers (timers.js:223:10)
+
+I think I'm going to have to fork mineflayer-pathfinder (hopefully resulting in a PR) to get it to work properly.
