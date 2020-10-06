@@ -53,7 +53,7 @@ const essentialItems = [
 	{type: 'name', name: 'stick', maxSlots: 1},
 	{type: 'regex', regex: new RegExp('planks$', 'i'), maxSlots: 1},
 	{type: 'regex', regex: new RegExp('_log$', 'i'), maxSlots: 1},
-	{type: 'nameList', list: ['dirt', 'cobblestone'], maxSlots: 1},
+	{type: 'name', name: 'cobblestone', maxSlots: 1},
 	{type: 'name', name: 'torch', maxSlots: 1},
 	{type: 'name', name: 'coal', maxSlots: 1},
 	{type: 'nameList', list: ['bucket', 'water_bucket', 'lava_bucket'], maxSlots: 1},
@@ -135,6 +135,7 @@ class autoBot {
 		this.defaultMove = new Movements(this.bot, this.mcData);
 		this.bot.pathfinder.setMovements(this.defaultMove);
 		this.recipe = require("prismarine-recipe")(this.bot.version).Recipe;
+		//this.bot.on("heldItemChanged", this.onHeldItemChanged);
 		// lookAt-Bot Code
 		//this.schedule = setInterval(this.stare, 50);
 		// lumberjack-Bot Code
@@ -170,7 +171,17 @@ class autoBot {
 			sleep(350).then(() => { this.callback(); });
 		}
 		else if (this.currentTask === 'mineVein') {
-			sleep(350).then(() => { this.mineVeinNext(this.remainder); });
+			sleep(50).then(() => { this.mineVeinNext(this.remainder); });
+		}
+	}
+
+	onHeldItemChanged(heldItem) {
+		if (this.currentTask != 'crafting') {
+			const toolIds = this.missingTools();
+			if (toolIds.length > 0) {
+				this.bot.pathfinder.setGoal(null);
+				this.craftTools(this.mineNearestCoalVein);
+			}
 		}
 	}
 
@@ -480,7 +491,7 @@ class autoBot {
 		else {
 			// possess case
 			//console.log(craftingTree);
-			return null;
+			return [];
 		}
 	}
 	
@@ -771,8 +782,22 @@ class autoBot {
 			}
 		}
 		else {
-			console.log("Calling autoCraftNext", craftingQueue);
+			//console.log("Calling autoCraftNext", craftingQueue);
 			this.autoCraftNext(craftingQueue, callback);
+		}
+	}
+
+	autoCraftMultiple(itemList, callback) {
+		// itemList looks like [{ id: 1, count: 1 }]
+		const current = itemList[0];
+		const remainder = craftingQueue.slice(1, craftingQueue.length);
+		if (current) {
+			this.autoCraft(current.id, current.count, () => {
+				this.autoCraftMultiple(remainder, callback);
+			});
+		}
+		else {
+			callback(true);
 		}
 	}
 
@@ -1182,7 +1207,7 @@ class autoBot {
 		else {
 			// If we have logs, mine, if we don't lumberjack
 			const inventoryDict = this.getInventoryDictionary();
-			console.log(inventoryDict, Object.keys(inventoryDict));
+			//console.log(inventoryDict, Object.keys(inventoryDict));
 			const logIds = this.listItemsByRegEx(/_log$/);
 			if (Object.keys(inventoryDict).some(id => id.match(/_log$/))) {
 				console.log('Returning to mining.');
@@ -1268,6 +1293,52 @@ class autoBot {
 		}
 	}
 
+	craftToolNext(toolIds, callback) {
+		const current = toolIds[0];
+		const remainder = toolIds.slice(1, toolIds.length);
+		if (current) {
+			this.autoCraft(current, 1, (success) => {
+				sleep(100).then(() => {
+					this.craftToolNext(remainder, callback);
+				});
+			});	
+		}
+		else {
+			callback(true);
+		}
+	}
+
+	missingTools() {
+		// Prefer iron, to stone, to wood by inventory
+		const tools = ['sword', 'pickaxe', 'axe', 'shovel', 'hoe'];
+		const toolIds = [];
+		for (const tool of tools) {
+			let toolId;
+			const inventoryDictionary = this.getInventoryDictionary();
+			if (Object.keys(inventoryDictionary).includes('iron_ingot')) {
+				const regex = new RegExp(`iron_${tool}`);
+				toolId = this.listItemsByRegEx(regex)[0];
+			}
+			else if (Object.keys(inventoryDictionary).includes('cobblestone')) {
+				const regex = new RegExp(`stone_${tool}`);
+				toolId = this.listItemsByRegEx(regex)[0];
+			}
+			else {
+				const regex = new RegExp(`wooden_${tool}`);
+				toolId = this.listItemsByRegEx(regex)[0];
+			}
+			if (!Object.keys(inventoryDictionary).includes(toolId)) {
+				toolIds.push(toolId);
+			}
+		}
+		return toolIds;
+	}
+
+	craftTools(callback) {
+		// Prefer iron, to stone, to wood by inventory
+		const toolIds = this.missingTools();
+		this.craftToolNext(toolIds, callback);
+	}
 
 	/**************************************************************************
 	 * 
@@ -1335,6 +1406,21 @@ class autoBot {
 			maxDistance: 128,
 			count: 100
 		});
+		let nearby = [];
+		for (const p of coalBlocks) {
+			if (this.bot.entity.position.distanceTo(new Vec3(p.x, p.y, p.z)) < 5) {
+				nearby.push(p);
+			}
+		}
+		if (nearby.length > 0) {
+			console.log("Unmined ore close by. Cleaning it up.");
+			nearby = nearby.sort((a, b) => {
+				const distA = this.bot.entity.position.distanceTo(new Vec3(a.x, a.y, a.z));
+				const distB = this.bot.entity.position.distanceTo(new Vec3(b.x, b.y, b.z));
+				return distA - distB;
+			});
+			return this.blockToVein(nearby[0], [this.bot.blockAt(nearby[0])]);
+		}
 		//console.log('Nearby coal ore blocks are: ', coalBlocks);
 		// If no coal ore was found, return false
 		if (coalBlocks.length === 0) {
@@ -1378,7 +1464,7 @@ class autoBot {
 		}
 		this.equipByName(pickaxe, () => {
 			const hand = this.bot.heldItem;
-			console.log(this.bot.heldItem);
+			//console.log(this.bot.heldItem);
 			if (!hand) {
 				this.autoCraft(craftPickaxe, 1, () => {
 					sleep(350).then(() => { this.equipByName(this.mcData.items[craftPickaxe].name, callback); });
@@ -1405,18 +1491,20 @@ class autoBot {
 		this.remainder = vein.slice(1, vein.length);
 		if (current) {
 			//console.log(`Current:`, current);
-			this.equipPickaxe(() => {
-				if (this.bot.entity.position.distanceTo(current.position) > 3) {
-					console.log("The bot is too far from the object block to mine.");
-					this.currentTask = 'mineVein';
-					const p = current.position;
-					const goal = new GoalGetToBlock(p.x, p.y, p.z);
-					this.bot.pathfinder.setGoal(goal);
-					return;
-				}
-				this.bot.dig(current, true, (err) => {
-					this.mineVeinNext(this.remainder);
-				});	
+			this.craftTools(() => {
+				this.equipPickaxe(() => {
+					if (this.bot.entity.position.distanceTo(current.position) > 3) {
+						console.log("The bot is too far from the object block to mine.");
+						this.currentTask = 'mineVein';
+						const p = current.position;
+						const goal = new GoalGetToBlock(p.x, p.y, p.z);
+						this.bot.pathfinder.setGoal(goal);
+						return;
+					}
+					this.bot.dig(current, true, (err) => {
+						this.mineVeinNext(this.remainder);
+					});
+				})
 			});
 		}
 		else {
