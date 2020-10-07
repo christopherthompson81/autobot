@@ -1123,15 +1123,23 @@ class autoBot {
 			sleep(1000).then(() => {
 				// If we have logs, mine, if we don't lumberjack
 				const inventoryDict = this.getInventoryDictionary();
-				const logIds = this.listItemsByRegEx(/_log/);
-				if (Object.keys(inventoryDict).some(id => logIds.includes(id))) {
-					console.log('Returning to mining.');
-					this.mineNearestCoalVein();
+				//console.log(inventoryDict, Object.keys(inventoryDict));
+				if (Object.keys(inventoryDict).some(id => id.match(/_log$/))) {
+					// Don't start mining without a full set of tools
+					const missingTools = this.missingTools();
+					if (missingTools.length > 0) {
+						console.log('Returning to cutting trees.');
+						this.craftTools(this.harvestNearestTree);
+					}
+					else {
+						console.log('Returning to mining.');
+						this.craftTools(this.mineNearestCoalVein);
+					}
 				}
 				else {
 					//console.log(inventoryDict);
 					console.log('Returning to cutting trees.');
-					this.harvestNearestTree();
+					this.craftTools(this.harvestNearestTree);
 				}
 			});
 		}
@@ -1206,7 +1214,6 @@ class autoBot {
 			// If we have logs, mine, if we don't lumberjack
 			const inventoryDict = this.getInventoryDictionary();
 			//console.log(inventoryDict, Object.keys(inventoryDict));
-			const logIds = this.listItemsByRegEx(/_log$/);
 			if (Object.keys(inventoryDict).some(id => id.match(/_log$/))) {
 				// Don't start mining without a full set of tools
 				const missingTools = this.missingTools();
