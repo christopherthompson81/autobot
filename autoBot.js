@@ -770,7 +770,7 @@ class autoBot {
 				matching: this.listBlocksByRegEx(/^crafting_table$/),
 				maxDistance: 128,
 				count: 10
-			})[0];
+			});
 			if (!craftingTable) {
 				// If we have one, place it
 				if (this.haveIngredient(craftingTableId)) {
@@ -779,12 +779,11 @@ class autoBot {
 				}
 				// make one and put it on any block one move away that has the same Y value
 				this.craftCraftingTable(() => { this.autoCraftNext(craftingQueue, callback); });
+				return;
 			}
 		}
-		else {
-			//console.log("Calling autoCraftNext", craftingQueue);
-			this.autoCraftNext(craftingQueue, callback);
-		}
+		//console.log("Calling autoCraftNext", craftingQueue);
+		this.autoCraftNext(craftingQueue, callback);
 	}
 
 	autoCraftMultiple(itemList, callback) {
@@ -1019,7 +1018,8 @@ class autoBot {
 		const current = drops[0];
 		this.remainder = drops.slice(1, drops.length);
 		if (current) {
-			console.log(`Picking Up:`, this.mcData.items[current.entityType].displayName);
+			const itemId = current.metadata[7].itemId;
+			console.log(`Picking Up:`, this.mcData.items[itemId].displayName);
 			const p = current.position;
 			const goal = new GoalBlock(p.x, p.y, p.z);
 			this.bot.pathfinder.setGoal(goal);
@@ -1128,7 +1128,7 @@ class autoBot {
 					// Don't start mining without a full set of tools
 					const missingTools = this.missingTools();
 					if (missingTools.length > 0) {
-						console.log('Returning to cutting trees.');
+						console.log('Returning to cutting trees because of missing tools.', missingTools);
 						this.craftTools(this.harvestNearestTree);
 					}
 					else {
@@ -1138,7 +1138,7 @@ class autoBot {
 				}
 				else {
 					//console.log(inventoryDict);
-					console.log('Returning to cutting trees.');
+					console.log('Returning to cutting trees.', inventoryDict);
 					this.craftTools(this.harvestNearestTree);
 				}
 			});
@@ -1218,7 +1218,7 @@ class autoBot {
 				// Don't start mining without a full set of tools
 				const missingTools = this.missingTools();
 				if (missingTools.length > 0) {
-					console.log('Returning to cutting trees.');
+					console.log('Returning to cutting trees because of missing tools.', missingTools);
 					this.craftTools(this.harvestNearestTree);
 				}
 				else {
@@ -1228,7 +1228,7 @@ class autoBot {
 			}
 			else {
 				//console.log(inventoryDict);
-				console.log('Returning to cutting trees.');
+				console.log('Returning to cutting trees.', inventoryDict);
 				this.craftTools(this.harvestNearestTree);
 			}
 		}
@@ -1238,6 +1238,7 @@ class autoBot {
 		const current = toolIds[0];
 		const remainder = toolIds.slice(1, toolIds.length);
 		if (current) {
+			console.log(`Crafting ${this.mcData.items[current].displayName}`);
 			this.autoCraft(current, 1, (success) => {
 				sleep(100).then(() => {
 					this.craftToolNext(remainder, callback);
@@ -1256,11 +1257,11 @@ class autoBot {
 		for (const tool of tools) {
 			let toolId;
 			const inventoryDictionary = this.getInventoryDictionary();
-			if (Object.keys(inventoryDictionary).includes('iron_ingot')) {
+			if (inventoryDictionary.iron_ingot > 3) {
 				const regex = new RegExp(`iron_${tool}`);
 				toolId = this.listItemsByRegEx(regex)[0];
 			}
-			else if (Object.keys(inventoryDictionary).includes('cobblestone')) {
+			else if (inventoryDictionary.cobblestone > 3) {
 				const regex = new RegExp(`stone_${tool}`);
 				toolId = this.listItemsByRegEx(regex)[0];
 			}
