@@ -24,6 +24,7 @@ To be successful it must:
 
 const autoBind = require('auto-bind');
 const mineflayer = require('mineflayer');
+const nbt = require('prismarine-nbt');
 const pathfinder = require('mineflayer-pathfinder').pathfinder;
 const Movements = require('mineflayer-pathfinder').Movements;
 const { GoalBlock, GoalNear, GoalGetToBlock } = require('mineflayer-pathfinder').goals;
@@ -129,11 +130,33 @@ class autoBot {
 		this.chestMap = {};
 	};
 
+	bestHarvestTool(block) {
+		const availableTools = this.bot.inventory.items();
+		const effects = this.bot.entity.effects;
+		// Baseline is an empty hand, not Number.MAX_VALUE
+		let fastest = block.digTime(null, false, false, false, [], effects);
+		let bestTool = null;
+		for (const tool of availableTools) {
+			const enchants = (tool && tool.nbt) ? nbt.simplify(tool.nbt).Enchantments : [];
+			const digTime = block.digTime(tool ? tool.type : null, false, false, false, enchants, effects);
+			if (digTime < fastest) {
+				fastest = digTime;
+				bestTool = tool;
+			}
+		}
+		return bestTool;
+	}
+
 	botLoop() {
 		//console.log(this.bot);
 		this.mcData = minecraftData(this.bot.version);
 		this.defaultMove = new Movements(this.bot, this.mcData);
+		this.defaultMove.allow1by1towers = false;
+		this.defaultMove.maxDropDown = 1;
+		this.defaultMove.digCost = 2;
 		this.bot.pathfinder.setMovements(this.defaultMove);
+		// Overwrite a pathfinder function
+		this.bot.pathfinder.bestHarvestTool = this.bestHarvestTool;
 		this.recipe = require("prismarine-recipe")(this.bot.version).Recipe;
 		//this.bot.on("heldItemChanged", this.onHeldItemChanged);
 		// lookAt-Bot Code
@@ -171,7 +194,7 @@ class autoBot {
 			sleep(350).then(() => { this.callback(); });
 		}
 		else if (this.currentTask === 'mineVein') {
-			sleep(50).then(() => { this.mineVeinNext(this.remainder); });
+			sleep(350).then(() => { this.mineVeinNext(this.remainder); });
 		}
 	}
 
@@ -1346,7 +1369,7 @@ class autoBot {
 		let coalBlocks = this.bot.findBlocks({
 			matching: this.listBlocksByRegEx(/_ore$/),
 			maxDistance: 128,
-			count: 100
+			count: 1000,
 		});
 		let nearby = [];
 		for (const p of coalBlocks) {
@@ -1369,7 +1392,7 @@ class autoBot {
 			return false;
 		}
 		// Resort by Y highest to lowest.
-		coalBlocks = coalBlocks.sort((a, b) => { return b.y - a.y });
+		//coalBlocks = coalBlocks.sort((a, b) => { return b.y - a.y });
 		return this.blockToVein(coalBlocks[0], [this.bot.blockAt(coalBlocks[0])]);
 	}
 
