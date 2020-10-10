@@ -1308,19 +1308,24 @@ class autoBot {
 			if (fuel && (fuel.count || 0) + fuelAmount > 64) {
 				fuelAmount = 64 - fuel.count;
 			}
-			//console.log(this.listItemsByRegEx(/^coal$/)[0], insertAmount);
-			//console.log(inventoryDict);
-			furnace.putFuel(
-				this.listItemsByRegEx(/^coal$/)[0],
-				null,
-				fuelAmount,
-				(err) => {
-					if (err) {
-						console.log("Put fuel", err)
-					}
-					callback();
-				},
-			);
+			if (fuelAmount > 0) {
+				//console.log(this.listItemsByRegEx(/^coal$/)[0], insertAmount);
+				//console.log(inventoryDict);
+				furnace.putFuel(
+					this.listItemsByRegEx(/^coal$/)[0],
+					null,
+					fuelAmount,
+					(err) => {
+						if (err) {
+							console.log("Put fuel", err)
+						}
+						callback();
+					},
+				);
+			}
+			else {
+				callback();
+			}
 		}
 		else {
 			callback();
@@ -1545,6 +1550,11 @@ class autoBot {
 			matching: this.listBlocksByRegEx(/_ore$/),
 			maxDistance: 128,
 			count: 1000,
+		});
+		coalBlocks = coalBlocks.sort((a, b) => {
+			const distA = this.bot.entity.position.distanceTo(new Vec3(a.x, a.y, a.z));
+			const distB = this.bot.entity.position.distanceTo(new Vec3(b.x, b.y, b.z));
+			return distA - distB;
 		});
 		let nearby = [];
 		for (const p of coalBlocks) {
