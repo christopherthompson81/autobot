@@ -45,16 +45,41 @@ const armorSlots = {
 	offHand: 45,
 };
 
+// materials are listed in decending order of bot prefererence
+const toolItems = {
+	names: [
+		'sword',
+		'pickaxe',
+		'axe',
+		'shovel',
+		'hoe',
+	],
+	materials: [
+		'iron',
+		'stone',
+		'wooden',
+	],
+	nonBotMaterials: [
+		'diamond',
+		'gold',
+		'netherite',
+	]
+};
+
+const armorItems = [
+	{type: 'regex', regex: new RegExp('helmet$', 'i'), maxSlots: 1, requiredSlot: armorSlots.head},
+	{type: 'regex', regex: new RegExp('chestplate$', 'i'), maxSlots: 1, requiredSlot: armorSlots.torso},
+	{type: 'regex', regex: new RegExp('leggings$', 'i'), maxSlots: 1, requiredSlot: armorSlots.legs},
+	{type: 'regex', regex: new RegExp('boots$', 'i'), maxSlots: 1, requiredSlot: armorSlots.feet},
+	{type: 'name', name: 'shield', maxSlots: 1, requiredSlot: armorSlots.offHand},
+];
+
 const essentialItems = [
-	{type: 'regex', regex: new RegExp('sword$', 'i'), maxSlots: 2},
-	{type: 'regex', regex: new RegExp('pickaxe$', 'i'), maxSlots: 2},
-	{type: 'regex', regex: new RegExp('_axe$', 'i'), maxSlots: 2},
-	{type: 'regex', regex: new RegExp('shovel$', 'i'), maxSlots: 2},
-	{type: 'regex', regex: new RegExp('hoe$', 'i'), maxSlots: 2},
 	{type: 'name', name: 'stick', maxSlots: 1},
 	{type: 'regex', regex: new RegExp('planks$', 'i'), maxSlots: 1},
 	{type: 'regex', regex: new RegExp('_log$', 'i'), maxSlots: 1},
 	{type: 'name', name: 'cobblestone', maxSlots: 1},
+	{type: 'name', name: 'iron_ingot', maxSlots: 1},
 	{type: 'name', name: 'torch', maxSlots: 1},
 	{type: 'name', name: 'coal', maxSlots: 1},
 	{type: 'nameList', list: ['bucket', 'water_bucket', 'lava_bucket'], maxSlots: 1},
@@ -84,11 +109,6 @@ const essentialItems = [
 		],
 		maxSlots: 1
 	},
-	{type: 'regex', regex: new RegExp('helmet$', 'i'), maxSlots: 1, requiredSlot: armorSlots.head},
-	{type: 'regex', regex: new RegExp('chestplate$', 'i'), maxSlots: 1, requiredSlot: armorSlots.torso},
-	{type: 'regex', regex: new RegExp('leggings$', 'i'), maxSlots: 1, requiredSlot: armorSlots.legs},
-	{type: 'regex', regex: new RegExp('boots$', 'i'), maxSlots: 1, requiredSlot: armorSlots.feet},
-	{type: 'name', name: 'shield', maxSlots: 1, requiredSlot: armorSlots.offHand},
 ];
 
 // reversable compressable items will cause an infinite recipe loop, so detect and break on them
@@ -168,6 +188,7 @@ class autoBot {
 			//this.harvestNearestTree();
 			//this.mineNearestCoalVein();
 			this.stashNonEssentialInventory();
+			//this.smeltOre();
 		});
 		// Collect broken blocks
 		//this.pickUpBrokenBlocks();
@@ -195,6 +216,9 @@ class autoBot {
 		}
 		else if (this.currentTask === 'mineVein') {
 			sleep(350).then(() => { this.mineVeinNext(this.remainder); });
+		}
+		else if (this.currentTask === 'smelting') {
+			sleep(350).then(() => { this.callback(); });
 		}
 	}
 
@@ -693,7 +717,8 @@ class autoBot {
 			point.add(side);
 			const block = this.bot.blockAt(point);
 			// block.type == 'air' for target
-			if (block.name === 'air') {
+			//console.log(block);
+			if (['cave_air', 'air'].includes(block.name)) {
 				console.log(block, "is air");
 				// block.material in ['rock', 'dirt', 'wood'] for target.y - 1
 				const blockBelow = this.bot.blockAt(point.add(below));
@@ -1078,10 +1103,23 @@ class autoBot {
 	 * 
 	 **************************************************************************/
 
+	getToolIds() {
+		let toolIds = [];
+		for (const toolName of toolItems.names) {
+			const regex = new RegExp(`_${toolName}$`, "i");
+			toolIds = [...toolIds, ...this.listItemsByRegEx(regex)];
+		}
+		return toolIds;
+	}
+	
 	listNonEssentialInventory() {
 		// Return a list of items in inventory that are non-essential (so as to stash them)
 		// Deductive. Get inventory and then remove essential items.
 		let inventory = this.bot.inventory.items();
+		// remove tools
+		const toolIds = this.getToolIds();
+		inventory = inventory.filter(item => !toolIds.includes(item.type));
+		// Then filter for essenatial
 		for (const eItem of essentialItems) {
 			const filtered = [];
 			let count = 0;
@@ -1170,6 +1208,11 @@ class autoBot {
 
 	stashNonEssentialInventory() {
 		if (this.checkInventoryToStash()) {
+			const inventoryDict = this.getInventoryDictionary();
+			if (this.currentTask != 'smelting' && inventoryDict['iron_ore']) {
+				this.smeltOre();
+				return;
+			}
 			console.log("Stashing non-essential inventory");
 			const chestsToOpen = this.bot.findBlocks({
 				matching: this.listBlocksByRegEx(/^chest$/),
@@ -1257,6 +1300,104 @@ class autoBot {
 		}
 	}
 
+	smeltOre() {
+		const furnaceBlock = this.bot.findBlock({
+			matching: this.listBlocksByRegEx(/furnace$/),
+			maxDistance: 128
+		});
+		// Only stash to surface / near surface chests
+		if (furnaceBlock) {
+			console.log("Furnace found. Moving to: ", furnaceBlock.position);
+			this.currentTask = 'smelting';
+			const p = furnaceBlock.position;
+			const goal = new GoalNear(p.x, p.y, p.z, 3);
+			this.callback = () => {
+				console.log('Smelting callback.');
+				const inventoryDict = this.getInventoryDictionary();
+				console.log(inventoryDict);
+				const furnace = this.bot.openFurnace(furnaceBlock);
+				furnace.on('open', () => {
+					if (furnace.outputItem()) {
+						furnace.takeOutput(() => {});
+					}
+					const fuel = furnace.fuelItem();
+					let fuelAmount = (inventoryDict['coal'] || 0) > 64 ? 64 : (inventoryDict['coal'] || 0);
+					if ((!fuel || fuel.count < 64) && inventoryDict["coal"] > 0) {
+						if (fuel && (fuel.count || 0) + fuelAmount > 64) {
+							fuelAmount = 64 - fuel.count;
+						}
+						//console.log(this.listItemsByRegEx(/^coal$/)[0], insertAmount);
+						//console.log(inventoryDict);
+						furnace.putFuel(
+							this.listItemsByRegEx(/^coal$/)[0],
+							null,
+							fuelAmount,
+							(err) => {
+								console.log("Put fuel", err)
+							},
+						);
+					}
+					if (inventoryDict["iron_ore"]) {
+						let inputAmount = inventoryDict["iron_ore"];
+						const currentInput = furnace.inputItem();
+						if (currentInput) {
+							if (currentInput.count + inputAmount > 64) {
+								inputAmount = 64 - currentInput.count;
+							}
+						}
+						furnace.putInput(
+							this.listItemsByRegEx(/^iron_ore$/)[0],
+							null,
+							inputAmount,
+							(err) => {
+								console.log("Put input", err);
+							},
+						)
+					}
+					sleep(1000).then(() => {
+						furnace.close();
+						console.log('Finished smelting.');
+						this.stashNonEssentialInventory();
+					});
+				});
+				furnace.on('close', () => {
+					console.log('Furnace closed');
+				});
+			}
+			this.bot.pathfinder.setGoal(goal);
+		}
+		else {
+			console.log("No furnace located. Autocrafting.");
+			const furnaceId = this.listItemsByRegEx(/^furnace$/)[0];
+			this.autoCraft(furnaceId, 1, () => {
+				sleep(350).then(() => {
+					const furnace = this.getInventoryItemById(furnaceId);
+					const placementVector = this.findPlacementVector();
+					if (!placementVector) {
+						this.stashNonEssentialInventory();
+						return;
+					}
+					const referenceBlock = this.bot.blockAt(this.bot.entity.position.offset(
+						placementVector.x || 0,
+						placementVector.y || 0,
+						placementVector.z || 0,
+					));
+					this.bot.equip(
+						furnace,
+						'hand',
+						() => {
+							this.bot.placeBlock(
+								referenceBlock,
+								placementVector,
+								() => { this.smeltOre(); }
+							)
+						}
+					);
+				});
+			});
+		}
+	}
+
 	craftToolNext(toolIds, callback) {
 		const current = toolIds[0];
 		const remainder = toolIds.slice(1, toolIds.length);
@@ -1275,26 +1416,32 @@ class autoBot {
 
 	missingTools() {
 		// Prefer iron, to stone, to wood by inventory
-		const tools = ['sword', 'pickaxe', 'axe', 'shovel', 'hoe'];
 		const toolIds = [];
-		for (const tool of tools) {
+		const inventoryDictionary = this.getInventoryDictionary();
+		for (const tool of toolItems.names) {
 			let toolId;
-			const inventoryDictionary = this.getInventoryDictionary();
-			if (inventoryDictionary.iron_ingot > 3) {
+			if (inventoryDictionary[`iron_${tool}`]) {
+				continue;
+			}
+			else if (inventoryDictionary.iron_ingot > 3) {
 				const regex = new RegExp(`iron_${tool}`);
 				toolId = this.listItemsByRegEx(regex)[0];
+			}
+			else if (inventoryDictionary[`stone_${tool}`]) {
+				continue;
 			}
 			else if (inventoryDictionary.cobblestone > 3) {
 				const regex = new RegExp(`stone_${tool}`);
 				toolId = this.listItemsByRegEx(regex)[0];
 			}
+			else if (inventoryDictionary[`wooden_${tool}`]) {
+				continue;
+			}
 			else {
 				const regex = new RegExp(`wooden_${tool}`);
 				toolId = this.listItemsByRegEx(regex)[0];
 			}
-			if (!Object.keys(inventoryDictionary).includes(toolId.toString())) {
-				toolIds.push(toolId);
-			}
+			toolIds.push(toolId);
 		}
 		return toolIds;
 	}
