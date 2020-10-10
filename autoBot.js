@@ -185,8 +185,8 @@ class autoBot {
 		//console.log(this.bot);
 		this.mcData = minecraftData(this.bot.version);
 		this.defaultMove = new Movements(this.bot, this.mcData);
-		this.defaultMove.allow1by1towers = false;
-		this.defaultMove.maxDropDown = 1;
+		//this.defaultMove.allow1by1towers = false;
+		//this.defaultMove.maxDropDown = 1;
 		this.defaultMove.digCost = 2;
 		this.bot.pathfinder.setMovements(this.defaultMove);
 		// Overwrite a pathfinder function
