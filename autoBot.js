@@ -150,6 +150,20 @@ class autoBot {
 		this.chestMap = {};
 	};
 
+	setHomePosition() {
+		const craftingTable = this.bot.findBlock({
+			matching: this.listBlocksByRegEx(/^crafting_table$/),
+			maxDistance: 128,
+			count: 10
+		});
+		if (!craftingTable) {
+			return this.bot.entity.position;
+		}
+		else {
+			return craftingTable.position;
+		}
+	}
+
 	bestHarvestTool(block) {
 		const availableTools = this.bot.inventory.items();
 		const effects = this.bot.entity.effects;
@@ -187,6 +201,8 @@ class autoBot {
 			//console.log(this.bot.inventory);
 			//this.harvestNearestTree();
 			//this.mineNearestCoalVein();
+			this.homePosition = this.setHomePosition();
+			console.log(this.homePosition);
 			this.stashNonEssentialInventory();
 			//this.smeltOre();
 		});
@@ -634,10 +650,11 @@ class autoBot {
 			}
 			let craftingTable = null;
 			if (recipe.requiresTable) {
-				console.log("Needs crafting table");
+				console.log("Needs crafting table", this.homePosition);
 				craftingTable = this.bot.findBlock({
+					point: this.homePosition,
 					matching: this.listBlocksByRegEx(/^crafting_table$/),
-					maxDistance: 128,
+					maxDistance: 20,
 					count: 10
 				});
 				if (!craftingTable) {
@@ -815,8 +832,9 @@ class autoBot {
 		if (needsCraftingTable) {
 			const craftingTableId = this.listItemsByRegEx(/^crafting_table$/)[0];
 			craftingTable = this.bot.findBlock({
+				point: this.homePosition,
 				matching: this.listBlocksByRegEx(/^crafting_table$/),
-				maxDistance: 128,
+				maxDistance: 20,
 				count: 10
 			});
 			if (!craftingTable) {
@@ -945,6 +963,7 @@ class autoBot {
 		const logTypes = this.listOfLogs();
 		//console.log(logTypes);
 		const logs = this.bot.findBlocks({
+			point: this.homePosition,
 			matching: logTypes,
 			maxDistance: 128,
 			count: 100
@@ -1215,6 +1234,7 @@ class autoBot {
 			}
 			console.log("Stashing non-essential inventory");
 			const chestsToOpen = this.bot.findBlocks({
+				point: this.homePosition,
 				matching: this.listBlocksByRegEx(/^chest$/),
 				maxDistance: 128,
 				count: 10
@@ -1365,6 +1385,7 @@ class autoBot {
 
 	smeltOre() {
 		const furnaceBlock = this.bot.findBlock({
+			point: this.homePosition,
 			matching: this.listBlocksByRegEx(/furnace$/),
 			maxDistance: 128
 		});
@@ -1547,6 +1568,7 @@ class autoBot {
 
 	findNearestCoalVein() {
 		let coalBlocks = this.bot.findBlocks({
+			point: this.homePosition,
 			matching: this.listBlocksByRegEx(/_ore$/),
 			maxDistance: 128,
 			count: 1000,
@@ -1577,7 +1599,7 @@ class autoBot {
 			return false;
 		}
 		// Resort by Y highest to lowest.
-		//coalBlocks = coalBlocks.sort((a, b) => { return b.y - a.y });
+		coalBlocks = coalBlocks.sort((a, b) => { return b.y - a.y });
 		return this.blockToVein(coalBlocks[0], [this.bot.blockAt(coalBlocks[0])]);
 	}
 
