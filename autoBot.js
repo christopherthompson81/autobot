@@ -1300,6 +1300,64 @@ class autoBot {
 		}
 	}
 
+	restoke(furnace, callback) {
+		const inventoryDict = this.getInventoryDictionary();
+		const fuel = furnace.fuelItem();
+		let fuelAmount = (inventoryDict['coal'] || 0) > 64 ? 64 : (inventoryDict['coal'] || 0);
+		if ((!fuel || fuel.count < 64) && inventoryDict["coal"] > 0) {
+			if (fuel && (fuel.count || 0) + fuelAmount > 64) {
+				fuelAmount = 64 - fuel.count;
+			}
+			//console.log(this.listItemsByRegEx(/^coal$/)[0], insertAmount);
+			//console.log(inventoryDict);
+			furnace.putFuel(
+				this.listItemsByRegEx(/^coal$/)[0],
+				null,
+				fuelAmount,
+				(err) => {
+					if (err) {
+						console.log("Put fuel", err)
+					}
+					callback();
+				},
+			);
+		}
+		else {
+			callback();
+		}
+	}
+
+	resupplyFurnace(furnace) {
+		const inventoryDict = this.getInventoryDictionary();
+		if (inventoryDict["iron_ore"]) {
+			let inputAmount = inventoryDict["iron_ore"];
+			const currentInput = furnace.inputItem();
+			if (currentInput) {
+				if (currentInput.count + inputAmount > 64) {
+					inputAmount = 64 - currentInput.count;
+				}
+			}
+			furnace.putInput(
+				this.listItemsByRegEx(/^iron_ore$/)[0],
+				null,
+				inputAmount,
+				(err) => {
+					if (err) {
+						console.log("Put input", err);
+					}
+					furnace.close();
+					console.log('Finished smelting.');
+					this.stashNonEssentialInventory();
+				},
+			)
+		}
+		else {
+			furnace.close();
+			console.log('Finished smelting.');
+			this.stashNonEssentialInventory();
+		}		
+	}
+
 	smeltOre() {
 		const furnaceBlock = this.bot.findBlock({
 			matching: this.listBlocksByRegEx(/furnace$/),
@@ -1318,47 +1376,17 @@ class autoBot {
 				const furnace = this.bot.openFurnace(furnaceBlock);
 				furnace.on('open', () => {
 					if (furnace.outputItem()) {
-						furnace.takeOutput(() => {});
+						furnace.takeOutput(() => {
+							this.restoke(furnace, () => {
+								this.resupplyFurnace(furnace)
+							});
+						});
 					}
-					const fuel = furnace.fuelItem();
-					let fuelAmount = (inventoryDict['coal'] || 0) > 64 ? 64 : (inventoryDict['coal'] || 0);
-					if ((!fuel || fuel.count < 64) && inventoryDict["coal"] > 0) {
-						if (fuel && (fuel.count || 0) + fuelAmount > 64) {
-							fuelAmount = 64 - fuel.count;
-						}
-						//console.log(this.listItemsByRegEx(/^coal$/)[0], insertAmount);
-						//console.log(inventoryDict);
-						furnace.putFuel(
-							this.listItemsByRegEx(/^coal$/)[0],
-							null,
-							fuelAmount,
-							(err) => {
-								console.log("Put fuel", err)
-							},
-						);
+					else {
+						this.restoke(furnace, () => {
+							this.resupplyFurnace(furnace)
+						});
 					}
-					if (inventoryDict["iron_ore"]) {
-						let inputAmount = inventoryDict["iron_ore"];
-						const currentInput = furnace.inputItem();
-						if (currentInput) {
-							if (currentInput.count + inputAmount > 64) {
-								inputAmount = 64 - currentInput.count;
-							}
-						}
-						furnace.putInput(
-							this.listItemsByRegEx(/^iron_ore$/)[0],
-							null,
-							inputAmount,
-							(err) => {
-								console.log("Put input", err);
-							},
-						)
-					}
-					sleep(1000).then(() => {
-						furnace.close();
-						console.log('Finished smelting.');
-						this.stashNonEssentialInventory();
-					});
 				});
 				furnace.on('close', () => {
 					console.log('Furnace closed');
