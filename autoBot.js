@@ -25,9 +25,10 @@ To be successful it must:
 const autoBind = require('auto-bind');
 const mineflayer = require('mineflayer');
 const nbt = require('prismarine-nbt');
-const pathfinder = require('mineflayer-pathfinder').pathfinder;
-const Movements = require('mineflayer-pathfinder').Movements;
-const { GoalBlock, GoalNear, GoalGetToBlock } = require('mineflayer-pathfinder').goals;
+const pathfinder = require('./pathfinder/pathfinder').pathfinder;
+const Movements = require('./pathfinder/pathfinder').Movements;
+const { GoalBlock, GoalNear, GoalGetToBlock } = require('./pathfinder/pathfinder').goals;
+const { PlayerState } = require('prismarine-physics');
 const fs = require('fs');
 let config = JSON.parse(fs.readFileSync('autobot_config.json'));
 const minecraftData = require('minecraft-data');
@@ -147,6 +148,8 @@ class autoBot {
 		this.currentTask = null;
 		this.bot.once('spawn', this.botLoop);
 		this.bot.on('goal_reached', this.onGoalReached);
+		this.bot.on('excessive_break_time', this.onExcessiveBreakTime);
+		this.bot.on('path_update', this.onPathUpdate);
 		this.chestMap = {};
 	};
 
@@ -164,58 +167,33 @@ class autoBot {
 		}
 	}
 
-	bestHarvestTool(block) {
-		const availableTools = this.bot.inventory.items();
-		const effects = this.bot.entity.effects;
-		// Baseline is an empty hand, not Number.MAX_VALUE
-		let fastest = block.digTime(null, false, false, false, [], effects);
-		let bestTool = null;
-		for (const tool of availableTools) {
-			const enchants = (tool && tool.nbt) ? nbt.simplify(tool.nbt).Enchantments : [];
-			const digTime = block.digTime(tool ? tool.type : null, false, false, false, enchants, effects);
-			if (digTime < fastest) {
-				fastest = digTime;
-				bestTool = tool;
-			}
-		}
-		return bestTool;
-	}
-
 	botLoop() {
-		//console.log(this.bot);
 		this.mcData = minecraftData(this.bot.version);
 		this.defaultMove = new Movements(this.bot, this.mcData);
-		//this.defaultMove.allow1by1towers = false;
-		//this.defaultMove.maxDropDown = 1;
-		this.defaultMove.digCost = 2;
 		this.bot.pathfinder.setMovements(this.defaultMove);
-		// Overwrite a pathfinder function
-		this.bot.pathfinder.bestHarvestTool = this.bestHarvestTool;
 		this.recipe = require("prismarine-recipe")(this.bot.version).Recipe;
-		//this.bot.on("heldItemChanged", this.onHeldItemChanged);
-		// lookAt-Bot Code
-		//this.schedule = setInterval(this.stare, 50);
-		// lumberjack-Bot Code
 		// Wait two seconds before starting to make sure blocks are loaded
 		sleep(2000).then(() => {
-			//console.log(this.bot.inventory);
 			//this.harvestNearestTree();
 			//this.mineNearestCoalVein();
 			this.homePosition = this.setHomePosition();
+			this.currentTarget = this.homePosition;
+			this.lastPos = this.bot.entity.position.floored();
 			console.log(this.homePosition);
 			this.stashNonEssentialInventory();
 			//this.smeltOre();
+			//this.pickUpBrokenBlocks();
 		});
-		// Collect broken blocks
-		//this.pickUpBrokenBlocks();
 	}
 
 	onGoalReached (goal) {
 		console.log("Goal Reached!", goal, this.currentTask, this.bot.entity.position);
 		const goalVec3 = new Vec3(goal.x, goal.y, goal.z);
-		if (goalVec3.distanceTo(this.bot.entity.position) > goal.rangeSq) {
-			console.log("An error happened in attempting to reach the goal.");
-			this.harvestNearestTree();
+		const distanceFromGoal = Math.floor(goalVec3.distanceTo(this.bot.entity.position));
+		if (distanceFromGoal > (goal.rangeSq || 3)) {
+			console.log("An error happened in attempting to reach the goal. Distance", distanceFromGoal);
+			sleep(1000).then(this.harvestNearestTree);
+			return;
 		}
 		if (this.currentTask === 'cutTree') {
 			console.log(`Cutting tree from bottom up.`);
@@ -238,14 +216,64 @@ class autoBot {
 		}
 	}
 
-	onHeldItemChanged(heldItem) {
-		if (this.currentTask != 'crafting') {
-			const toolIds = this.missingTools();
-			if (toolIds.length > 0) {
-				this.bot.pathfinder.setGoal(null);
-				this.craftTools(this.mineNearestCoalVein);
-			}
+	onExcessiveBreakTime(block, breakTime) {
+		console.log(`Excessive break time (${breakTime}) trying to break ${block.displayName} at ${block.position}`);
+		if (this.currentTask === 'mineVein') {
+			this.bot.pathfinder.setGoal(null);
+			this.currentTask = 'stashing';
+			console.log('Excess break time forcing tool crafting. Mining Abandoned.');
+			this.craftTools(this.harvestNearestTree);
 		}
+	}
+
+	backupBot(callback) {
+		this.bot.setControlState('back', true);
+		sleep(350).then(() => {
+			this.bot.clearControlStates();
+			callback();
+		});
+	}
+
+	onPathUpdate(results) {
+		//console.log("Path Updated. Results: ", results);
+		//console.log(`Path hash: ${results.path.map(i => i.hash).join(';')}`);
+		if (results.status === 'timeout') {
+			//console.log(`Path hash: ${results.path.map(i => i.hash).join(';')}`);
+			const localPathHash = results.path.map(i => i.hash).join(';');
+			if (this.pathHash === localPathHash) {
+				this.repeatedPathTimeouts += 1;
+			}
+			else {
+				this.repeatedPathTimeouts = 0;
+			}
+			this.pathHash = localPathHash;
+			// If we're stuck for 10 seconds
+			if (this.bot.entity.position.floored().equals(this.lastPos)) {
+				if ((Date.now() - this.lastMoveTime) > 10000) {
+					console.log('Have not moved for ten seconds.');
+					this.bot.pathfinder.setGoal(null);
+					sleep(350).then(() => {
+						this.backupBot(this.harvestNearestTree);
+					});
+					return;
+				}
+			}
+			else {
+				this.lastMoveTime = Date.now();
+			}
+			if (this.repeatedPathTimeouts > 10) {
+				if (results.path.length > 2) {
+					console.log(`Looks like the bot is stuck: ${this.pathHash}`);
+					this.bot.pathfinder.setGoal(null);					
+					sleep(350).then(() => {
+						this.backupBot(this.harvestNearestTree);
+					});
+					return;
+				}
+			}
+			//console.log(`Path hash: ${results.path.map(i => i.hash).join(';')}`);
+		}
+		this.lastPos = this.bot.entity.position.floored();
 	}
 
 	stare() {
@@ -630,7 +658,7 @@ class autoBot {
 		if (current) {
 			//console.log(`Crafting ${this.mcData.items[current.id].displayName}`);
 			if (this.haveIngredient(current.id, current.count)) {
-				//console.log("Skipping");
+				console.log(`Already have ${current.count} ${this.mcData.items[current.id].displayName}(s)`);
 				this.autoCraftNext(remainder, callback);
 				return;
 			}
@@ -638,6 +666,7 @@ class autoBot {
 			if (!recipe) {
 				recipe = this.findUsableRecipe(current.id);
 				if (!recipe) {
+					console.log(`Can't craft ${this.mcData.items[current.id].displayName} because there is no usable recipe`);
 					callback(false);
 					return;
 				}
@@ -666,6 +695,7 @@ class autoBot {
 				}
 				console.log("Found one:", craftingTable.position);
 				const p = craftingTable.position;
+				this.currentTarget = p;
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				this.currentTask = "crafting";
 				this.callback = () => {
@@ -766,7 +796,12 @@ class autoBot {
 				this.bot.placeBlock(
 					referenceBlock,
 					placementVector,
-					() => { callBack(); }
+					(err) => {
+						if (err) {
+							console.log(err);
+						}
+						callBack();
+					}
 				)
 			}
 		);
@@ -926,6 +961,7 @@ class autoBot {
 			new Vec3(0, 0, 1),
 			new Vec3(0, 0, -1)
 		];
+		/*
 		let crown = true;
 		// Check above the top
 		for (var s = 0; s < sides.length; s++) {
@@ -950,6 +986,7 @@ class autoBot {
 				}
 			}	
 		}
+		*/
 		const tree = Array();
 		for (var i = bottom.y; i <= top.y; i++) {
 			const block = this.bot.blockAt(new Vec3(bottom.x, i, bottom.z));
@@ -962,11 +999,17 @@ class autoBot {
 		// This list is sorted by distance
 		const logTypes = this.listOfLogs();
 		//console.log(logTypes);
-		const logs = this.bot.findBlocks({
+		let logs = this.bot.findBlocks({
 			point: this.homePosition,
 			matching: logTypes,
 			maxDistance: 128,
 			count: 100
+		});
+		// resort to distance from bot
+		logs = logs.sort((a, b) => {
+			const distA = this.bot.entity.position.distanceTo(new Vec3(a.x, a.y, a.z));
+			const distB = this.bot.entity.position.distanceTo(new Vec3(b.x, b.y, b.z));
+			return distA - distB;
 		});
 		//console.log('Nearby logs are: ', logs);
 		// Discriminate between trees and non-trees
@@ -977,8 +1020,9 @@ class autoBot {
 				return tree;
 			}
 		}
-		// If no valid trees were found, return false
-		return false;
+		// If no valid trees were found, return one log
+		console.log("No trees, cutting random log. I hope it's not someone's house.");
+		return [this.bot.blockAt(logs[0])];
 	}
 
 	equipAxe(callback) {
@@ -1029,6 +1073,7 @@ class autoBot {
 		// Go to a tree and cut it down
 		this.remainder = tree;
 		const p = tree[0].position;
+		this.currentTarget = p;
 		const goal = new GoalGetToBlock(p.x, p.y, p.z);
 		this.bot.pathfinder.setGoal(goal);
 	}
@@ -1086,8 +1131,14 @@ class autoBot {
 		this.remainder = drops.slice(1, drops.length);
 		if (current) {
 			const itemId = current.metadata[7].itemId;
-			console.log(`Picking Up:`, this.mcData.items[itemId].displayName);
+			if (itemId) {
+				console.log(`Picking Up:`, this.mcData.items[itemId].displayName);
+			}
+			else {
+				console.log(`Picking Up:`, current);
+			}
 			const p = current.position;
+			this.currentTarget = p;
 			const goal = new GoalBlock(p.x, p.y, p.z);
 			this.bot.pathfinder.setGoal(goal);
 		}
@@ -1439,11 +1490,19 @@ class autoBot {
 					this.bot.equip(
 						furnace,
 						'hand',
-						() => {
+						(err) => {
+							if (err) {
+								console.log(err);
+							}
 							this.bot.placeBlock(
 								referenceBlock,
 								placementVector,
-								() => { this.smeltOre(); }
+								(err) => {
+									if (err) {
+										console.log(err);
+									}
+									this.smeltOre();
+								}
 							)
 						}
 					);
@@ -1599,7 +1658,7 @@ class autoBot {
 			return false;
 		}
 		// Resort by Y highest to lowest.
-		coalBlocks = coalBlocks.sort((a, b) => { return b.y - a.y });
+		//coalBlocks = coalBlocks.sort((a, b) => { return b.y - a.y });
 		return this.blockToVein(coalBlocks[0], [this.bot.blockAt(coalBlocks[0])]);
 	}
 
