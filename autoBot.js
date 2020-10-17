@@ -142,6 +142,7 @@ class autoBot {
 		this.defaultMove = null;
 		this.schedule = null;
 		this.currentTask = null;
+		this.badTargets = [];
 		this.bot.once('spawn', this.botLoop);
 		this.bot.on('goal_reached', this.onGoalReached);
 		this.bot.on('excessive_break_time', this.onExcessiveBreakTime);
@@ -245,8 +246,10 @@ class autoBot {
 		});
 	}
 
-	onBotStuck(goalProgress) {
+	onBotStuck(goalProgress, path, goal) {
 		console.log("Pathfinder indicates bot is stuck. Goal Progress: ", goalProgress);
+		console.log("Path: ", path);
+		this.badTargets.push(new Vec3(goal.x, goal.y, goal.z));
 		this.returnHome();
 	}
 
@@ -1622,6 +1625,13 @@ class autoBot {
 			matching: this.listBlocksByRegEx(/_ore$/),
 			maxDistance: 128,
 			count: 1000,
+		});
+		// filter bad targets
+		coalBlocks = coalBlocks.filter((p) => {
+			for (const badTarget of this.badTargets) {
+				if (p.equals(badTarget)) return false;
+			}
+			return true;
 		});
 		coalBlocks = coalBlocks.sort((a, b) => {
 			const distA = this.bot.entity.position.distanceTo(new Vec3(a.x, a.y, a.z));

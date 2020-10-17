@@ -213,14 +213,14 @@ function inject (bot) {
 
 		// Test if stuck
 		if (
-			goalProgress.position.equals(bot.entity.position.floored()) &&
+			goalProgress.position.distanceTo(bot.entity.position) < 2 &&
 			Date.now() > (goalProgress.timestamp + (goalProgress.threshold * 1000)) &&
 			!goalProgress.notified &&
 			stateGoal
 		) {
-			bot.emit('bot_stuck', goalProgress)
+			bot.emit('bot_stuck', goalProgress, path, stateGoal)
 			goalProgress.notified = true;
-			return
+			//return
 		}
 
 		if (path.length === 0) {
@@ -253,19 +253,19 @@ function inject (bot) {
 			if (!digging) {
 				digging = true
 				const b = nextPoint.toBreak.shift()
-				const block = bot.blockAt(new Vec3(b.x, b.y, b.z), false)
+				const block = bot.blockAt(new Vec3(b.x, b.y, b.z).floored(), false)
 				const tool = bot.pathfinder.bestHarvestTool(block)
 				const blockBreakTime = breakTime(block, tool);
 				goalProgress.threshold = (blockBreakTime / 1000) + 10;
 				// Break time is in ms; Emit a message when breaking will take more than 3 seconds
-				if (Math.floor(blockBreakTime) > 3000) {
+				if (blockBreakTime > 3000) {
 					bot.emit('excessive_break_time', block, blockBreakTime);
 				}
 				fullStop()
 				bot.equip(tool, 'hand', function () {
 					bot.dig(block, function (err) {
 						lastNodeTime = performance.now()
-						if (err) resetPath()
+						if (err) resetPath(false)
 						digging = false
 					})
 				})
@@ -320,6 +320,7 @@ function inject (bot) {
 		if ((dx * dx + dz * dz) <= 0.15 * 0.15 && (bot.entity.onGround || bot.entity.isInWater)) {
 			// arrived at next point
 			if (!goalProgress.position.equals(bot.entity.position.floored())) {
+				console.log('+');
 				setGoalProgress();
 			}
 			lastNodeTime = performance.now()
