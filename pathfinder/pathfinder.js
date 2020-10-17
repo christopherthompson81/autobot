@@ -46,6 +46,19 @@ function inject (bot) {
 	let placingBlock = null
 	let thinking = false
 	let lastNodeTime = performance.now()
+	const goalProgress = {
+		timestamp: Date.now(),
+		position: new Vec3(0, 0, 0),
+		threshold: 10,
+		notified: false,
+	};
+
+	function setGoalProgress() {
+		goalProgress.timestamp = Date.now();
+		goalProgress.position = bot.entity.position.floored();
+		goalProgress.threshold = 10;
+		goalProgress.notified = false;
+	}
 
 	function resetPath (clearStates = true) {
 		path = []
@@ -57,6 +70,7 @@ function inject (bot) {
 	}
 
 	bot.pathfinder.setGoal = function (goal, dynamic = false) {
+		setGoalProgress();
 		stateGoal = goal
 		dynamicGoal = dynamic
 		resetPath()
@@ -197,6 +211,18 @@ function inject (bot) {
 			resetPath()
 		}
 
+		// Test if stuck
+		if (
+			goalProgress.position.equals(bot.entity.position.floored()) &&
+			Date.now() > (goalProgress.timestamp + (goalProgress.threshold * 1000)) &&
+			!goalProgress.notified &&
+			stateGoal
+		) {
+			bot.emit('bot_stuck', goalProgress)
+			goalProgress.notified = true;
+			return
+		}
+
 		if (path.length === 0) {
 			lastNodeTime = performance.now()
 			if (stateGoal && stateMovements && !thinking) {
@@ -230,6 +256,7 @@ function inject (bot) {
 				const block = bot.blockAt(new Vec3(b.x, b.y, b.z), false)
 				const tool = bot.pathfinder.bestHarvestTool(block)
 				const blockBreakTime = breakTime(block, tool);
+				goalProgress.threshold = (blockBreakTime / 1000) + 10;
 				// Break time is in ms; Emit a message when breaking will take more than 3 seconds
 				if (Math.floor(blockBreakTime) > 3000) {
 					bot.emit('excessive_break_time', block, blockBreakTime);
@@ -292,6 +319,9 @@ function inject (bot) {
 		const dz = nextPoint.z - p.z
 		if ((dx * dx + dz * dz) <= 0.15 * 0.15 && (bot.entity.onGround || bot.entity.isInWater)) {
 			// arrived at next point
+			if (!goalProgress.position.equals(bot.entity.position.floored())) {
+				setGoalProgress();
+			}
 			lastNodeTime = performance.now()
 			path.shift()
 			if (path.length === 0) { // done

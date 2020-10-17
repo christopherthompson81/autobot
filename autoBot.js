@@ -28,14 +28,9 @@ const nbt = require('prismarine-nbt');
 const pathfinder = require('./pathfinder/pathfinder').pathfinder;
 const Movements = require('./pathfinder/pathfinder').Movements;
 const { GoalBlock, GoalNear, GoalGetToBlock } = require('./pathfinder/pathfinder').goals;
-const { PlayerState } = require('prismarine-physics');
 const fs = require('fs');
 let config = JSON.parse(fs.readFileSync('autobot_config.json'));
 const minecraftData = require('minecraft-data');
-const { exit, nextTick } = require('process');
-const { timeStamp } = require('console');
-const { SlowBuffer } = require('buffer');
-const { cachedDataVersionTag } = require('v8');
 const Vec3 = require('vec3').Vec3
 
 const armorSlots = {
@@ -134,12 +129,13 @@ function sleep(ms) {
 }
 
 class autoBot {
-	constructor() {
+	constructor(botId) {
+		botId = !botId ? '' : '_' + botId.toString();
 		autoBind(this);
 		this.bot = mineflayer.createBot({
 			host: config.host,
 			port: config.port,
-			username: config.username,
+			username: `${config.username}${botId}`,
 			password: config.password
 		});
 		this.bot.loadPlugin(pathfinder);
@@ -149,7 +145,7 @@ class autoBot {
 		this.bot.once('spawn', this.botLoop);
 		this.bot.on('goal_reached', this.onGoalReached);
 		this.bot.on('excessive_break_time', this.onExcessiveBreakTime);
-		this.bot.on('path_update', this.onPathUpdate);
+		this.bot.on('bot_stuck', this.onBotStuck);
 		this.chestMap = {};
 	};
 
@@ -173,16 +169,18 @@ class autoBot {
 		this.bot.pathfinder.setMovements(this.defaultMove);
 		this.recipe = require("prismarine-recipe")(this.bot.version).Recipe;
 		// Wait two seconds before starting to make sure blocks are loaded
-		sleep(2000).then(() => {
-			//this.harvestNearestTree();
-			//this.mineNearestCoalVein();
-			this.homePosition = this.setHomePosition();
-			this.currentTarget = this.homePosition;
-			this.lastPos = this.bot.entity.position.floored();
-			console.log(this.homePosition);
-			this.stashNonEssentialInventory();
-			//this.smeltOre();
-			//this.pickUpBrokenBlocks();
+		this.bot.waitForChunksToLoad(() => {
+			console.log('Waiting for 5 seconds to allow world to load.');
+			sleep(5000).then(() => {
+				this.homePosition = this.setHomePosition();
+				this.currentTarget = this.homePosition;
+				console.log(`Home Position: ${this.homePosition}`);
+				//this.harvestNearestTree();
+				//this.mineNearestCoalVein();
+				this.stashNonEssentialInventory();
+				//this.smeltOre();
+				//this.pickUpBrokenBlocks();
+			});
 		});
 	}
 
@@ -192,7 +190,7 @@ class autoBot {
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(this.bot.entity.position));
 		if (distanceFromGoal > (goal.rangeSq || 3)) {
 			console.log("An error happened in attempting to reach the goal. Distance", distanceFromGoal);
-			sleep(1000).then(this.harvestNearestTree);
+			this.returnHome();
 			return;
 		}
 		if (this.currentTask === 'cutTree') {
@@ -234,46 +232,22 @@ class autoBot {
 		});
 	}
 
-	onPathUpdate(results) {
-		//console.log("Path Updated. Results: ", results);
-		//console.log(`Path hash: ${results.path.map(i => i.hash).join(';')}`);
-		if (results.status === 'timeout') {
-			//console.log(`Path hash: ${results.path.map(i => i.hash).join(';')}`);
-			const localPathHash = results.path.map(i => i.hash).join(';');
-			if (this.pathHash === localPathHash) {
-				this.repeatedPathTimeouts += 1;
-			}
-			else {
-				this.repeatedPathTimeouts = 0;
-			}
-			this.pathHash = localPathHash;
-			// If we're stuck for 10 seconds
-			if (this.bot.entity.position.floored().equals(this.lastPos)) {
-				if ((Date.now() - this.lastMoveTime) > 10000) {
-					console.log('Have not moved for ten seconds.');
-					this.bot.pathfinder.setGoal(null);
-					sleep(350).then(() => {
-						this.backupBot(this.harvestNearestTree);
-					});
-					return;
-				}
-			}
-			else {
-				this.lastMoveTime = Date.now();
-			}
-			if (this.repeatedPathTimeouts > 10) {
-				if (results.path.length > 2) {
-					console.log(`Looks like the bot is stuck: ${this.pathHash}`);
-					this.bot.pathfinder.setGoal(null);					
-					sleep(350).then(() => {
-						this.backupBot(this.harvestNearestTree);
-					});
-					return;
-				}
-			}
-			//console.log(`Path hash: ${results.path.map(i => i.hash).join(';')}`);
-		}
-		this.lastPos = this.bot.entity.position.floored();
+	returnHome() {
+		console.log("Returning to home position: ", this.homePosition);
+		this.bot.pathfinder.setGoal(null);
+		this.backupBot(() => {
+			const p = this.homePosition;
+			this.currentTarget = p;
+			this.currentTask = 'stashing';
+			this.callback = this.stashNonEssentialInventory;
+			const goal = new GoalNear(p.x, p.y, p.z, 3);
+			this.bot.pathfinder.setGoal(goal);
+		});
+	}
+
+	onBotStuck(goalProgress) {
+		console.log("Pathfinder indicates bot is stuck. Goal Progress: ", goalProgress);
+		this.returnHome();
 	}
 
 	stare() {
@@ -837,6 +811,7 @@ class autoBot {
 		}
 		else {
 			console.log("Could not create a crafting table because we lack the required resources.");
+			this.harvestNearestTree();
 		}
 	}
 
@@ -1062,7 +1037,7 @@ class autoBot {
 		else {
 			console.log('Finished cutting. Waiting for drops.');
 			this.currentTask = null;
-			sleep(1000).then(() => {
+			sleep(1500).then(() => {
 				console.log('Picking up uncollected blocks.');
 				this.pickUpBrokenBlocks();
 			});
@@ -1186,10 +1161,25 @@ class autoBot {
 		// Return a list of items in inventory that are non-essential (so as to stash them)
 		// Deductive. Get inventory and then remove essential items.
 		let inventory = this.bot.inventory.items();
-		// remove tools
-		const toolIds = this.getToolIds();
-		inventory = inventory.filter(item => !toolIds.includes(item.type));
-		// Then filter for essenatial
+		// Take out good tools, leave superfluous tools in
+		for (const tool of toolItems.names) {
+			let toolKeepCount = 2;
+			for (const material of toolItems.materials) {
+				if (toolKeepCount === 0) {
+					break;
+				}
+				inventory = inventory.filter(item => {
+					if (item.name === `${material}_${tool}` && toolKeepCount > 0) {
+						toolKeepCount--;
+						return false;
+					}
+					else {
+						return true;
+					}
+				});
+			}
+		}
+		// Then filter for essential
 		for (const eItem of essentialItems) {
 			const filtered = [];
 			let count = 0;
@@ -1307,6 +1297,7 @@ class autoBot {
 					console.log('Stashing callback.');
 					const chest = this.bot.openChest(chestToOpen);
 					chest.on('open', () => {
+						console.log('Chest opened.');
 						const itemsToStash = this.listNonEssentialInventory();
 						this.stashNext(chest, itemsToStash);
 					});
@@ -1437,7 +1428,7 @@ class autoBot {
 	smeltOre() {
 		const furnaceBlock = this.bot.findBlock({
 			point: this.homePosition,
-			matching: this.listBlocksByRegEx(/furnace$/),
+			matching: this.listBlocksByRegEx(/^(furnace|lit_furnace)$/),
 			maxDistance: 128
 		});
 		// Only stash to surface / near surface chests
