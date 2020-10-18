@@ -174,6 +174,7 @@ class autoBot {
 			console.log('Waiting for 5 seconds to allow world to load.');
 			sleep(5000).then(() => {
 				this.homePosition = this.setHomePosition();
+				//this.homePosition = new Vec3(180, 68, 160);
 				this.currentTarget = this.homePosition;
 				console.log(`Home Position: ${this.homePosition}`);
 				//this.harvestNearestTree();
@@ -191,6 +192,9 @@ class autoBot {
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(this.bot.entity.position));
 		if (distanceFromGoal > (goal.rangeSq || 3)) {
 			console.log("An error happened in attempting to reach the goal. Distance", distanceFromGoal);
+			if (this.currentTask === 'mining') {
+				this.badTargets.push(new Vec3(goal.x, goal.y, goal.z));
+			}
 			this.returnHome();
 			return;
 		}
@@ -249,6 +253,7 @@ class autoBot {
 	onBotStuck(goalProgress, path, goal) {
 		console.log("Pathfinder indicates bot is stuck. Goal Progress: ", goalProgress);
 		console.log("Path: ", path);
+		console.log("Goal: ", goal);
 		this.badTargets.push(new Vec3(goal.x, goal.y, goal.z));
 		this.returnHome();
 	}

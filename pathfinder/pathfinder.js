@@ -62,11 +62,15 @@ function inject (bot) {
 
 	function resetPath (clearStates = true) {
 		path = []
-		if (digging) bot.stopDigging()
-		digging = false
-		placing = false
 		pathUpdated = false
-		if (clearStates) { bot.clearControlStates() }
+		placing = false
+		if (digging) {
+			bot.stopDigging()
+		}
+		digging = false
+		if (clearStates) {
+			bot.clearControlStates()
+		}
 	}
 
 	bot.pathfinder.setGoal = function (goal, dynamic = false) {
@@ -253,10 +257,10 @@ function inject (bot) {
 			if (!digging) {
 				digging = true
 				const b = nextPoint.toBreak.shift()
-				const block = bot.blockAt(new Vec3(b.x, b.y, b.z).floored(), false)
+				const block = bot.blockAt(new Vec3(b.x, b.y, b.z), false)
 				const tool = bot.pathfinder.bestHarvestTool(block)
 				const blockBreakTime = breakTime(block, tool);
-				goalProgress.threshold = (blockBreakTime / 1000) + 10;
+				goalProgress.threshold += (blockBreakTime / 1000);
 				// Break time is in ms; Emit a message when breaking will take more than 3 seconds
 				if (blockBreakTime > 3000) {
 					bot.emit('excessive_break_time', block, blockBreakTime);
@@ -265,8 +269,13 @@ function inject (bot) {
 				bot.equip(tool, 'hand', function () {
 					bot.dig(block, function (err) {
 						lastNodeTime = performance.now()
-						if (err) resetPath(false)
-						digging = false
+						if (err) {
+							console.log("Digging error");
+							//resetPath();
+						}
+						else {
+							digging = false
+						}
 					})
 				})
 			}
