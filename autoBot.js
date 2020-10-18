@@ -190,7 +190,7 @@ class autoBot {
 		console.log("Goal Reached!", goal, this.currentTask, this.bot.entity.position);
 		const goalVec3 = new Vec3(goal.x, goal.y, goal.z);
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(this.bot.entity.position));
-		if (distanceFromGoal > (goal.rangeSq || 3)) {
+		if (distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3)) {
 			console.log("An error happened in attempting to reach the goal. Distance", distanceFromGoal);
 			if (this.currentTask === 'mining') {
 				this.badTargets.push(new Vec3(goal.x, goal.y, goal.z));
@@ -1666,6 +1666,71 @@ class autoBot {
 		// Resort by Y highest to lowest.
 		//coalBlocks = coalBlocks.sort((a, b) => { return b.y - a.y });
 		return this.blockToVein(coalBlocks[0], [this.bot.blockAt(coalBlocks[0])]);
+	}
+
+	findBestOreVein() {
+		let oreBlocks = this.bot.findBlocks({
+			point: this.homePosition,
+			matching: this.listBlocksByRegEx(/_ore$/),
+			maxDistance: 128,
+			count: 1000,
+		});
+		// filter bad targets
+		oreBlocks = oreBlocks.filter((p) => {
+			for (const badTarget of this.badTargets) {
+				if (p.equals(badTarget)) return false;
+			}
+			return true;
+		});
+		oreBlocks = oreBlocks.sort((a, b) => {
+			const distA = this.bot.entity.position.distanceTo(new Vec3(a.x, a.y, a.z));
+			const distB = this.bot.entity.position.distanceTo(new Vec3(b.x, b.y, b.z));
+			return distA - distB;
+		});
+		let nearby = [];
+		for (const p of oreBlocks) {
+			if (this.bot.entity.position.distanceTo(new Vec3(p.x, p.y, p.z)) < 5) {
+				nearby.push(p);
+			}
+		}
+		if (nearby.length > 0) {
+			console.log("Unmined ore close by. Cleaning it up.");
+			nearby = nearby.sort((a, b) => {
+				const distA = this.bot.entity.position.distanceTo(new Vec3(a.x, a.y, a.z));
+				const distB = this.bot.entity.position.distanceTo(new Vec3(b.x, b.y, b.z));
+				return distA - distB;
+			});
+			return this.blockToVein(nearby[0], [this.bot.blockAt(nearby[0])]);
+		}
+		// If no ore was found, return false
+		if (oreBlocks.length === 0) {
+			return false;
+		}
+		// Resort by Y highest to lowest.
+		//oreBlocks = oreBlocks.sort((a, b) => { return b.y - a.y });
+		// Resort by desireability highest to lowest. (eliminate ones we don't have tools for right now)
+		desirable = [
+			{
+				name: 'diamond',
+				minToolMaterial: 'iron',
+			},
+			{
+				name: 'emerald',
+				minToolMaterial: 'iron',
+			},
+			'gold',
+			'lapis',
+			'redstone',
+			'nether_gold',
+			'nether_quartz',
+			'iron',
+			'coal',
+		];
+		oreBlocks = oreBlocks.sort((a, b) => {
+
+			return b.y - a.y;
+		});
+		return this.blockToVein(oreBlocks[0], [this.bot.blockAt(oreBlocks[0])]);
 	}
 
 	havePickaxe() {
