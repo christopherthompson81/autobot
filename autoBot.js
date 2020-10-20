@@ -444,7 +444,7 @@ class autoBot {
 					*/
 					const parentQueue = this.getCraftingTree(
 						ingredient.id,
-						ingredient.count
+						ingredient.count * count
 					);
 					if (parentQueue) {
 						for (const item of parentQueue) {
@@ -1677,8 +1677,9 @@ class autoBot {
 			maxDistance: 128,
 			count: 1000,
 		});
-		// filter bad targets
+		// filter bad targets and y < 5 (Bots get stuck on unbreakables)
 		oreBlocks = oreBlocks.filter((p) => {
+			if (p.y < 5) return false;
 			for (const badTarget of this.badTargets) {
 				if (p.equals(badTarget)) return false;
 			}
@@ -1736,7 +1737,16 @@ class autoBot {
 			let rareBlocks = this.bot.findBlocks({
 				point: this.homePosition,
 				matching: [this.mcData.blocksByName.diamond_ore.id, this.mcData.blocksByName.emerald_ore.id],
-				maxDistance: 256,
+				maxDistance: 128,
+				count: 100
+			});
+			// filter bad targets and y < 5 (Bots get stuck on unbreakables)
+			rareBlocks = rareBlocks.filter((p) => {
+				if (p.y < 5) return false;
+				for (const badTarget of this.badTargets) {
+					if (p.equals(badTarget)) return false;
+				}
+				return true;
 			});
 			if (rareBlocks.length > 0) {
 				console.log(`Ooo! ${this.bot.blockAt(rareBlocks[0]).displayName}`);

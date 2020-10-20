@@ -6,4 +6,6 @@
 
 const autoBot = require("./autoBot.js");
 
-const myAutoBot = new autoBot();
+let botId = process.argv[2]
+
+const myAutoBot = new autoBot(botId);
