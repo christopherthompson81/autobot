@@ -1,3 +1,8 @@
+/*
+Pathfinder Library
+
+Exhibits issues in negative coordinates - investigate
+*/
 const { performance } = require('perf_hooks')
 
 const AStar = require('./lib/astar')

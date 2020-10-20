@@ -178,7 +178,7 @@ class autoBot {
 				this.currentTarget = this.homePosition;
 				console.log(`Home Position: ${this.homePosition}`);
 				//this.harvestNearestTree();
-				//this.mineNearestCoalVein();
+				//this.mineNearestOreVein();
 				this.stashNonEssentialInventory();
 				//this.smeltOre();
 				//this.pickUpBrokenBlocks();
@@ -790,6 +790,8 @@ class autoBot {
 	}
 
 	craftCraftingTable(callback) {
+		// TODO: This function doesn't actually make planks from logs if needed
+		//  Things only work normally because of the typical order of operations in auto-crafting tools
 		const craftingTableId = this.listItemsByRegEx(/^crafting_table$/)[0];
 		// If we have one, place it
 		if (this.haveIngredient(craftingTableId, 1)) {
@@ -866,7 +868,7 @@ class autoBot {
 				return;
 			}
 		}
-		//console.log("Calling autoCraftNext", craftingQueue);
+		console.log("Calling autoCraftNext", craftingQueue);
 		this.autoCraftNext(craftingQueue, callback);
 	}
 
@@ -1262,7 +1264,7 @@ class autoBot {
 					}
 					else {
 						console.log('Returning to mining.');
-						this.craftTools(this.mineNearestCoalVein);
+						this.craftTools(this.mineNearestOreVein);
 					}
 				}
 				else {
@@ -1359,7 +1361,7 @@ class autoBot {
 				}
 				else {
 					console.log('Returning to mining.');
-					this.craftTools(this.mineNearestCoalVein);
+					this.craftTools(this.mineNearestOreVein);
 				}
 			}
 			else {
@@ -1709,26 +1711,51 @@ class autoBot {
 		// Resort by Y highest to lowest.
 		//oreBlocks = oreBlocks.sort((a, b) => { return b.y - a.y });
 		// Resort by desireability highest to lowest. (eliminate ones we don't have tools for right now)
-		desirable = [
-			{
-				name: 'diamond',
-				minToolMaterial: 'iron',
-			},
-			{
-				name: 'emerald',
-				minToolMaterial: 'iron',
-			},
-			'gold',
-			'lapis',
-			'redstone',
-			'nether_gold',
-			'nether_quartz',
-			'iron',
-			'coal',
+		const desirable = [
+			'diamond_ore',
+			'emerald_ore',
+			'gold_ore',
+			'lapis_ore',
+			'redstone_ore',
+			'nether_gold_ore',
+			'nether_quartz_ore',
+			'iron_ore',
+			'coal_ore',
 		];
+		const items = Object.keys(this.getInventoryDictionary());
+		const harvestable = [];
+		for (const material of desirable) {
+			const harvestTools = Object.keys(this.mcData.blocksByName[material].harvestTools);
+			const currentlyHarvestable = harvestTools.some(r => items.indexOf(r) >= 0);
+			if (currentlyHarvestable) {
+				harvestable.push(material);
+			}
+		}
+		// if harvestable includes diamond or emerald, make a special check for those.
+		if (harvestable.includes('diamond_ore') || harvestable.includes('emerald_ore')) {
+			let rareBlocks = this.bot.findBlocks({
+				point: this.homePosition,
+				matching: [this.mcData.blocksByName.diamond_ore.id, this.mcData.blocksByName.emerald_ore.id],
+				maxDistance: 256,
+			});
+			if (rareBlocks.length > 0) {
+				console.log(`Ooo! ${this.bot.blockAt(rareBlocks[0]).displayName}`);
+				return this.blockToVein(rareBlocks[0], [this.bot.blockAt(rareBlocks[0])]);
+			}
+		}
+		oreBlocks = oreBlocks.filter((p) => {
+			if (harvestable.includes(this.bot.blockAt(p).name)) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		});
+		// Sort by desireability - low index first
 		oreBlocks = oreBlocks.sort((a, b) => {
-
-			return b.y - a.y;
+			const indexA = desirable.indexOf(this.bot.blockAt(a).name);
+			const indexB = desirable.indexOf(this.bot.blockAt(b).name);
+			return indexA - indexB;
 		});
 		return this.blockToVein(oreBlocks[0], [this.bot.blockAt(oreBlocks[0])]);
 	}
@@ -1835,9 +1862,10 @@ class autoBot {
 		this.bot.pathfinder.setGoal(goal);
 	}
 
-	mineNearestCoalVein() {
+	mineNearestOreVein() {
 		this.currentTask = 'mineVein';
-		const vein = this.findNearestCoalVein();
+		//const vein = this.findNearestCoalVein();
+		const vein = this.findBestOreVein();
 		if (vein) {
 			console.log("Mining Vein: ", vein[0].position);
 			this.mineVein(vein);
