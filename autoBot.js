@@ -108,21 +108,21 @@ const essentialItems = [
 ];
 
 // reversable compressable items will cause an infinite recipe loop, so detect and break on them
-const compressableItems = [
-	'bone_meal',
-	'coal',
-	'diamond',
-	'dried_kelp',
-	'emerald',
-	'gold_ingot',
-	'gold_nugget',
-	'iron_ingot',
-	'iron_nugget',
-	'lapis_lazuli',
-	'nether_wart',
-	'redstone',
-	'wheat',
-];
+const compressableItems = {
+	bone_meal: "bone_block",
+	coal: "coal_block",
+	diamond: "diamond_block",
+	dried_kelp: "dried_kelp_block",
+	emerald: "emerald_block",
+	gold_ingot: "gold_block",
+	gold_nugget: "gold_ingot",
+	iron_ingot: "iron_block",
+	iron_nugget: "iron_ingot",
+	lapis_lazuli: "lapis_block",
+	nether_wart: "nether_wart_block",
+	redstone: "redstone_block",
+	wheat: "hay_block",
+};
 
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
@@ -417,7 +417,7 @@ class autoBot {
 		//console.log(`Has ${recipes.length} recipes`);
 		// Treat compressables as having no recipe
 		//console.log(compressableItems.includes(this.mcData.items[itemId].name), this.mcData.items[itemId].name);
-		if (recipes.length == 0 || compressableItems.includes(this.mcData.items[itemId].name)) {
+		if (recipes.length == 0 || Object.keys(compressableItems).includes(this.mcData.items[itemId].name)) {
 			// No recipe means the item needs to be acquired
 			//console.log(`${this.mcData.items[itemId].name} must be acquired.`);
 			const disposition = this.haveIngredient(itemId, count) ? "possess" : "missing";
@@ -641,7 +641,10 @@ class autoBot {
 		const remainder = craftingQueue.slice(1, craftingQueue.length);
 		if (current) {
 			//console.log(`Crafting ${this.mcData.items[current.id].displayName}`);
-			if (this.haveIngredient(current.id, current.count)) {
+			if (
+				this.haveIngredient(current.id, current.count) &&
+				remainder.length > 0
+			) {
 				console.log(`Already have ${current.count} ${this.mcData.items[current.id].displayName}(s)`);
 				this.autoCraftNext(remainder, callback);
 				return;
@@ -1278,11 +1281,54 @@ class autoBot {
 		}
 	}
 
+	compressNext(compressList, callback) {
+		const current = compressList[0];
+		const remainder = compressList.slice(1, compressList.length);
+		if (current) {
+			console.log(`Compressing to ${this.mcData.items[current.id].displayName}`);
+			this.autoCraft(current.id, current.count, (success) => {
+				sleep(100).then(() => {
+					this.compressNext(remainder, callback);
+				});
+			});	
+		}
+		else {
+			callback(true);
+		}
+	}
+
+	getCompressList() {
+		const inventoryDict = this.getInventoryDictionary()
+		const compressList = [];
+		for (const item in inventoryDict) {
+			if (Object.keys(compressableItems).includes(item)) {
+				if (inventoryDict[item] >= 9) {
+					const targetId = this.mcData.itemsByName[compressableItems[item]].id;
+					compressList.push({
+						id: targetId,
+						count: Math.floor(inventoryDict[item] / 9),
+					});
+				}
+			}
+		}
+		return compressList;
+	}
+
+	compressItems(compressList) {
+		this.compressNext(compressList, this.stashNonEssentialInventory);
+	}
+
 	stashNonEssentialInventory() {
 		if (this.checkInventoryToStash()) {
 			const inventoryDict = this.getInventoryDictionary();
 			if (this.currentTask != 'smelting' && inventoryDict['iron_ore']) {
 				this.smeltOre();
+				return;
+			}
+			// Do compressables before stashing
+			const compressList = this.getCompressList();
+			if (compressList.length > 0) {
+				this.compressItems(compressList);
 				return;
 			}
 			console.log("Stashing non-essential inventory");
