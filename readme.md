@@ -7,8 +7,11 @@ Autobot currently only implements the following behaviours:
 * Autonomous crafting including locating or crafting a crafting table
 * Locating and cutting down trees
 * Locating and mining ore veins
+	* Prioritizing by desirability or closeness
 * Collecting nearby drops on the ground
 * Stashing excess items by crafting and placing a chest
+	* Item Compression (coal to coal_block)
+* Ore Smelting with a furnace (restoke fuel, deposit inputs, collect outputs)
 * Picking the right tool for the current task
 
 The Intended development roadmap (in chronological order) is:
@@ -21,12 +24,12 @@ The Intended development roadmap (in chronological order) is:
 ## Running
 
 ### Server:
-* PaperMC - Tested using build 185 (Client/Server 1.16.2)
+* Vanilla - Tested using Client/Server 1.16.3
 * Set online mode to false
 
 To launch the server, use:
 
-	java -Xms2G -Xmx2G -jar paper-185.jar
+	java -Xms2G -Xmx2G -jar server.jar
 
 ### Client
 

@@ -1157,6 +1157,7 @@ class autoBot {
 	 * * Find chests
 	 * * Craft & place chests
 	 * * Empty unneeded items into chests
+	 * * Compress items
 	 * * Optimize and stort chest storage
 	 * * Minimize chest diversity
 	 * * Label single-type chests with a sign using the displayName for that item type
