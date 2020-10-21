@@ -442,9 +442,11 @@ class autoBot {
 						console.log(`${itemId} missing ingredients:`, ingredients)
 					}
 					*/
+					// I'm not sure what the best way to do this is yet
 					const parentQueue = this.getCraftingTree(
 						ingredient.id,
-						ingredient.count * count
+						//Math.ceil(Math.abs(ingredient.count) * count / recipe.result.count)
+						Math.abs(ingredient.count) * count
 					);
 					if (parentQueue) {
 						for (const item of parentQueue) {
@@ -681,7 +683,7 @@ class autoBot {
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				this.currentTask = "crafting";
 				this.callback = () => {
-					this.bot.craft(recipe, current.count, craftingTable, (err) => {
+					this.bot.craft(recipe, Math.ceil(current.count / recipe.result.count), craftingTable, (err) => {
 						if (err) {
 							console.log(err, JSON.stringify(recipe), current.count, craftingTable);
 							callback(false);
