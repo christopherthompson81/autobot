@@ -1767,6 +1767,7 @@ class autoBot {
 			const indexB = desirable.indexOf(this.bot.blockAt(b).name);
 			return indexA - indexB;
 		});
+		console.log(`Mining a(n) ${this.bot.blockAt(oreBlocks[0]).displayName} vein`)
 		return this.blockToVein(oreBlocks[0], [this.bot.blockAt(oreBlocks[0])]);
 	}
 
