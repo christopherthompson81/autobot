@@ -30,3 +30,4 @@ I think I'm going to have to fork mineflayer-pathfinder (hopefully resulting in 
 
 
 * difficulty with gravel
+* dry out both water and lava lakes

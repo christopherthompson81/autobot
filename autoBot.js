@@ -1021,7 +1021,7 @@ class autoBot {
 			}
 			else {
 				console.log("Hand: ", hand.displayName);
-				const regex = RegExp(`axe$`, "i");
+				const regex = RegExp(`_axe$`, "i");
 				const axes = this.listItemsByRegEx(regex);
 				if (!axes.includes(hand.type)) {
 					this.autoCraft(586, 1, () => {

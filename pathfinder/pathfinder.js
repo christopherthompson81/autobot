@@ -220,18 +220,6 @@ function inject (bot) {
 			resetPath()
 		}
 
-		// Test if stuck
-		if (
-			goalProgress.position.distanceTo(bot.entity.position) < 2 &&
-			Date.now() > (goalProgress.timestamp + (goalProgress.threshold * 1000)) &&
-			!goalProgress.notified &&
-			stateGoal
-		) {
-			bot.emit('bot_stuck', goalProgress, path, stateGoal)
-			goalProgress.notified = true;
-			//return
-		}
-
 		if (path.length === 0) {
 			lastNodeTime = performance.now()
 			if (stateGoal && stateMovements && !thinking) {
@@ -253,8 +241,24 @@ function inject (bot) {
 			return
 		}
 
+		// Test if stuck
+		if (
+			goalProgress.position.distanceTo(bot.entity.position) < 2 &&
+			Date.now() > (goalProgress.timestamp + (goalProgress.threshold * 1000)) &&
+			!goalProgress.notified &&
+			stateGoal
+		) {
+			bot.emit('bot_stuck', goalProgress, path, stateGoal)
+			goalProgress.notified = true;
+			//return
+		}
+
 		let nextPoint = path[0]
 		const p = bot.entity.position
+
+		if (nextPoint === undefined) {
+			return
+		}
 
 		// Handle digging
 		if (digging || nextPoint.toBreak.length > 0) {
