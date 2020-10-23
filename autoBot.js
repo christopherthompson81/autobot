@@ -1596,21 +1596,27 @@ class autoBot {
 		const inventoryDictionary = this.getInventoryDictionary();
 		for (const tool of toolItems.names) {
 			let toolId;
-			if (inventoryDictionary[`iron_${tool}`]) {
+			let toolCount = 0;
+			for (const item in inventoryDictionary) {
+				if (item.match(new RegExp(`_${tool}`))) {
+					toolCount += inventoryDictionary[item];
+				}
+			}
+			if (inventoryDictionary[`iron_${tool}`] && toolCount >= 2) {
 				continue;
 			}
 			else if (inventoryDictionary.iron_ingot > 3) {
 				const regex = new RegExp(`iron_${tool}`);
 				toolId = this.listItemsByRegEx(regex)[0];
 			}
-			else if (inventoryDictionary[`stone_${tool}`]) {
+			else if (inventoryDictionary[`stone_${tool}`] && toolCount >= 2) {
 				continue;
 			}
 			else if (inventoryDictionary.cobblestone > 3) {
 				const regex = new RegExp(`stone_${tool}`);
 				toolId = this.listItemsByRegEx(regex)[0];
 			}
-			else if (inventoryDictionary[`wooden_${tool}`]) {
+			else if (inventoryDictionary[`wooden_${tool}`] && toolCount >= 2) {
 				continue;
 			}
 			else {
@@ -1845,7 +1851,7 @@ class autoBot {
 			return distA - distB;
 		});
 		const targetBlock = this.bot.blockAt(oreBlocks[0]);
-		console.log(`Mining a(n) ${targetBlock.displayName} vein. Distance: ${this.bot.entity.position.distanceTo(oreBlocks[0])}`);
+		console.log(`Mining a(n) ${targetBlock.displayName} vein. Distance: ${Math.floor(this.bot.entity.position.distanceTo(oreBlocks[0]))}`);
 		return this.blockToVein(oreBlocks[0], [targetBlock]);
 	}
 
