@@ -1772,8 +1772,6 @@ class autoBot {
 		if (oreBlocks.length === 0) {
 			return false;
 		}
-		// Resort by Y highest to lowest.
-		//oreBlocks = oreBlocks.sort((a, b) => { return b.y - a.y });
 		// Resort by desireability highest to lowest. (eliminate ones we don't have tools for right now)
 		const desirable = [
 			'ancient_debris',
@@ -1846,8 +1844,9 @@ class autoBot {
 			const distB = this.bot.entity.position.distanceTo(new Vec3(b.x, b.y, b.z));
 			return distA - distB;
 		});
-		console.log(`Mining a(n) ${this.bot.blockAt(oreBlocks[0]).displayName} vein`)
-		return this.blockToVein(oreBlocks[0], [this.bot.blockAt(oreBlocks[0])]);
+		const targetBlock = this.bot.blockAt(oreBlocks[0]);
+		console.log(`Mining a(n) ${targetBlock.displayName} vein. Distance: ${this.bot.entity.position.distanceTo(oreBlocks[0])}`);
+		return this.blockToVein(oreBlocks[0], [targetBlock]);
 	}
 
 	havePickaxe() {
