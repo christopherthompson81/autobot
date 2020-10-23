@@ -115,7 +115,6 @@ const compressableItems = {
 	dried_kelp: "dried_kelp_block",
 	emerald: "emerald_block",
 	gold_ingot: "gold_block",
-	gold_nugget: "gold_ingot",
 	iron_ingot: "iron_block",
 	iron_nugget: "iron_ingot",
 	lapis_lazuli: "lapis_block",
@@ -1777,6 +1776,7 @@ class autoBot {
 		//oreBlocks = oreBlocks.sort((a, b) => { return b.y - a.y });
 		// Resort by desireability highest to lowest. (eliminate ones we don't have tools for right now)
 		const desirable = [
+			'ancient_debris',
 			'diamond_ore',
 			'emerald_ore',
 			'gold_ore',
@@ -1796,11 +1796,18 @@ class autoBot {
 				harvestable.push(material);
 			}
 		}
-		// if harvestable includes diamond or emerald, make a special check for those.
-		if (harvestable.includes('diamond_ore') || harvestable.includes('emerald_ore')) {
+		// if harvestable includes ancient_debris, diamond, or emerald, make a special check for those.
+		if (
+			harvestable.includes('ancient_debris') ||
+			harvestable.includes('diamond_ore') ||
+			harvestable.includes('emerald_ore')) {
 			let rareBlocks = this.bot.findBlocks({
 				point: this.homePosition,
-				matching: [this.mcData.blocksByName.diamond_ore.id, this.mcData.blocksByName.emerald_ore.id],
+				matching: [
+					this.mcData.blocksByName.ancient_debris.id,
+					this.mcData.blocksByName.diamond_ore.id,
+					this.mcData.blocksByName.emerald_ore.id
+				],
 				maxDistance: 128,
 				count: 100
 			});
@@ -1830,6 +1837,14 @@ class autoBot {
 			const indexA = desirable.indexOf(this.bot.blockAt(a).name);
 			const indexB = desirable.indexOf(this.bot.blockAt(b).name);
 			return indexA - indexB;
+		});
+		// Filter for block type [0] and then sort for distance
+		const blockTypeZero = this.bot.blockAt(oreBlocks[0]).name;
+		oreBlocks = oreBlocks.filter(p => this.bot.blockAt(p).name === blockTypeZero);
+		oreBlocks = oreBlocks.sort((a, b) => {
+			const distA = this.bot.entity.position.distanceTo(new Vec3(a.x, a.y, a.z));
+			const distB = this.bot.entity.position.distanceTo(new Vec3(b.x, b.y, b.z));
+			return distA - distB;
 		});
 		console.log(`Mining a(n) ${this.bot.blockAt(oreBlocks[0]).displayName} vein`)
 		return this.blockToVein(oreBlocks[0], [this.bot.blockAt(oreBlocks[0])]);

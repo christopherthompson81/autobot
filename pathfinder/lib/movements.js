@@ -35,7 +35,12 @@ class Movements {
     this.blocksToAvoid.add(mcData.blocksByName.wheat.id)
     this.blocksToAvoid.add(mcData.blocksByName.lava.id)
     this.blocksToAvoid.add(mcData.blocksByName.chest.id)
+    this.blocksToAvoid.add(mcData.blocksByName.acacia_log.id)
+    this.blocksToAvoid.add(mcData.blocksByName.birch_log.id)
     this.blocksToAvoid.add(mcData.blocksByName.dark_oak_log.id)
+    this.blocksToAvoid.add(mcData.blocksByName.jungle_log.id)
+    this.blocksToAvoid.add(mcData.blocksByName.oak_log.id)
+    this.blocksToAvoid.add(mcData.blocksByName.spruce_log.id)
 
     this.liquids = new Set()
     this.liquids.add(mcData.blocksByName.water.id)
