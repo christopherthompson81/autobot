@@ -105,7 +105,17 @@ class Movements {
   }
 
   safeOrBreak (block, toBreak) {
-    if (block.safe) return 0
+    if (block.safe) {
+      // Fixing edge case.
+      // Handle ground is safe, but one up is blocked (assumption is planar, but maybe that's a bad assumption)
+      if (this.bot.entity.position.y === block.position.y) {
+        const blockUp = this.getBlock(block.position, 0, 1, 0);
+        if (this.safeToBreak(blockUp) && !blockUp.safe) {
+          toBreak.push(blockUp.position);
+        }
+      }
+      return 0
+    }
     if (!this.safeToBreak(block)) return 100 // Can't break, so can't move
     toBreak.push(block.position)
 
