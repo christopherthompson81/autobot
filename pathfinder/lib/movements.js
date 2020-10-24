@@ -22,6 +22,7 @@ class Movements {
 
     this.digCost = 1
     this.dontCreateFlow = true
+    this.dontCavitateGravityBlocks = true
     this.allow1by1towers = true
     this.allowFreeMotion = false
     this.allowParkour = true
@@ -29,22 +30,20 @@ class Movements {
     this.blocksCantBreak = new Set()
     this.blocksCantBreak.add(mcData.blocksByName.bedrock.id)
     this.blocksCantBreak.add(mcData.blocksByName.chest.id)
+    this.blocksCantBreak.add(mcData.blocksByName.spruce_log.id)
 
     this.blocksToAvoid = new Set()
     this.blocksToAvoid.add(mcData.blocksByName.fire.id)
     this.blocksToAvoid.add(mcData.blocksByName.wheat.id)
     this.blocksToAvoid.add(mcData.blocksByName.lava.id)
-    this.blocksToAvoid.add(mcData.blocksByName.chest.id)
-    this.blocksToAvoid.add(mcData.blocksByName.acacia_log.id)
-    this.blocksToAvoid.add(mcData.blocksByName.birch_log.id)
-    this.blocksToAvoid.add(mcData.blocksByName.dark_oak_log.id)
-    this.blocksToAvoid.add(mcData.blocksByName.jungle_log.id)
-    this.blocksToAvoid.add(mcData.blocksByName.oak_log.id)
-    this.blocksToAvoid.add(mcData.blocksByName.spruce_log.id)
 
     this.liquids = new Set()
     this.liquids.add(mcData.blocksByName.water.id)
     this.liquids.add(mcData.blocksByName.lava.id)
+
+    this.gravityBlocks = new Set()
+    this.gravityBlocks.add(mcData.blocksByName.gravel.id)
+    this.gravityBlocks.add(mcData.blocksByName.sand.id)
 
     this.scafoldingBlocks = []
     this.scafoldingBlocks.push(mcData.blocksByName.dirt.id)
@@ -82,12 +81,14 @@ class Movements {
       return {
         safe: false,
         physical: false,
-        liquid: false
+        liquid: false,
+        gravity: false,
       }
     }
     b.safe = b.boundingBox === 'empty' && !this.blocksToAvoid.has(b.type)
     b.physical = b.boundingBox === 'block'
     b.liquid = this.liquids.has(b.type)
+    b.gravity = this.gravityBlocks.has(b.type)
     return b
   }
 
@@ -100,6 +101,9 @@ class Movements {
       if (this.getBlock(block.position, 0, 0, -1).liquid) return false
       if (this.getBlock(block.position, 0, 0, 1).liquid) return false
     }
+    if (this.dontCavitateGravityBlocks) {
+      if (this.getBlock(block.position, 0, 1, 0).gravity) return false
+    }
     return block.type && !this.blocksCantBreak.has(block.type)
     // TODO: break exclusion areas
   }
@@ -110,7 +114,7 @@ class Movements {
       // Handle ground is safe, but one up is blocked (assumption is planar, but maybe that's a bad assumption)
       if (this.bot.entity.position.y === block.position.y) {
         const blockUp = this.getBlock(block.position, 0, 1, 0);
-        if (this.safeToBreak(blockUp) && !blockUp.safe) {
+        if (this.safeToBreak(blockUp) && blockUp.physical) {
           toBreak.push(blockUp.position);
         }
       }

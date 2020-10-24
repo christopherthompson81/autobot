@@ -1924,6 +1924,12 @@ class autoBot {
 			return;
 		}
 		if (current) {
+			if (!this.defaultMove.safeToBreak(current)) {
+				console.log('Target ore ${current.displayName} block is not safe to break. Skipping.');
+				this.badTargets.push(current.position.clone());
+				this.mineVeinNext(this.remainder);
+				return;
+			}
 			//console.log(`Current:`, current);
 			this.equipPickaxe(() => {
 				if (this.bot.entity.position.distanceTo(current.position) > 3) {
