@@ -1184,6 +1184,8 @@ class autoBot {
 		// Return a list of items in inventory that are non-essential (so as to stash them)
 		// Deductive. Get inventory and then remove essential items.
 		let inventory = this.bot.inventory.items();
+		// sort descending by count to handle issue of heterogenous competing items (prefer retaining biggest stack)
+		inventory = inventory.sort((a, b) => b.count - a.count);
 		// Take out good tools, leave superfluous tools in
 		for (const tool of toolItems.names) {
 			let toolKeepCount = 2;
@@ -1332,6 +1334,17 @@ class autoBot {
 		this.compressNext(compressList, this.stashNonEssentialInventory);
 	}
 
+	saveChestWindow(position, chestWindow) {
+		const p = position;
+		const posHash = p.x + ',' + p.y + ',' + p.z;
+		this.chestMap[posHash] = {
+			id: chestWindow.id,
+			type: chestWindow.type,
+			title: chestWindow.title,
+			slots: chestWindow.slots.slice(0, 53)
+		}
+	}
+
 	stashNonEssentialInventory() {
 		if (this.checkInventoryToStash()) {
 			const inventoryDict = this.getInventoryDictionary();
@@ -1370,6 +1383,8 @@ class autoBot {
 					const chest = this.bot.openChest(chestToOpen);
 					chest.on('open', () => {
 						console.log('Chest opened.');
+						//console.log('chestWindow: ', chest.window);
+						//console.log('chest.items(): ', chest.items());
 						const itemsToStash = this.listNonEssentialInventory();
 						this.stashNext(chest, itemsToStash);
 					});

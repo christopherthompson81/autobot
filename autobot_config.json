@@ -1,5 +1,5 @@
 {
-	"host": "localhost",
+	"host": "10.0.0.79",
 	"port": 25565,
 	"username": "autoBot",
 	"password": null,
