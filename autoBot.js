@@ -1361,7 +1361,13 @@ class autoBot {
 	saveChestWindow(position, chestWindow) {
 		const p = position;
 		const posHash = this.getPosHash(position);
-		const contents = chestWindow.slots.slice(0, 53);
+		let contents;
+		if (chestWindow.type === 'minecraft:generic_9x6') {
+			contents = chestWindow.slots.slice(0, 53);
+		}
+		else {
+			contents = chestWindow.slots.slice(0, 26);
+		}
 		this.chestMap[posHash] = {
 			id: chestWindow.id,
 			position: position,
