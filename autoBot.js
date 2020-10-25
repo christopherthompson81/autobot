@@ -141,6 +141,10 @@ class autoBot {
 		this.defaultMove = null;
 		this.schedule = null;
 		this.currentTask = null;
+		this.currentTarget = {
+			posHash: '',
+			errorCount: 0
+		};
 		this.badTargets = [];
 		this.bot.once('spawn', this.botLoop);
 		this.bot.on('goal_reached', this.onGoalReached);
@@ -199,10 +203,24 @@ class autoBot {
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(this.bot.entity.position));
 		if (distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3)) {
 			console.log("An error happened in attempting to reach the goal. Distance", distanceFromGoal);
-			if (this.currentTask === 'mining') {
-				this.badTargets.push(new Vec3(goal.x, goal.y, goal.z));
+			const goalPos = new Vec3(goal.x, goal.y, goal.z);
+			const posHash = goal.x + ',' + goal.y + ',' + goal.z;
+			if (this.currentTarget.posHash === posHash) {
+				this.currentTarget.errorCount++;
+				if (this.currentTarget.errorCount > 5) {
+					if (this.currentTask === 'mining') {
+						this.badTargets.push(goalPos.clone());
+					}
+					this.returnHome();
+					return
+				}
 			}
-			this.returnHome();
+			else {
+				this.currentTarget.posHash = posHash;
+				this.currentTarget.errorCount = 1;
+			}
+			//const newGoal = new GoalNear(goal.x, goal.y, goal.z, (Math.sqrt(goal.rangeSq) || 3));
+			this.backupBot(() => this.bot.pathfinder.setGoal(goal));
 			return;
 		}
 		if (this.currentTask === 'cutTree') {
@@ -1453,9 +1471,10 @@ class autoBot {
 		const inventoryDict = this.getInventoryDictionary();
 		const fuel = furnace.fuelItem();
 		let fuelAmount = (inventoryDict['coal'] || 0) > 64 ? 64 : (inventoryDict['coal'] || 0);
-		if ((!fuel || fuel.count < 64) && inventoryDict["coal"] > 0) {
-			if (fuel && (fuel.count || 0) + fuelAmount > 64) {
-				fuelAmount = 64 - fuel.count;
+		let fuelCount = fuel ? fuel.count : 0;
+		if (fuelCount < 64 && inventoryDict["coal"] > 0) {
+			if ((fuelCount + fuelAmount) > 64) {
+				fuelAmount = 64 - fuelCount;
 			}
 			if (fuelAmount > 0) {
 				//console.log(this.listItemsByRegEx(/^coal$/)[0], insertAmount);
@@ -1466,7 +1485,7 @@ class autoBot {
 					fuelAmount,
 					(err) => {
 						if (err) {
-							console.log("Put fuel", err)
+							console.log(`Put fuel (adding ${fuelAmount} coal to ${fuel.count}): `, err)
 						}
 						callback();
 					},
@@ -1754,16 +1773,18 @@ class autoBot {
 	}
 
 	findBestOreVein() {
+		// First handle nearby cleanup
 		let oreBlocks = this.bot.findBlocks({
 			point: this.homePosition,
 			matching: this.listBlocksByRegEx(/_ore$/),
 			maxDistance: 128,
-			count: 1000,
+			count: 10000,
 		});
 		// filter bad targets and y < 5 (Bots get stuck on unbreakables)
-		console.log(`Found ${oreBlocks.length}/1000 ore blocks in the search`);
+		//console.log(`Found ${oreBlocks.length}/1000 ore blocks in the search`);
 		oreBlocks = oreBlocks.filter((p) => {
 			if (p.y < 5) return false;
+			if (this.bot.entity.position.distanceTo(p) > 5) return false;
 			for (const badTarget of this.badTargets) {
 				if (p.equals(badTarget)) return false;
 			}
@@ -1774,24 +1795,9 @@ class autoBot {
 			const distB = this.bot.entity.position.distanceTo(new Vec3(b.x, b.y, b.z));
 			return distA - distB;
 		});
-		let nearby = [];
-		for (const p of oreBlocks) {
-			if (this.bot.entity.position.distanceTo(new Vec3(p.x, p.y, p.z)) < 5) {
-				nearby.push(p);
-			}
-		}
-		if (nearby.length > 0) {
+		if (oreBlocks.length > 0) {
 			console.log("Unmined ore close by. Cleaning it up.");
-			nearby = nearby.sort((a, b) => {
-				const distA = this.bot.entity.position.distanceTo(new Vec3(a.x, a.y, a.z));
-				const distB = this.bot.entity.position.distanceTo(new Vec3(b.x, b.y, b.z));
-				return distA - distB;
-			});
-			return this.blockToVein(nearby[0], [this.bot.blockAt(nearby[0])]);
-		}
-		// If no ore was found, return false
-		if (oreBlocks.length === 0) {
-			return false;
+			return this.blockToVein(oreBlocks[0], [this.bot.blockAt(oreBlocks[0])]);
 		}
 		// Resort by desireability highest to lowest. (eliminate ones we don't have tools for right now)
 		const desirable = [
@@ -1815,59 +1821,34 @@ class autoBot {
 				harvestable.push(material);
 			}
 		}
-		// if harvestable includes ancient_debris, diamond, or emerald, make a special check for those.
-		if (
-			harvestable.includes('ancient_debris') ||
-			harvestable.includes('diamond_ore') ||
-			harvestable.includes('emerald_ore')) {
-			let rareBlocks = this.bot.findBlocks({
+		for (const targetType of harvestable) {
+			oreBlocks = this.bot.findBlocks({
 				point: this.homePosition,
-				matching: [
-					this.mcData.blocksByName.ancient_debris.id,
-					this.mcData.blocksByName.diamond_ore.id,
-					this.mcData.blocksByName.emerald_ore.id
-				],
+				matching: this.mcData.blocksByName[targetType].id,
 				maxDistance: 128,
-				count: 100
+				count: 1000,
 			});
 			// filter bad targets and y < 5 (Bots get stuck on unbreakables)
-			rareBlocks = rareBlocks.filter((p) => {
+			console.log(`Found ${oreBlocks.length}/1000 ${targetType} blocks in the search`);
+			oreBlocks = oreBlocks.filter((p) => {
 				if (p.y < 5) return false;
 				for (const badTarget of this.badTargets) {
 					if (p.equals(badTarget)) return false;
 				}
 				return true;
 			});
-			if (rareBlocks.length > 0) {
-				console.log(`Ooo! ${this.bot.blockAt(rareBlocks[0]).displayName}`);
-				return this.blockToVein(rareBlocks[0], [this.bot.blockAt(rareBlocks[0])]);
+			oreBlocks = oreBlocks.sort((a, b) => {
+				const distA = this.bot.entity.position.distanceTo(new Vec3(a.x, a.y, a.z));
+				const distB = this.bot.entity.position.distanceTo(new Vec3(b.x, b.y, b.z));
+				return distA - distB;
+			});
+			if (oreBlocks.length > 0) {
+				const targetBlock = this.bot.blockAt(oreBlocks[0]);
+				console.log(`Mining a(n) ${targetBlock.displayName} vein. Distance: ${Math.floor(this.bot.entity.position.distanceTo(oreBlocks[0]))}`);
+				return this.blockToVein(oreBlocks[0], [targetBlock]);
 			}
 		}
-		oreBlocks = oreBlocks.filter((p) => {
-			if (harvestable.includes(this.bot.blockAt(p).name)) {
-				return true;
-			}
-			else {
-				return false;
-			}
-		});
-		// Sort by desireability - low index first
-		oreBlocks = oreBlocks.sort((a, b) => {
-			const indexA = desirable.indexOf(this.bot.blockAt(a).name);
-			const indexB = desirable.indexOf(this.bot.blockAt(b).name);
-			return indexA - indexB;
-		});
-		// Filter for block type [0] and then sort for distance
-		const blockTypeZero = this.bot.blockAt(oreBlocks[0]).name;
-		oreBlocks = oreBlocks.filter(p => this.bot.blockAt(p).name === blockTypeZero);
-		oreBlocks = oreBlocks.sort((a, b) => {
-			const distA = this.bot.entity.position.distanceTo(new Vec3(a.x, a.y, a.z));
-			const distB = this.bot.entity.position.distanceTo(new Vec3(b.x, b.y, b.z));
-			return distA - distB;
-		});
-		const targetBlock = this.bot.blockAt(oreBlocks[0]);
-		console.log(`Mining a(n) ${targetBlock.displayName} vein. Distance: ${Math.floor(this.bot.entity.position.distanceTo(oreBlocks[0]))}`);
-		return this.blockToVein(oreBlocks[0], [targetBlock]);
+		return false;
 	}
 
 	havePickaxe() {
@@ -1940,7 +1921,7 @@ class autoBot {
 		}
 		if (current) {
 			if (!this.defaultMove.safeToBreak(current)) {
-				console.log('Target ore ${current.displayName} block is not safe to break. Skipping.');
+				console.log(`Target ore ${current.displayName} block is not safe to break. Skipping.`);
 				this.badTargets.push(current.position.clone());
 				this.mineVeinNext(this.remainder);
 				return;
