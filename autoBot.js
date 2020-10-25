@@ -1408,9 +1408,83 @@ class autoBot {
 		}
 	}
 
+	digNext(digQueue, callback) {
+		const current = digQueue[0];
+		const remainder = digQueue.slice(1, digQueue.length);
+		if (current) {
+			const block = this.bot.blockAt(digQueue);
+			const tool = this.bot.pathfinder.bestHarvestTool(block);
+			this.bot.equip(tool, 'hand', () => {
+				this.bot.dig(block, (err) => {
+					if (err) {
+						console.log("Digging error");
+					}
+					this.digNext(remainder, callback)
+				});
+			});
+		}
+		else {
+			callback(true);
+		}
+	}
+
+	flattenCube(position, callback) {
+		const p = position;
+		// We need sufficient materials, otherwise fail. (9 dirt)
+		// Add target space dirt to inventory dirt
+		let dirtCount = this.getInventoryDictionary().dirt || 0;
+		for (let y = -1; y <= 1; y++) {
+			for (let x = -1; x <= 1; x++) {
+				for (let z = -1; z <= 1; z++) {
+					const scanBlock = this.bot.blockAt(p.offset(x, y, z));
+					dirtCount += scanBlock.name === 'dirt' ? 1 : 0;
+				}
+			}
+		}
+		if (dirtCount < 9) {
+			callback(false);
+			return;
+		}
+		// Set a goal of exactly standing inside the block at foot level.
+		const goal = new GoalBlock(p.x, p.y, p.z);
+		const clearPattern = [
+			// Body space
+			[0, 0, 0],
+			[0, 1, 0],
+			// Foot level
+			[0, 0, -1], // N
+			[1, 0, -1], // NE
+			[1, 0, 0], // E
+			[1, 0, 1], // SE
+			[0, 0, 1], // S
+			[-1, 0, 1], // SW
+			[-1, 0, 0], // W
+			[-1, 0, -1], // NW
+			// Eye-level
+			[0, 1, -1], // N
+			[1, 1, -1], // NE
+			[1, 1, 0], // E
+			[1, 1, 1], // SE
+			[0, 1, 1], // S
+			[-1, 1, 1], // SW
+			[-1, 1, 0], // W
+			[-1, 1, -1], // NW
+		]
+		const dirtPattern = [
+			[-1, -1, -1], // NW
+			[0, -1, -1], // N
+			[1, -1, -1], // NE
+			[-1, -1, 0], // W
+			[0, -1, 0], // center
+			[1, -1, 0], // E
+			[-1, -1, 1], // SW
+			[0, -1, 1], // S
+			[1, -1, 1], // SE
+		]
+	}
+
 	placeNewChest() {
 		/*
-		find existing chests. Keep grid if chests
 		home position is anchor; chest grid is interpreted
 		use a concentric growth pattern.
 		rings are: [
@@ -1419,7 +1493,8 @@ class autoBot {
 			[x -6, z -6 to x 6, z 6]
 			etc...
 		]
-		Y can be plus or minus one
+		craft chest if needed
+		flatten surface surrounding target block. (3x3x3 cube) bottom: dirt, middle: air, top: air
 		valid targets are:
 			* air
 			* block below having material "dirt" or "rock"
@@ -1432,8 +1507,7 @@ class autoBot {
 			[-1, 0, 0],
 		]
 		Opportunistically use direction as player standing position offset from target block.
-		TODO: flatten surface surrounding target block. (3x3x3 cube) bottom: dirt, middle: air, top: air
-		craft chest if needed
+		
 		set a goal to the player standing position, then place
 		*/
 		const chestId = this.listItemsByRegEx(/^chest$/)[0];
@@ -1543,12 +1617,25 @@ class autoBot {
 			// If we have logs, mine, if we don't lumberjack
 			const inventoryDict = this.getInventoryDictionary();
 			//console.log(inventoryDict, Object.keys(inventoryDict));
-			if (Object.keys(inventoryDict).some(id => id.match(/_log$/))) {
-				// Don't start mining without a full set of tools
+			let logCount = 0;
+			for (const item in inventoryDict) {
+				if (item.match(/_log$/)) {
+					logCount += inventoryDict[item];
+				}
+			}
+			if (logCount > 0) {
+				console.log(`Log Count: ${logCount}`);
 				const missingTools = this.missingTools();
+				// Don't start mining without a full set of tools
 				if (missingTools.length > 0) {
-					console.log('Returning to cutting trees because of missing tools.', missingTools);
-					this.craftTools(this.harvestNearestTree);
+					if (logCount > 32) {
+						// Do a stashing loop
+						this.craftTools(this.stashNonEssentialInventory);
+					}
+					else {
+						console.log('Returning to cutting trees because of missing tools.', missingTools);
+						this.craftTools(this.harvestNearestTree);
+					}
 				}
 				else {
 					console.log('Returning to mining.');
