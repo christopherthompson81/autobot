@@ -145,6 +145,7 @@ class autoBot {
 			posHash: '',
 			errorCount: 0
 		};
+		this.nearbyThreshold = 6;
 		this.badTargets = [];
 		this.bot.once('spawn', this.botLoop);
 		this.bot.on('goal_reached', this.onGoalReached);
@@ -281,6 +282,10 @@ class autoBot {
 		console.log("Goal: ", goal);
 		this.badTargets.push(new Vec3(goal.x, goal.y, goal.z));
 		this.returnHome();
+	}
+
+	getPosHash(p) {
+		return p.x + ',' + p.y + ',' + p.z;
 	}
 
 	stare() {
@@ -949,7 +954,7 @@ class autoBot {
 					bottom = block.position.clone().add(new Vec3(0, 1, 0));
 				}
 				else {
-					console.log(`Block: ${p} is not a tree because it does not have dirt below it's base`);
+					//console.log(`Block: ${p} is not a tree because it does not have dirt below it's base`);
 					return false;
 				}
 			}
@@ -965,18 +970,19 @@ class autoBot {
 					top = point.clone().subtract(new Vec3(0, 1, 0));
 				}
 				else {
-					console.log(`Block: ${p} is not a tree because it does not have leaves above it's top`);
+					//console.log(`Block: ${p} is not a tree because it does not have leaves above it's top`);
 					return false;
 				}
 			}
 		}
+		/*
 		const sides = [
 			new Vec3(1, 0, 0),
 			new Vec3(-1, 0, 0),
 			new Vec3(0, 0, 1),
 			new Vec3(0, 0, -1)
 		];
-		/*
+		
 		let crown = true;
 		// Check above the top
 		for (var s = 0; s < sides.length; s++) {
@@ -1018,7 +1024,7 @@ class autoBot {
 			point: this.homePosition,
 			matching: logTypes,
 			maxDistance: 128,
-			count: 100
+			count: 1000
 		});
 		// resort to distance from bot
 		logs = logs.sort((a, b) => {
@@ -1354,12 +1360,45 @@ class autoBot {
 
 	saveChestWindow(position, chestWindow) {
 		const p = position;
-		const posHash = p.x + ',' + p.y + ',' + p.z;
+		const posHash = this.getPosHash(position);
+		const contents = chestWindow.slots.slice(0, 53);
 		this.chestMap[posHash] = {
 			id: chestWindow.id,
+			position: position,
 			type: chestWindow.type,
 			title: chestWindow.title,
-			slots: chestWindow.slots.slice(0, 53)
+			slots: contents,
+			freeSlotCount: contents.filter((r) => r === null).length
+		}
+	}
+
+	findChest() {
+		for (const posHash in this.chestMap) {
+			const chest = this.chestMap[posHash];
+			if (chest.freeSlotCount > 0) {
+				console.log(`Known Chest: `, chest);
+				return this.bot.blockAt(chest.position);
+			}
+		}
+		let chestsToOpen = this.bot.findBlocks({
+			point: this.homePosition,
+			matching: this.listBlocksByRegEx(/^chest$/),
+			maxDistance: 128,
+			count: 100
+		});
+		// Only stash to surface / near surface chests
+		chestsToOpen = chestsToOpen.filter((r) => {
+			if (r.y < 60) return false;
+			for (const posHash in this.chestMap) {
+				if (r.equals(this.chestMap[posHash].position)) return false;
+			}
+			return true;
+		});
+		if (chestsToOpen.length > 0) {
+			return this.bot.blockAt(chestsToOpen[0]);
+		}
+		else {
+			return false;
 		}
 	}
 
@@ -1377,20 +1416,7 @@ class autoBot {
 				return;
 			}
 			console.log("Stashing non-essential inventory");
-			const chestsToOpen = this.bot.findBlocks({
-				point: this.homePosition,
-				matching: this.listBlocksByRegEx(/^chest$/),
-				maxDistance: 128,
-				count: 10
-			});
-			// Only stash to surface / near surface chests
-			let chestToOpen = null;
-			for (const point of chestsToOpen) {
-				if (point.y >= 60) {
-					chestToOpen = this.bot.blockAt(point);
-					break;
-				}
-			}
+			const chestToOpen = this.findChest();
 			if (chestToOpen) {
 				console.log("Chest found. Moving to: ", chestToOpen.position);
 				this.currentTask = 'stashing';
@@ -1401,6 +1427,13 @@ class autoBot {
 					const chest = this.bot.openChest(chestToOpen);
 					chest.on('open', () => {
 						console.log('Chest opened.');
+						this.saveChestWindow(chestToOpen.position, chest.window);
+						if (this.chestMap[this.getPosHash(chestToOpen.position)].freeSlotCount === 0) {
+							// TODO: Do something if this chest is full
+							console.log('Chest is full. Trying to find another');
+							this.stashNonEssentialInventory();
+							return;
+						}
 						//console.log('chestWindow: ', chest.window);
 						//console.log('chest.items(): ', chest.items());
 						const itemsToStash = this.listNonEssentialInventory();
@@ -1774,6 +1807,7 @@ class autoBot {
 
 	findBestOreVein() {
 		// First handle nearby cleanup
+		// Very large number of blocks returned because otherwise many nearby blocks will be overlooked
 		let oreBlocks = this.bot.findBlocks({
 			point: this.homePosition,
 			matching: this.listBlocksByRegEx(/_ore$/),
@@ -1784,7 +1818,7 @@ class autoBot {
 		//console.log(`Found ${oreBlocks.length}/1000 ore blocks in the search`);
 		oreBlocks = oreBlocks.filter((p) => {
 			if (p.y < 5) return false;
-			if (this.bot.entity.position.distanceTo(p) > 5) return false;
+			if (this.bot.entity.position.distanceTo(p) > this.nearbyThreshold) return false;
 			for (const badTarget of this.badTargets) {
 				if (p.equals(badTarget)) return false;
 			}
@@ -1921,7 +1955,7 @@ class autoBot {
 		}
 		if (current) {
 			if (!this.defaultMove.safeToBreak(current)) {
-				console.log(`Target ore ${current.displayName} block is not safe to break. Skipping.`);
+				console.log(`Target ${current.displayName} block is not safe to break. Skipping.`);
 				this.badTargets.push(current.position.clone());
 				this.mineVeinNext(this.remainder);
 				return;
