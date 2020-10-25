@@ -1363,10 +1363,10 @@ class autoBot {
 		const posHash = this.getPosHash(position);
 		let contents;
 		if (chestWindow.type === 'minecraft:generic_9x6') {
-			contents = chestWindow.slots.slice(0, 53);
+			contents = chestWindow.slots.slice(0, 54);
 		}
 		else {
-			contents = chestWindow.slots.slice(0, 26);
+			contents = chestWindow.slots.slice(0, 27);
 		}
 		this.chestMap[posHash] = {
 			id: chestWindow.id,
@@ -1382,7 +1382,7 @@ class autoBot {
 		for (const posHash in this.chestMap) {
 			const chest = this.chestMap[posHash];
 			if (chest.freeSlotCount > 0) {
-				console.log(`Known Chest: `, chest);
+				//console.log(`Known Chest: `, chest);
 				return this.bot.blockAt(chest.position);
 			}
 		}
@@ -1406,6 +1406,63 @@ class autoBot {
 		else {
 			return false;
 		}
+	}
+
+	placeNewChest() {
+		/*
+		find existing chests. Keep grid if chests
+		home position is anchor; chest grid is interpreted
+		use a concentric growth pattern.
+		rings are: [
+			[x -2, z -2 to x 2, z 2]
+			[x -4, z -4 to x 4, z 4]
+			[x -6, z -6 to x 6, z 6]
+			etc...
+		]
+		Y can be plus or minus one
+		valid targets are:
+			* air
+			* block below having material "dirt" or "rock"
+			* block above also being air
+		Replicate orientation. If new, use -Z (North), X (East), Z (South), -X (West)
+		directions [
+			[0, 0, -1],
+			[1, 0, 0],
+			[0, 0, 1],
+			[-1, 0, 0],
+		]
+		Opportunistically use direction as player standing position offset from target block.
+		TODO: flatten surface surrounding target block. (3x3x3 cube) bottom: dirt, middle: air, top: air
+		craft chest if needed
+		set a goal to the player standing position, then place
+		*/
+		const chestId = this.listItemsByRegEx(/^chest$/)[0];
+		this.autoCraft(chestId, 1, () => {
+			sleep(350).then(() => {
+				const chest = this.getInventoryItemById(chestId);
+				const placementVector = this.findPlacementVector();
+				if (!placementVector) {
+					this.harvestNearestTree();
+					return;
+				}
+				const referenceBlock = this.bot.blockAt(this.bot.entity.position.offset(
+					placementVector.x || 0,
+					placementVector.y || 0,
+					placementVector.z || 0,
+				));
+				this.bot.equip(
+					chest,
+					'hand',
+					() => {
+						this.bot.placeBlock(
+							referenceBlock,
+							placementVector,
+							() => { this.stashNonEssentialInventory(); }
+						)
+					}
+				);
+			});
+		});
 	}
 
 	stashNonEssentialInventory() {
