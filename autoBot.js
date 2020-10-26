@@ -210,11 +210,17 @@ class autoBot {
 			if (this.currentTarget.posHash === posHash) {
 				this.currentTarget.errorCount++;
 				if (this.currentTarget.errorCount > 5) {
-					if (this.currentTask === 'mining') {
+					if (this.currentTask === 'mining' && this.currentTarget.errorCount > 6) {
 						this.badTargets.push(goalPos.clone());
+						this.returnHome();
+						return;
 					}
-					this.returnHome();
-					return
+					else {
+						this.flattenCube(this.bot.entity.position.floored(), () => {
+							this.backupBot(() => this.bot.pathfinder.setGoal(goal));
+						});
+						return;
+					}
 				}
 			}
 			else {
