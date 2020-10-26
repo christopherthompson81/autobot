@@ -243,6 +243,9 @@ class autoBot {
 		else if (this.currentTask === 'smelting') {
 			sleep(350).then(() => { this.callback(); });
 		}
+		else if (this.currentTask === 'flattenCube') {
+			sleep(350).then(() => { this.callback(); });
+		}
 	}
 
 	onExcessiveBreakTime(block, breakTime) {
@@ -476,7 +479,7 @@ class autoBot {
 					const parentQueue = this.getCraftingTree(
 						ingredient.id,
 						//Math.ceil(Math.abs(ingredient.count) * count / recipe.result.count)
-						Math.abs(ingredient.count) * count
+						Math.ceil((Math.abs(ingredient.count) * count) / recipe.result.count)
 					);
 					if (parentQueue) {
 						for (const item of parentQueue) {
@@ -783,17 +786,17 @@ class autoBot {
 			// block.type == 'air' for target
 			//console.log(block);
 			if (['cave_air', 'air'].includes(block.name)) {
-				console.log(block, "is air");
+				//console.log(block, "is air");
 				// block.material in ['rock', 'dirt', 'wood'] for target.y - 1
 				const blockBelow = this.bot.blockAt(point.add(below));
 				//console.log(`And below is `, blockBelow, blockBelow.material);
 				if (['rock', 'dirt', 'wood'].includes(blockBelow.material)) {
-					console.log(`And below is ${blockBelow.material}`);
+					//console.log(`And below is ${blockBelow.material}`);
 					return side;
 				}
 			}
 		}
-		console.log("Could not find an adjacent space suitable for placement");
+		//console.log("Could not find an adjacent space suitable for placement");
 		return false;
 	}
 
@@ -881,6 +884,8 @@ class autoBot {
 					console.log(`Harvesting ${blockObj.displayName} does not require specific tools.`);
 				}
 			}
+			callback(false);
+			return;
 		}
 		const needsCraftingTable = this.checkNeedsCraftingTable(craftingQueue);
 		let craftingTable = null;
@@ -1282,7 +1287,9 @@ class autoBot {
 		if (current) {
 			chest.deposit(current.type, null, current.count, (err) => {
 				if (err) {
-					console.log(`Unable to stash ${current.count} ${current.name}`, err);
+					console.log(`Unable to stash ${current.count} ${current.name}`);
+					this.placeNewChest();
+					return;
 				} else {
 					console.log(`Stashed ${current.count} ${current.name}`);
 				}
@@ -1408,11 +1415,36 @@ class autoBot {
 		}
 	}
 
+	placeNext(placeQueue, callback) {
+		const current = placeQueue[0];
+		const remainder = placeQueue.slice(1, placeQueue.length);
+		if (current) {
+			const item = this.getInventoryItemById(this.mcData.itemsByName[current.name].id);
+			const referenceBlock = this.bot.blockAt(current.position);
+			const placementVector = new Vec3(1, 0, 0);
+			this.bot.equip(item, 'hand', () => {
+				this.bot.placeBlock(referenceBlock, placementVector, (err) => {
+					if (err) {
+						console.log("Placing error");
+					}
+					sleep(100).then(() => this.placeNext(remainder, callback));
+				});
+			});
+		}
+		else {
+			callback(true);
+		}
+	}
+
 	digNext(digQueue, callback) {
 		const current = digQueue[0];
 		const remainder = digQueue.slice(1, digQueue.length);
 		if (current) {
-			const block = this.bot.blockAt(digQueue);
+			const block = this.bot.blockAt(current);
+			if (!block.diggable || ['air', 'cave_air', 'void_air'].includes(block.name)) {
+				this.digNext(remainder, callback);
+				return;
+			}
 			const tool = this.bot.pathfinder.bestHarvestTool(block);
 			this.bot.equip(tool, 'hand', () => {
 				this.bot.dig(block, (err) => {
@@ -1430,61 +1462,89 @@ class autoBot {
 
 	flattenCube(position, callback) {
 		const p = position;
-		// We need sufficient materials, otherwise fail. (9 dirt)
-		// Add target space dirt to inventory dirt
-		let dirtCount = this.getInventoryDictionary().dirt || 0;
-		for (let y = -1; y <= 1; y++) {
-			for (let x = -1; x <= 1; x++) {
-				for (let z = -1; z <= 1; z++) {
-					const scanBlock = this.bot.blockAt(p.offset(x, y, z));
-					dirtCount += scanBlock.name === 'dirt' ? 1 : 0;
-				}
-			}
-		}
-		if (dirtCount < 9) {
-			callback(false);
-			return;
-		}
 		// Set a goal of exactly standing inside the block at foot level.
 		const goal = new GoalBlock(p.x, p.y, p.z);
-		const clearPattern = [
-			// Body space
-			[0, 0, 0],
-			[0, 1, 0],
-			// Foot level
-			[0, 0, -1], // N
-			[1, 0, -1], // NE
-			[1, 0, 0], // E
-			[1, 0, 1], // SE
-			[0, 0, 1], // S
-			[-1, 0, 1], // SW
-			[-1, 0, 0], // W
-			[-1, 0, -1], // NW
-			// Eye-level
-			[0, 1, -1], // N
-			[1, 1, -1], // NE
-			[1, 1, 0], // E
-			[1, 1, 1], // SE
-			[0, 1, 1], // S
-			[-1, 1, 1], // SW
-			[-1, 1, 0], // W
-			[-1, 1, -1], // NW
-		]
-		const dirtPattern = [
-			[-1, -1, -1], // NW
-			[0, -1, -1], // N
-			[1, -1, -1], // NE
-			[-1, -1, 0], // W
-			[0, -1, 0], // center
-			[1, -1, 0], // E
-			[-1, -1, 1], // SW
-			[0, -1, 1], // S
-			[1, -1, 1], // SE
-		]
+		this.currentTask = 'flattenCube';
+		this.callback = () => {
+			const clearPattern = [
+				// Body space (probably unneeded)
+				[0, 0, 0],
+				[0, 1, 0],
+				// Foot level
+				[0, 0, -1], // N
+				[1, 0, -1], // NE
+				[1, 0, 0], // E
+				[1, 0, 1], // SE
+				[0, 0, 1], // S
+				[-1, 0, 1], // SW
+				[-1, 0, 0], // W
+				[-1, 0, -1], // NW
+				// Eye-level
+				[0, 1, -1], // N
+				[1, 1, -1], // NE
+				[1, 1, 0], // E
+				[1, 1, 1], // SE
+				[0, 1, 1], // S
+				[-1, 1, 1], // SW
+				[-1, 1, 0], // W
+				[-1, 1, -1], // NW
+			];
+			const dirtPattern = [
+				[-1, -1, -1], // NW
+				[0, -1, -1], // N
+				[1, -1, -1], // NE
+				[-1, -1, 0], // W
+				[0, -1, 0], // center
+				[1, -1, 0], // E
+				[-1, -1, 1], // SW
+				[0, -1, 1], // S
+				[1, -1, 1], // SE
+			];
+			const digQueue = [];
+			for (const offset of clearPattern) {
+				const block = this.bot.blockAt(position.offset(...offset));
+				if (block.boundingBox === 'block') digQueue.push(position.offset(...offset).clone());
+			}
+			const dirtPlaceQueue = []
+			for (const offset of dirtPattern) {
+				const block = this.bot.blockAt(position.offset(...offset));
+				if (block.boundingBox === 'block' && !['grass_block', 'dirt'].includes(block.name)) {
+					// Don't dig out the block we're standing on.
+					if (JSON.stringify(offset) !== JSON.stringify([0, -1, 0])) {
+						console.log(`Digging out ${block.name}`);
+						digQueue.push(position.offset(...offset).clone());
+						dirtPlaceQueue.push({
+							position: position.offset(...offset).clone(),
+							name: 'dirt',
+						});
+					}
+				}
+				else if (['void_air', 'cave_air', 'air'].includes(block.name)) {
+					dirtPlaceQueue.push({
+						position: position.offset(...offset).clone(),
+						name: 'dirt',
+					});
+				}
+			}
+			this.digNext(digQueue, (success) => {
+				// We need sufficient materials, otherwise fail. (9 dirt)
+				// Add target space dirt to inventory dirt
+				let dirtCount = this.getInventoryDictionary().dirt || 0;
+				if (dirtCount < dirtPlaceQueue.length) {
+					this.backupBot(() => callback(false));
+					return;
+				}
+				this.placeNext(dirtPlaceQueue, () => {
+					this.backupBot(() => callback(true));
+				});
+			});
+		}
+		this.bot.pathfinder.setGoal(goal);
 	}
 
 	placeNewChest() {
 		/*
+		craft chest if needed
 		home position is anchor; chest grid is interpreted
 		use a concentric growth pattern.
 		rings are: [
@@ -1493,7 +1553,6 @@ class autoBot {
 			[x -6, z -6 to x 6, z 6]
 			etc...
 		]
-		craft chest if needed
 		flatten surface surrounding target block. (3x3x3 cube) bottom: dirt, middle: air, top: air
 		valid targets are:
 			* air
@@ -1511,32 +1570,63 @@ class autoBot {
 		set a goal to the player standing position, then place
 		*/
 		const chestId = this.listItemsByRegEx(/^chest$/)[0];
-		this.autoCraft(chestId, 1, () => {
-			sleep(350).then(() => {
-				const chest = this.getInventoryItemById(chestId);
-				const placementVector = this.findPlacementVector();
-				if (!placementVector) {
+		let chest = this.getInventoryItemById(chestId);
+		if (!chest) {
+			console.log('Autocrafting chest.');
+			this.autoCraft(chestId, 1, (success) => {
+				if (!success) {
+					// Probably lack wood
+					console.log('Failed to make chest.');
 					this.harvestNearestTree();
+				}
+				else {
+					this.placeNewChest();
+				}
+			});
+			return;
+		}
+		let ringSize = 1;
+		let buildPos = null;
+		let targetPos = null;
+		let x, z;
+		while (!buildPos && ringSize < 5) {
+			for (x = -2 * ringSize; x <= (2 * ringSize); x += 2) {
+				for (z = -2 * ringSize; z <= (2 * ringSize); z += 2) {
+					targetPos = this.homePosition.offset(x, 0, z);
+					if (!['chest', 'crafting_table', 'furnace'].includes(this.bot.blockAt(targetPos).name)) {
+						buildPos = targetPos.clone();
+						break;
+					}
+				}
+				if (buildPos != null) {
+					console.log(`x: ${x}. z: ${z}`);
+					break;
+				}
+			}
+			ringSize++;
+		}
+		if (buildPos) {
+			this.flattenCube(buildPos, (success) => {
+				if (!success) {
+					console.log('Error flattening');
 					return;
 				}
-				const referenceBlock = this.bot.blockAt(this.bot.entity.position.offset(
-					placementVector.x || 0,
-					placementVector.y || 0,
-					placementVector.z || 0,
-				));
-				this.bot.equip(
-					chest,
-					'hand',
-					() => {
-						this.bot.placeBlock(
-							referenceBlock,
-							placementVector,
-							() => { this.stashNonEssentialInventory(); }
-						)
-					}
-				);
+				chest = this.getInventoryItemById(chestId);
+				this.bot.equip(chest, 'hand', (err) => {
+					if (err) console.log('Error equipping chest');
+					const referenceBlock = this.bot.blockAt(buildPos);
+					sleep(350).then(() => {
+						this.bot.placeBlock(referenceBlock, new Vec3(1, 0, 0), (err) => {
+							if (err) console.log('Error placing chest', err);
+							this.stashNonEssentialInventory();
+						});
+					});
+				});
 			});
-		});
+		}
+		else {
+			console.log('Could not find a spot for a new chest.');
+		}
 	}
 
 	stashNonEssentialInventory() {
@@ -1568,6 +1658,7 @@ class autoBot {
 						if (this.chestMap[this.getPosHash(chestToOpen.position)].freeSlotCount === 0) {
 							// TODO: Do something if this chest is full
 							console.log('Chest is full. Trying to find another');
+							chest.close();
 							this.stashNonEssentialInventory();
 							return;
 						}
@@ -1583,34 +1674,8 @@ class autoBot {
 				this.bot.pathfinder.setGoal(goal);
 			}
 			else {
-				console.log("No chest located. Autocrafting.");
-				const chestId = this.listItemsByRegEx(/^chest$/)[0];
-				this.autoCraft(chestId, 1, () => {
-					sleep(350).then(() => {
-						const chest = this.getInventoryItemById(chestId);
-						const placementVector = this.findPlacementVector();
-						if (!placementVector) {
-							this.harvestNearestTree();
-							return;
-						}
-						const referenceBlock = this.bot.blockAt(this.bot.entity.position.offset(
-							placementVector.x || 0,
-							placementVector.y || 0,
-							placementVector.z || 0,
-						));
-						this.bot.equip(
-							chest,
-							'hand',
-							() => {
-								this.bot.placeBlock(
-									referenceBlock,
-									placementVector,
-									() => { this.stashNonEssentialInventory(); }
-								)
-							}
-						);
-					});
-				});
+				console.log("No chest located.");
+				this.placeNewChest();
 			}
 		}
 		else {
