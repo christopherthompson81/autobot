@@ -74,6 +74,7 @@ const essentialItems = [
 	{type: 'name', name: 'stick', maxSlots: 1},
 	{type: 'regex', regex: new RegExp('planks$', 'i'), maxSlots: 1},
 	{type: 'regex', regex: new RegExp('_log$', 'i'), maxSlots: 1},
+	{type: 'name', name: 'dirt', maxSlots: 1},
 	{type: 'name', name: 'cobblestone', maxSlots: 1},
 	{type: 'name', name: 'iron_ingot', maxSlots: 1},
 	{type: 'name', name: 'torch', maxSlots: 1},
@@ -674,29 +675,27 @@ class autoBot {
 		const remainder = craftingQueue.slice(1, craftingQueue.length);
 		if (current) {
 			//console.log(`Crafting ${this.mcData.items[current.id].displayName}`);
+			let recipe = this.findUsableRecipe(current.id);
+			let targetCount = recipe ? recipe.result.count * current.count : current.count
 			if (
-				this.haveIngredient(current.id, current.count) &&
+				this.haveIngredient(current.id, targetCount) &&
 				remainder.length > 0
 			) {
-				console.log(`Already have ${current.count} ${this.mcData.items[current.id].displayName}(s)`);
+				console.log(`Already have ${targetCount} ${this.mcData.items[current.id].displayName}(s)`);
 				this.autoCraftNext(remainder, callback);
 				return;
 			}
-			let recipe = current.recipe;
 			if (!recipe) {
-				recipe = this.findUsableRecipe(current.id);
-				if (!recipe) {
-					console.log(`Can't craft ${this.mcData.items[current.id].displayName} because there is no usable recipe`);
-					callback(false);
-					return;
-				}
-				// Fix for minecraft-data bug #231
-				//https://github.com/PrismarineJS/minecraft-data/issues/231
-				if (recipe.inShape) {
-					recipe.inShape = recipe.inShape.reverse();
-				}
-				//console.log(JSON.stringify(recipe));
+				console.log(`Can't craft ${this.mcData.items[current.id].displayName} because there is no usable recipe`);
+				callback(false);
+				return;
 			}
+			// Fix for minecraft-data bug #231
+			//https://github.com/PrismarineJS/minecraft-data/issues/231
+			if (recipe.inShape) {
+				recipe.inShape = recipe.inShape.reverse();
+			}
+			//console.log(JSON.stringify(recipe));
 			let craftingTable = null;
 			if (recipe.requiresTable) {
 				console.log("Needs crafting table", this.homePosition);
@@ -729,12 +728,7 @@ class autoBot {
 							console.log("Theoretical success!", this.bot.inventory.items().map(x => { return {name: x.name, count: x.count}; }));
 							//console.log(JSON.stringify(recipe), current.count, craftingTable);
 						}
-						if (remainder.length > 0) {
-							this.autoCraftNext(remainder, callback)
-						}
-						else {
-							callback(true);
-						}
+						this.autoCraftNext(remainder, callback);
 					});
 				}
 				console.log("Moving to crafting table");
