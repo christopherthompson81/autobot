@@ -1105,6 +1105,19 @@ class autoBot {
 	}
 
 	harvestNearestTree() {
+		// If we have logs, mine, if we don't lumberjack
+		const inventoryDict = this.getInventoryDictionary();
+		//console.log(inventoryDict, Object.keys(inventoryDict));
+		let logCount = 0;
+		for (const item in inventoryDict) {
+			if (item.match(/_log$/)) {
+				logCount += inventoryDict[item];
+			}
+		}
+		if (logCount > 32) {
+			this.pickUpBrokenBlocks();
+			return;
+		}
 		this.currentTask = 'cutTree';
 		const tree = this.findNearestTree();
 		if (tree) {
