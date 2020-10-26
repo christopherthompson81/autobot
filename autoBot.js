@@ -1295,6 +1295,7 @@ class autoBot {
 			chest.deposit(current.type, null, current.count, (err) => {
 				if (err) {
 					console.log(`Unable to stash ${current.count} ${current.name}`);
+					chest.close();
 					this.placeNewChest();
 					return;
 				} else {
