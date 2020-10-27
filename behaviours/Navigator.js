@@ -1,10 +1,8 @@
-const Vec3 = require('vec3').Vec3;
-
 class Navigator {
 	constructor(bot, mcData) {
 		this.bot = bot;
 		this.mcData = mcData;
-		this.homePosition = this.setHomePosition();
+		this.bot.autobot.homePosition = this.setHomePosition();
 	}
 
 	getPosHash(p) {
