@@ -1,10 +1,14 @@
 const Inventory = require('./Inventory');
+const Navigator = require('./Navigator');
+const compressableItems = require('./constants').compressableItems;
 
 class Autocraft {
 	constructor(bot, mcData) {
 		this.bot = bot;
 		this.mcData = mcData;
 		this.inventory = new Inventory(bot, mcData);
+		this.navigator = new Navigator(bot, mcData);
+		this.recipe = require("prismarine-recipe")(this.bot.version).Recipe;
 	}
 
 	/**************************************************************************
@@ -265,15 +269,9 @@ class Autocraft {
 		});
 	}
 
-	getCraftingPath(itemId, count) {
-		const craftingTree = this.getCraftingTree(itemId, count);
-		//console.log(craftingTree[0]);
-		const path = this.unrollCraftingTree(itemId, count, craftingTree[0]);
-		return path;
-	}
-
 	getCraftingQueue(itemId, count) {
-		const path = this.getCraftingPath(itemId, count);
+		const craftingTree = this.getCraftingTree(itemId, count);
+		const path = this.unrollCraftingTree(itemId, count, craftingTree[0]);
 		if (path) {
 			return path.reverse();
 		}
@@ -328,9 +326,9 @@ class Autocraft {
 			//console.log(JSON.stringify(recipe));
 			let craftingTable = null;
 			if (recipe.requiresTable) {
-				console.log("Needs crafting table", this.homePosition);
+				console.log("Needs crafting table", this.navigator.homePosition);
 				craftingTable = this.bot.findBlock({
-					point: this.homePosition,
+					point: this.navigator.homePosition,
 					matching: this.listBlocksByRegEx(/^crafting_table$/),
 					maxDistance: 20,
 					count: 10
@@ -344,9 +342,8 @@ class Autocraft {
 				}
 				console.log("Found one:", craftingTable.position);
 				const p = craftingTable.position;
-				this.currentTarget = p;
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
-				this.currentTask = "crafting";
+				this.bot.autobot.currentTask = "crafting";
 				this.callback = () => {
 					this.bot.craft(recipe, Math.floor(current.count / recipe.result.count), craftingTable, (err) => {
 						if (err) {
@@ -355,7 +352,7 @@ class Autocraft {
 							return;
 						}
 						else {
-							console.log("Theoretical success!", this.bot.inventory.items().map(x => { return {name: x.name, count: x.count}; }));
+							//console.log("Theoretical success!", this.bot.inventory.items().map(x => { return {name: x.name, count: x.count}; }));
 							//console.log(JSON.stringify(recipe), current.count, craftingTable);
 						}
 						this.autoCraftNext(remainder, callback);
@@ -443,6 +440,9 @@ class Autocraft {
 					(err) => {
 						if (err) {
 							console.log(err);
+							this.navigator.backupBot(() => {
+								this.bot.placeBlock(referenceBlock, placementVector, callback);
+							});
 						}
 						callBack();
 					}
@@ -516,7 +516,7 @@ class Autocraft {
 		if (needsCraftingTable) {
 			const craftingTableId = this.listItemsByRegEx(/^crafting_table$/)[0];
 			craftingTable = this.bot.findBlock({
-				point: this.homePosition,
+				point: this.navigator.homePosition,
 				matching: this.listBlocksByRegEx(/^crafting_table$/),
 				maxDistance: 20,
 				count: 10
@@ -535,20 +535,6 @@ class Autocraft {
 		console.log("Calling autoCraftNext", craftingQueue);
 		this.autoCraftNext(craftingQueue, callback);
 	}
-
-	autoCraftMultiple(itemList, callback) {
-		// itemList looks like [{ id: 1, count: 1 }]
-		const current = itemList[0];
-		const remainder = craftingQueue.slice(1, craftingQueue.length);
-		if (current) {
-			this.autoCraft(current.id, current.count, () => {
-				this.autoCraftMultiple(remainder, callback);
-			});
-		}
-		else {
-			callback(true);
-		}
-	}
 }
 
-module.exports = Autocraft
+module.exports = Autocraft;

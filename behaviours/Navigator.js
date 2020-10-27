@@ -54,3 +54,5 @@ class Navigator {
 		});
 	}
 }
+
+module.exports = Navigator;
