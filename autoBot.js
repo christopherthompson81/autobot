@@ -453,6 +453,7 @@ class autoBot {
 		//console.log(compressableItems.includes(this.mcData.items[itemId].name), this.mcData.items[itemId].name);
 		if (recipes.length == 0 || Object.keys(compressableItems).includes(this.mcData.items[itemId].name)) {
 			// No recipe means the item needs to be acquired
+			// Acquisition items can indicate more than necessary are needed (would require a new parameter to fix)
 			//console.log(`${this.mcData.items[itemId].name} must be acquired.`);
 			const disposition = this.haveIngredient(itemId, count) ? "possess" : "missing";
 			craftQueue.push({
@@ -480,7 +481,7 @@ class autoBot {
 					const parentQueue = this.getCraftingTree(
 						ingredient.id,
 						//Math.ceil(Math.abs(ingredient.count) * count / recipe.result.count)
-						Math.ceil((Math.abs(ingredient.count) * count) / recipe.result.count)
+						Math.ceil((Math.abs(ingredient.count) * count) / recipe.result.count) * recipe.result.count
 					);
 					if (parentQueue) {
 						for (const item of parentQueue) {
@@ -1588,7 +1589,8 @@ class autoBot {
 					this.harvestNearestTree();
 				}
 				else {
-					this.placeNewChest();
+					// Wait timing might need to be adjusted up
+					sleep(100).then(this.placeNewChest);
 				}
 			});
 			return;
@@ -1664,7 +1666,6 @@ class autoBot {
 						console.log('Chest opened.');
 						this.saveChestWindow(chestToOpen.position, chest.window);
 						if (this.chestMap[this.getPosHash(chestToOpen.position)].freeSlotCount === 0) {
-							// TODO: Do something if this chest is full
 							console.log('Chest is full. Trying to find another');
 							chest.close();
 							this.stashNonEssentialInventory();
@@ -1673,6 +1674,7 @@ class autoBot {
 						//console.log('chestWindow: ', chest.window);
 						//console.log('chest.items(): ', chest.items());
 						const itemsToStash = this.listNonEssentialInventory();
+						// TODO: write a function to check the stashing queue against the chest... probably in the findChest function to return an appropriate chest
 						this.stashNext(chest, itemsToStash);
 					});
 					chest.on('close', () => {
@@ -1743,7 +1745,7 @@ class autoBot {
 						if (err) {
 							console.log(`Put fuel (adding ${fuelAmount} coal to ${fuel.count}): `, err)
 						}
-						callback();
+						sleep(100).then(callback);
 					},
 				);
 			}
