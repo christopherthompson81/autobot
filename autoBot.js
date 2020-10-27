@@ -210,17 +210,11 @@ class autoBot {
 			if (this.currentTarget.posHash === posHash) {
 				this.currentTarget.errorCount++;
 				if (this.currentTarget.errorCount > 5) {
-					if (this.currentTask === 'mining' && this.currentTarget.errorCount > 6) {
+					if (this.currentTask === 'mining') {
 						this.badTargets.push(goalPos.clone());
-						this.returnHome();
-						return;
 					}
-					else {
-						this.flattenCube(this.bot.entity.position.floored(), () => {
-							this.backupBot(() => this.bot.pathfinder.setGoal(goal));
-						});
-						return;
-					}
+					this.returnHome();
+					return;
 				}
 			}
 			else {
@@ -682,7 +676,7 @@ class autoBot {
 		if (current) {
 			//console.log(`Crafting ${this.mcData.items[current.id].displayName}`);
 			let recipe = this.findUsableRecipe(current.id);
-			let targetCount = recipe ? recipe.result.count * current.count : current.count
+			let targetCount = current.count;
 			if (
 				this.haveIngredient(current.id, targetCount) &&
 				remainder.length > 0
@@ -724,7 +718,7 @@ class autoBot {
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				this.currentTask = "crafting";
 				this.callback = () => {
-					this.bot.craft(recipe, Math.ceil(current.count / recipe.result.count), craftingTable, (err) => {
+					this.bot.craft(recipe, Math.floor(current.count / recipe.result.count), craftingTable, (err) => {
 						if (err) {
 							console.log(err, JSON.stringify(recipe), current.count, craftingTable);
 							callback(false);
@@ -1411,7 +1405,7 @@ class autoBot {
 			point: this.homePosition,
 			matching: this.listBlocksByRegEx(/^chest$/),
 			maxDistance: 128,
-			count: 100
+			count: 200
 		});
 		// Only stash to surface / near surface chests
 		chestsToOpen = chestsToOpen.filter((r) => {
