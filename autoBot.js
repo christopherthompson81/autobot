@@ -1745,7 +1745,7 @@ class autoBot {
 						if (err) {
 							console.log(`Put fuel (adding ${fuelAmount} coal to ${fuel.count}): `, err)
 						}
-						sleep(100).then(callback);
+						sleep(350).then(callback);
 					},
 				);
 			}
