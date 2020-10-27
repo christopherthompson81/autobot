@@ -1590,7 +1590,7 @@ class autoBot {
 				}
 				else {
 					// Wait timing might need to be adjusted up
-					sleep(100).then(this.placeNewChest);
+					sleep(350).then(this.placeNewChest);
 				}
 			});
 			return;
