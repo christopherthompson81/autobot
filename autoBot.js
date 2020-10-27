@@ -1538,6 +1538,7 @@ class autoBot {
 			this.digNext(digQueue, (success) => {
 				// We need sufficient materials, otherwise fail. (9 dirt)
 				// Add target space dirt to inventory dirt
+				// TODO: add a collectBlocks routine
 				let dirtCount = this.getInventoryDictionary().dirt || 0;
 				if (dirtCount < dirtPlaceQueue.length) {
 					this.backupBot(() => callback(false));
