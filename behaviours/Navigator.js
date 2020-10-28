@@ -40,13 +40,12 @@ class Navigator {
 	}
 
 	returnHome() {
-		console.log("Returning to home position: ", this.homePosition);
+		console.log("Returning to home position: ", this.bot.autobot.homePosition);
 		this.bot.pathfinder.setGoal(null);
 		this.backupBot(() => {
-			const p = this.homePosition;
-			this.currentTarget = p;
+			const p = this.bot.autobot.homePosition;
 			this.currentTask = 'stashing';
-			this.callback = this.stashNonEssentialInventory;
+			this.callback = this.bot.autobot.stash.stashNonEssentialInventory;
 			const goal = new GoalNear(p.x, p.y, p.z, 3);
 			this.bot.pathfinder.setGoal(goal);
 		});

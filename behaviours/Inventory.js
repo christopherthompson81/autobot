@@ -78,6 +78,66 @@ class Inventory {
 			});
 		}
 	}
+
+	craftToolNext(toolIds, callback) {
+		const current = toolIds[0];
+		const remainder = toolIds.slice(1, toolIds.length);
+		if (current) {
+			console.log(`Crafting ${this.mcData.items[current].displayName}`);
+			this.autoCraft(current, 1, (success) => {
+				sleep(100).then(() => {
+					this.craftToolNext(remainder, callback);
+				});
+			});	
+		}
+		else {
+			callback(true);
+		}
+	}
+
+	missingTools() {
+		// Prefer iron, to stone, to wood by inventory
+		const toolIds = [];
+		const inventoryDictionary = this.getInventoryDictionary();
+		for (const tool of toolItems.names) {
+			let toolId;
+			let toolCount = 0;
+			for (const item in inventoryDictionary) {
+				if (item.match(new RegExp(`_${tool}`))) {
+					toolCount += inventoryDictionary[item];
+				}
+			}
+			if (inventoryDictionary[`iron_${tool}`] && toolCount >= 2) {
+				continue;
+			}
+			else if (inventoryDictionary.iron_ingot > 3) {
+				const regex = new RegExp(`iron_${tool}`);
+				toolId = this.listItemsByRegEx(regex)[0];
+			}
+			else if (inventoryDictionary[`stone_${tool}`] && toolCount >= 2) {
+				continue;
+			}
+			else if (inventoryDictionary.cobblestone > 3) {
+				const regex = new RegExp(`stone_${tool}`);
+				toolId = this.listItemsByRegEx(regex)[0];
+			}
+			else if (inventoryDictionary[`wooden_${tool}`] && toolCount >= 2) {
+				continue;
+			}
+			else {
+				const regex = new RegExp(`wooden_${tool}`);
+				toolId = this.listItemsByRegEx(regex)[0];
+			}
+			toolIds.push(toolId);
+		}
+		return toolIds;
+	}
+
+	craftTools(callback) {
+		// Prefer iron, to stone, to wood by inventory
+		const toolIds = this.missingTools();
+		this.craftToolNext(toolIds, callback);
+	}
 }
 
 module.exports = Inventory;

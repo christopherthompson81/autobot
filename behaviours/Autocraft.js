@@ -86,7 +86,6 @@ class Autocraft {
 			//console.log(`${this.mcData.items[itemId].name} must be acquired.`);
 			const disposition = this.haveIngredient(itemId, count) ? "possess" : "missing";
 			craftQueue.push({
-				error: false,
 				name: this.mcData.items[itemId].name,
 				disposition: disposition,
 				id: itemId,
@@ -120,11 +119,10 @@ class Autocraft {
 				}
 				if (queueBranch.length > 1) {
 					craftQueue.push({
-						"error": false,
-						"name": this.mcData.items[itemId].name,
-						"recipe": recipe,
-						"disposition": "requires",
-						"requires": queueBranch
+						name: this.mcData.items[itemId].name,
+						recipe: recipe,
+						disposition: "requires",
+						requires: queueBranch
 					});	
 				}
 				else {
@@ -133,12 +131,11 @@ class Autocraft {
 			}
 			return [
 				{
-					"error": false,
-					"name": this.mcData.items[itemId].name,
-					"disposition": "craft",
-					"id": itemId,
-					"count": count,
-					"one_of": craftQueue,
+					name: this.mcData.items[itemId].name,
+					disposition: "craft",
+					id: itemId,
+					count: count,
+					one_of: craftQueue,
 				}
 			];
 		}
@@ -506,48 +503,37 @@ class Autocraft {
 	autoCraft(itemId, count, callback) {
 		const craftingQueue = this.getCraftingQueue(itemId, count);
 		if (craftingQueue.length === 0) {
-			console.log(`No path to craft a ${this.mcData.items[itemId].displayName} due to lack of acquisition-obligate resources.`);
 			const missing = this.getMissing(itemId);
-			console.log("List of missing acquisition-obligate resources:", missing);
-			const inventoryDict = this.getInventoryDictionary();
-			console.log(inventoryDict);
 			const blocks = this.findMissingItemsNearby(missing);
-			if (blocks.length > 0) {
-				const blockObj = this.bot.blockAt(blocks[0]);
-				//console.log(blockObj);
-				console.log(`There is a(n) ${blockObj.displayName} nearby, which would close the resource gap in crafting a(n) ${this.mcData.items[itemId].displayName}`);
-				if (blockObj.harvestTools) {
-					console.log(`Harvesting ${blockObj.displayName} requires specific tools.`);
-				}
-				else {
-					console.log(`Harvesting ${blockObj.displayName} does not require specific tools.`);
-				}
-			}
-			callback(false);
+			callback({
+				error: true,
+				errorCode: 'missingAcquisitionObligateItems',
+				errorDescription: `No path to craft a ${this.mcData.items[itemId].displayName} due to lack of acquisition-obligate resources.`,
+				missingItems: missing,
+				nearbyResources: blocks
+			});
 			return;
 		}
-		const needsCraftingTable = this.checkNeedsCraftingTable(craftingQueue);
-		let craftingTable = null;
-		if (needsCraftingTable) {
-			const craftingTableId = this.bot.autobot.inventory.listItemsByRegEx(/^crafting_table$/)[0];
-			craftingTable = this.bot.findBlock({
+		if (this.checkNeedsCraftingTable(craftingQueue)) {
+			const craftingTableId = this.mcData.blocksByName('crafting_table').id;
+			const craftingTable = this.bot.findBlock({
 				point: this.navigator.homePosition,
-				matching: this.listBlocksByRegEx(/^crafting_table$/),
-				maxDistance: 20,
-				count: 10
+				matching: craftingTableId,
+				maxDistance: 20
 			});
 			if (!craftingTable) {
 				// If we have one, place it
 				if (this.haveIngredient(craftingTableId)) {
 					this.placeCraftingTable(() => { this.autoCraftNext(craftingQueue, callback); });
-					return;
 				}
-				// make one and put it on any block one move away that has the same Y value
-				this.craftCraftingTable(() => { this.autoCraftNext(craftingQueue, callback); });
+				// Otherwise make one and put it on any block one move away that has the same Y value
+				else {
+					this.craftCraftingTable(() => { this.autoCraftNext(craftingQueue, callback); });
+				}
 				return;
 			}
 		}
-		console.log("Calling autoCraftNext", craftingQueue);
+		//console.log("Calling autoCraftNext", craftingQueue);
 		this.autoCraftNext(craftingQueue, callback);
 	}
 }

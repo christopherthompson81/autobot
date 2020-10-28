@@ -89,8 +89,16 @@ const compressableItems = {
 	wheat: "hay_block",
 };
 
+const appliances = [
+	'blast_furnace',
+	'chest',
+	'crafting_table',
+	'furnace',
+];
+
 exports.armorSlots = armorSlots;
 exports.toolItems = toolItems;
 exports.armorItems = armorItems;
 exports.essentialItems = essentialItems;
 exports.compressableItems = compressableItems;
+exports.appliances = appliances;
