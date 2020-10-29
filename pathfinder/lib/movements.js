@@ -29,8 +29,11 @@ class Movements {
 
     this.blocksCantBreak = new Set()
     this.blocksCantBreak.add(mcData.blocksByName.bedrock.id)
+    this.blocksCantBreak.add(mcData.blocksByName.blast_furnace.id)
     this.blocksCantBreak.add(mcData.blocksByName.chest.id)
     this.blocksCantBreak.add(mcData.blocksByName.crafting_table.id)
+    this.blocksCantBreak.add(mcData.blocksByName.furnace.id)
+    this.blocksCantBreak.add(mcData.blocksByName.hopper.id)
 
     this.blocksToAvoid = new Set()
     this.blocksToAvoid.add(mcData.blocksByName.fire.id)

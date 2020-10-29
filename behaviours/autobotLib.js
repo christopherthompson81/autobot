@@ -13,6 +13,9 @@ function bestHarvestTool(bot, block) {
 			fastest = digTime;
 			bestTool = tool;
 		}
+		// TODO: if tools are the same and picked, switch if the new tool is more damaged (use most damaged tool first).
+		// 	This will prevent wear-evening, which would cause the time between tools breaking to be close together.
+		//	We want to maximize the time gap between tools breaking.
 	}
 	return bestTool;
 }
