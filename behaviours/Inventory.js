@@ -97,6 +97,7 @@ class Inventory {
 
 	missingTools() {
 		// Prefer iron, to stone, to wood by inventory
+		// POSSIBLE_TODO: If combined durability (of a tool type) is less than 10%, add another spare
 		const toolIds = [];
 		const inventoryDictionary = this.getInventoryDictionary();
 		for (const tool of toolItems.names) {
