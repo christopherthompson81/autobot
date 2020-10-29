@@ -83,7 +83,7 @@ class Landscaping {
 		const p = position;
 		// Set a goal of exactly standing inside the block at foot level.
 		const goal = new GoalBlock(p.x, p.y, p.z);
-		this.bot.autobot.currentTask = 'flattenCube';
+		//this.bot.autobot.currentTask = 'flattenCube';
 		this.callback = () => {
 			const clearPattern = [
 				// Body space (probably unneeded)

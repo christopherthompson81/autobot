@@ -265,7 +265,7 @@ class Mining {
 			this.equipPickaxe(() => {
 				if (this.bot.entity.position.distanceTo(current.position) > 3) {
 					console.log("The bot is too far from the object block to mine.");
-					this.currentTask = 'mineVein';
+					//this.currentTask = 'mineVein';
 					const p = current.position;
 					const goal = new GoalGetToBlock(p.x, p.y, p.z);
 					this.bot.pathfinder.setGoal(goal);
@@ -278,7 +278,7 @@ class Mining {
 		}
 		else {
 			console.log('Finished mining. Waiting for drops.');
-			this.currentTask = null;
+			//this.currentTask = null;
 			sleep(1000).then(() => {
 				console.log('Picking up uncollected blocks.');
 				this.pickUpBrokenBlocks();
@@ -295,7 +295,7 @@ class Mining {
 	}
 
 	mineNearestOreVein() {
-		this.currentTask = 'mineVein';
+		//this.currentTask = 'mineVein';
 		//const vein = this.findNearestCoalVein();
 		const vein = this.findBestOreVein();
 		if (vein) {

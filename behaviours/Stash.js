@@ -148,7 +148,7 @@ class Stash {
 		else {
 			chest.close();
 			console.log('Finished stashing.');
-			this.currentTask = null;
+			//this.currentTask = null;
 			sleep(1000).then(() => {
 				// If we have logs, mine, if we don't lumberjack
 				const inventoryDict = this.getInventoryDictionary();
@@ -369,7 +369,7 @@ class Stash {
 			const chestToOpen = this.findChest();
 			if (chestToOpen) {
 				console.log("Chest found. Moving to: ", chestToOpen.position);
-				this.currentTask = 'stashing';
+				//this.currentTask = 'stashing';
 				const p = chestToOpen.position;
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				this.callback = () => {

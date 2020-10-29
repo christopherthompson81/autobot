@@ -321,7 +321,7 @@ class Autocraft {
 				//console.log("Found one:", craftingTable.position);
 				const p = craftingTable.position;
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
-				this.bot.autobot.currentTask = "crafting";
+				//this.bot.autobot.currentTask = "crafting";
 				this.callback = () => {
 					const targetCount = Math.floor(current.count / recipe.result.count);
 					this.bot.craft(recipe, targetCount, craftingTable, (err) => {

@@ -145,7 +145,7 @@ class Lumberjack {
 				return;
 			}
 		}
-		this.bot.autobot.currentTask = 'cutTree';
+		//this.bot.autobot.currentTask = 'cutTree';
 		const tree = this.findNearestTree();
 		if (tree) {
 			//console.log("Cutting tree: ", tree[0].position);

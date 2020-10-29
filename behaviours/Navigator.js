@@ -44,7 +44,7 @@ class Navigator {
 		this.bot.pathfinder.setGoal(null);
 		this.backupBot(() => {
 			const p = this.bot.autobot.homePosition;
-			this.currentTask = 'stashing';
+			//this.currentTask = 'stashing';
 			this.callback = this.bot.autobot.stash.stashNonEssentialInventory;
 			const goal = new GoalNear(p.x, p.y, p.z, 3);
 			this.bot.pathfinder.setGoal(goal);

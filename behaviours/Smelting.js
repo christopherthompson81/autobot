@@ -82,7 +82,7 @@ class Smelting {
 		// Only stash to surface / near surface chests
 		if (furnaceBlock) {
 			console.log("Furnace found. Moving to: ", furnaceBlock.position);
-			this.currentTask = 'smelting';
+			//this.currentTask = 'smelting';
 			const p = furnaceBlock.position;
 			const goal = new GoalNear(p.x, p.y, p.z, 3);
 			this.callback = () => {
