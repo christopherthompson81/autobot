@@ -268,7 +268,7 @@ class Autocraft {
 
 	// Recursively craft an item (craft parents if needed)
 	autoCraftNext(craftingQueue, callback) {
-		const eventName = 'autobot.autocraft.done';
+		const eventName = 'autobot.autoCraft.done';
 		let result = {};
 		const current = craftingQueue[0];
 		const remainder = craftingQueue.slice(1, craftingQueue.length);
@@ -476,7 +476,7 @@ class Autocraft {
 
 	// Recursively craft an item (craft parents if needed)
 	autoCraft(itemId, count, callback) {
-		const eventName = 'autobot.autocraft.done';
+		const eventName = 'autobot.autoCraft.done';
 		let result = {};
 		const craftingQueue = this.getCraftingQueue(itemId, count);
 		if (craftingQueue.length === 0) {

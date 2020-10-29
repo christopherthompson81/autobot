@@ -1,3 +1,5 @@
+const toolItems = require('./constants').toolItems;
+
 class Inventory {
 	constructor(bot, mcData) {
 		this.bot = bot;
@@ -49,10 +51,8 @@ class Inventory {
 
 	equipByName(itemName, callback) {
 		console.log(`Attempting to equip: ${itemName}.`);
-		const regex = RegExp(`${itemName}$`, "i");
-		//console.log(regex);
+		const regex = new RegExp(`${itemName}$`, "i");
 		const itemList = this.listItemsByRegEx(regex);
-		//console.log(itemList);
 		let item = null;
 		for (const i of this.bot.inventory.items()) {
 			if (itemList.includes(i.type)) {
@@ -61,25 +61,28 @@ class Inventory {
 			}
 		}
 		if (!item) {
-			console.log(`Fail. No ${itemName} found in inventory.`);
+			//console.log(`Fail. No ${itemName} found in inventory.`);
 			this.bot.hand = null;
-			callback();
+			callback(false);
 		}
 		else {
 			this.bot.equip(item, 'hand', (err) => {
 				if (err) {
-					console.log(err, item);
-					callback();
+					//console.log(err, item);
+					this.bot.hand = null;
+					callback(false);
 				}
 				else {
 					this.bot.hand = item;
-					callback();
+					callback(true);
 				}
 			});
 		}
 	}
 
 	craftToolNext(toolIds, callback) {
+		const eventName = 'autobot.craftTools.done';
+		let result = {};
 		const current = toolIds[0];
 		const remainder = toolIds.slice(1, toolIds.length);
 		if (current) {
@@ -91,7 +94,13 @@ class Inventory {
 			});	
 		}
 		else {
-			callback(true);
+			result = {
+				error: false,
+				errorCode: "success",
+				errorDescription: "Finished crafting tools.",
+			};
+			if (callback) callback(result);
+			this.bot.emit(eventName, result);
 		}
 	}
 
@@ -99,7 +108,7 @@ class Inventory {
 		// Prefer iron, to stone, to wood by inventory
 		// POSSIBLE_TODO: If combined durability (of a tool type) is less than 10%, add another spare
 		const toolIds = [];
-		const inventoryDictionary = this.getInventoryDictionary();
+		const inventoryDictionary = this.bot.autobot.inventory.getInventoryDictionary();
 		for (const tool of toolItems.names) {
 			let toolId;
 			let toolCount = 0;
@@ -108,27 +117,12 @@ class Inventory {
 					toolCount += inventoryDictionary[item];
 				}
 			}
-			if (inventoryDictionary[`iron_${tool}`] && toolCount >= 2) {
-				continue;
-			}
-			else if (inventoryDictionary.iron_ingot > 3) {
-				const regex = new RegExp(`iron_${tool}`);
-				toolId = this.listItemsByRegEx(regex)[0];
-			}
-			else if (inventoryDictionary[`stone_${tool}`] && toolCount >= 2) {
-				continue;
-			}
-			else if (inventoryDictionary.cobblestone > 3) {
-				const regex = new RegExp(`stone_${tool}`);
-				toolId = this.listItemsByRegEx(regex)[0];
-			}
-			else if (inventoryDictionary[`wooden_${tool}`] && toolCount >= 2) {
-				continue;
-			}
-			else {
-				const regex = new RegExp(`wooden_${tool}`);
-				toolId = this.listItemsByRegEx(regex)[0];
-			}
+			if (inventoryDictionary[`iron_${tool}`] && toolCount >= 2) continue;
+			else if (inventoryDictionary.iron_ingot > 3) toolId = this.mcData.itemsByName[`iron_${tool}`].id;
+			else if (inventoryDictionary[`stone_${tool}`] && toolCount >= 2) continue;
+			else if (inventoryDictionary.cobblestone > 3) toolId = this.mcData.itemsByName[`stone_${tool}`].id;
+			else if (inventoryDictionary[`wooden_${tool}`] && toolCount >= 2) continue;
+			else toolId = this.mcData.itemsByName[`wooden_${tool}`].id;
 			toolIds.push(toolId);
 		}
 		return toolIds;

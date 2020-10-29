@@ -33,6 +33,8 @@ class CollectDrops {
 	}
 
 	pickUpNext(drops, callback) {
+		const eventName = 'autobot.collectDrops.done';
+		let result = {};
 		const current = drops[0];
 		const remainder = drops.slice(1, drops.length);
 		if (current) {
@@ -54,11 +56,14 @@ class CollectDrops {
 		else {
 			sleep(350).then(() => {
 				this.bot.autobot.currentTask = null;
-				callback({
+				result = {
 					error: false,
+					errorCode: "success",
 					errorDescription: "Finished picking up drops.",
 					collectedItems: this.collected
-				});
+				};
+				if (callback) callback(result);
+				this.bot.emit(eventName, result);
 			});
 		}
 	}

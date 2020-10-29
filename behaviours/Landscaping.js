@@ -10,6 +10,8 @@ class Landscaping {
 	}
 
 	placeNext(placeQueue, callback) {
+		const eventName = 'autobot.landscaping.placeQueue.done';
+		let result = {};
 		const current = placeQueue[0];
 		const remainder = placeQueue.slice(1, placeQueue.length);
 		if (current) {
@@ -19,13 +21,16 @@ class Landscaping {
 			this.bot.equip(item, 'hand', () => {
 				this.bot.placeBlock(referenceBlock, placementVector, (err) => {
 					if (err) {
-						callback({
+						result = {
 							error: true,
+							errorCode: "placingError",
 							errorDescription: "Could not place block.",
 							parentError: err,
 							currentTarget: current,
 							queueRemainder: remainder
-						});
+						};
+						if (callback) callback(result);
+						this.bot.emit(eventName, result);
 					}
 					else {
 						sleep(100).then(() => this.placeNext(remainder, callback));
@@ -34,14 +39,19 @@ class Landscaping {
 			});
 		}
 		else {
-			callback({
+			result = {
 				error: false,
+				errorCode: "success",
 				errorDecription: "Finished placing blocks"
-			});
+			};
+			if (callback) callback(result);
+			this.bot.emit(eventName, result);
 		}
 	}
 
 	digNext(digQueue, callback) {
+		const eventName = 'autobot.landscaping.digQueue.done';
+		let result = {};
 		const current = digQueue[0];
 		const remainder = digQueue.slice(1, digQueue.length);
 		if (current) {
@@ -66,6 +76,8 @@ class Landscaping {
 	}
 
 	flattenCube(position, callback, targetSubstrate, substrateList) {
+		const eventName = 'autobot.landscaping.flattenCube.done';
+		let result = {};
 		if (!targetSubstrate) targetSubstrate = 'dirt';
 		if (!substrateList) substrateList = ['dirt', 'grass_block'];
 		const p = position;
