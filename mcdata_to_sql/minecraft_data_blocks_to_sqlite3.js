@@ -8,8 +8,6 @@ function getSQL(filename) {
 	return fs.readFileSync(filename, 'utf8');
 }
 
-//console.log(getSQL('./sql/create_table_blocks.sql'));
-
 db.serialize(function generateDB() {
 	db.run(getSQL('sql/create_table_blocks.sql'));
 	db.run(getSQL('sql/create_table_block_drops.sql'));
