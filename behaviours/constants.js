@@ -145,11 +145,14 @@ const machineBlocks = [
 	'stonecutter',
 ];
 const crops = [
+	'beetroots',
+	'carrots',
+	'cocoa',
+	'melon',
+	'potatoes',
+	'pumpkin',
 	'sugar_cane',
 	'wheat',
-	'pumpkin',
-	'melon',
-	'cocoa',
 ];
 const food = [
 	'cake',

@@ -9,7 +9,8 @@ CREATE TABLE blocks (
     transparent BOOLEAN,
     filter_light INTEGER,
     emit_light INTEGER,
-    bounding_box TEXT, -- enum ['block', 'empty']
+    bounding_box TEXT,
     stack_size INTEGER,
-	material TEXT
+	material TEXT,
+    PRIMARY KEY("block_id")
 )
