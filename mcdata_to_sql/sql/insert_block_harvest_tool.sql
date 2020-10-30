@@ -1,0 +1,1 @@
+INSERT INTO block_harvest_tools (block_id, item_id) VALUES (?, ?)
