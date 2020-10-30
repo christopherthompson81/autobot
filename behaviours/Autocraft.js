@@ -5,6 +5,7 @@ class Autocraft {
 		this.bot = bot;
 		this.mcData = mcData;
 		this.recipe = require("prismarine-recipe")(this.bot.version).Recipe;
+		this.active = false;
 	}
 
 	/**************************************************************************
@@ -338,6 +339,7 @@ class Autocraft {
 							};
 							if (callback) callback(result);
 							this.bot.emit(eventName, result);
+							this.active = false;
 							return;
 						}
 						/*
@@ -365,6 +367,7 @@ class Autocraft {
 			};
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);
+			this.active = false;
 		}
 	}
 
@@ -476,6 +479,7 @@ class Autocraft {
 
 	// Recursively craft an item (craft parents if needed)
 	autoCraft(itemId, count, callback) {
+		this.active = true;
 		const eventName = 'autobot.autoCraft.done';
 		let result = {};
 		const craftingQueue = this.getCraftingQueue(itemId, count);
@@ -491,6 +495,7 @@ class Autocraft {
 			};
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);
+			this.active = false;
 			return;
 		}
 		if (this.checkNeedsCraftingTable(craftingQueue)) {

@@ -14,6 +14,7 @@
     "mineflayer": "^2.30.0",
     "mineflayer-pathfinder": "^1.0.10",
     "prismarine-nbt": "^1.3.0",
+    "sqlite3": "^5.0.0",
     "vec3": "^0.1.7"
   },
   "directories": {

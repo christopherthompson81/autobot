@@ -89,11 +89,118 @@ const compressableItems = {
 	wheat: "hay_block",
 };
 
-const appliances = [
+const airBlocks = ['void_air', 'cave_air', 'air'];
+const liquidBlocks = ['water', 'lava'];
+const dangerBlocks = [
+	'campfire',
+	'fire',
+	'magma_block',
+	'soul_campfire',
+	'soul_fire',
+	'spawner',
+];
+const unbreakable = [
+	'bedrock',
+	'command_block'
+];
+const gravityBlocks = [
+	'gravel',
+	'red_sand',
+	'sand',
+];
+// oreBlocks is ordered by desirability
+const oreBlocks = [
+	'ancient_debris',
+	'diamond_ore',
+	'emerald_ore',
+	'gold_ore',
+	'lapis_ore',
+	'redstone_ore',
+	'nether_gold_ore',
+	'nether_quartz_ore',
+	'iron_ore',
+	'coal_ore',
+];
+const utilityBlocks = [
+	'anvil',
+	'barrel',
 	'blast_furnace',
+	'brewing_stand',
+	'cartography_table',
+	'cauldron',
 	'chest',
 	'crafting_table',
+	'enchanting_table',
+	'fletching_table',
 	'furnace',
+	'target',
+];
+const machineBlocks = [
+	'dropper',
+	'hopper',
+	'observer',
+	'repeater',
+	'smithing_table',
+	'smoker',
+	'stonecutter',
+];
+const crops = [
+	'sugar_cane',
+	'wheat',
+	'pumpkin',
+	'melon',
+	'cocoa',
+];
+const food = [
+	'cake',
+];
+const playerMadeBlocks = [
+	'polished_*',
+	'*cobblestone',
+	'*_planks',
+	'*glass*',
+	'chiseled_*',
+	'cut_*',
+	'note_block',
+	'*_bed',
+	'*_rail',
+	'*piston*',
+	'*_wool',
+	'diamond_block',
+	'gold_block', 
+	'iron_block',
+	'*bricks',
+	'tnt',
+	'bookshelf',
+	'*torch',
+	'*stairs',
+	'*chest',
+	'redstone_wire',
+	'*sign',
+	'*door',
+	'ladder',
+	'lever',
+	'*pressure_plate',
+	'*button',
+	'jukebox',
+	'*fence', // consider separating some types
+	'carved_pumpkin', // consider decorations
+	'jack_o_lantern',
+	'iron_bars',
+	'chain',
+	'*gate',
+	'redstone_lamp',
+	'tripwire_hook',
+	'tripwire',
+	'emerald_block',
+	'beacon',
+	'*wall',
+	'flower_pot',
+	'potted*',
+	'',
+	'',
+	// All utility blocks
+	// All food blocks / crops
 ];
 
 exports.armorSlots = armorSlots;
@@ -101,4 +208,5 @@ exports.toolItems = toolItems;
 exports.armorItems = armorItems;
 exports.essentialItems = essentialItems;
 exports.compressableItems = compressableItems;
-exports.appliances = appliances;
+exports.utilityBlocks = utilityBlocks;
+exports.playerMadeBlocks = playerMadeBlocks;

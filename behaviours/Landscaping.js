@@ -1,17 +1,31 @@
-const toolItems = require('./constants').toolItems;
-const essentialItems = require('./constants').essentialItems;
-const compressableItems = require('./constants').compressableItems;
-
 class Landscaping {
 	constructor(bot, mcData) {
 		this.bot = bot;
 		this.mcData = mcData;
 		this.callback = () => {};
+		this.digging = false;
+		this.placing = false;
+		this.flatteningCube = false;
+	}
+
+	blockBreakable(block) {
+		//['void_air', 'cave_air', 'air'].includes(block.name)
+		const airBlocks = ['void_air', 'cave_air', 'air'];
+		const liquidBlocks = [];
+		const utilityBlocks = [
+			'blast_furnace',
+			'chest',
+			'crafting_table',
+			'furnace',
+			'hopper',
+		];
+		const specialBlocks = [];
 	}
 
 	placeNext(placeQueue, callback) {
 		const eventName = 'autobot.landscaping.placeQueue.done';
 		let result = {};
+		if (!this.placing) this.placing = true;
 		const current = placeQueue[0];
 		const remainder = placeQueue.slice(1, placeQueue.length);
 		if (current) {
@@ -46,12 +60,14 @@ class Landscaping {
 			};
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);
+			this.placing = false;
 		}
 	}
 
 	digNext(digQueue, callback) {
 		const eventName = 'autobot.landscaping.digQueue.done';
 		let result = {};
+		if (!this.digging) this.digging = true;
 		const current = digQueue[0];
 		const remainder = digQueue.slice(1, digQueue.length);
 		if (current) {
@@ -64,20 +80,37 @@ class Landscaping {
 			this.bot.equip(tool, 'hand', () => {
 				this.bot.dig(block, (err) => {
 					if (err) {
-						console.log("Digging error");
+						result = {
+							error: true,
+							errorCode: "diggingError",
+							errorDescription: "Could not dig block.",
+							parentError: err,
+							currentTarget: current,
+							queueRemainder: remainder
+						};
+						if (callback) callback(result);
+						this.bot.emit(eventName, result);
 					}
 					this.digNext(remainder, callback)
 				});
 			});
 		}
 		else {
-			callback(true);
+			result = {
+				error: false,
+				errorCode: "success",
+				errorDecription: "Finished digging blocks"
+			};
+			if (callback) callback(result);
+			this.bot.emit(eventName, result);
+			this.digging = false;
 		}
 	}
 
 	flattenCube(position, callback, targetSubstrate, substrateList) {
 		const eventName = 'autobot.landscaping.flattenCube.done';
 		let result = {};
+		if (!this.flatteningCube) this.flatteningCube = true;
 		if (!targetSubstrate) targetSubstrate = 'dirt';
 		if (!substrateList) substrateList = ['dirt', 'grass_block'];
 		const p = position;

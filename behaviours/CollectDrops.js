@@ -4,6 +4,7 @@ class CollectDrops {
 		this.mcData = mcData;
 		this.callback = () => {};
 		this.collected = {};
+		this.active = false;
 	}
 	
 	/**************************************************************************
@@ -55,7 +56,7 @@ class CollectDrops {
 		}
 		else {
 			sleep(350).then(() => {
-				//this.bot.autobot.currentTask = null;
+				this.active = false;
 				result = {
 					error: false,
 					errorCode: "success",
@@ -69,7 +70,7 @@ class CollectDrops {
 	}
 
 	pickUpBrokenBlocks(callback) {
-		//this.bot.autobot.currentTask = 'collectDrops';
+		this.active = true;
 		this.collected = {};
 		const drops = this.findNearbyDrops(10);
 		//console.log(`Found ${drops.length} broken blocks to collect.`)

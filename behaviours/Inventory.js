@@ -4,6 +4,7 @@ class Inventory {
 	constructor(bot, mcData) {
 		this.bot = bot;
 		this.mcData = mcData;
+		this.craftingTools = false;
 	}
 
 	listBlocksByRegEx(regex) {
@@ -101,6 +102,7 @@ class Inventory {
 			};
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);
+			this.craftingTools = false;
 		}
 	}
 
@@ -130,6 +132,7 @@ class Inventory {
 
 	craftTools(callback) {
 		// Prefer iron, to stone, to wood by inventory
+		this.craftingTools = true;
 		const toolIds = this.missingTools();
 		this.craftToolNext(toolIds, callback);
 	}
