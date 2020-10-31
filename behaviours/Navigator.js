@@ -11,7 +11,7 @@ class Navigator {
 
 	setHomePosition() {
 		const craftingTables = this.bot.findBlocks({
-			matching: this.listBlocksByRegEx(/^crafting_table$/),
+			matching: this.mcData.blocksByName('crafting_table').id,
 			maxDistance: 128,
 			count: 10
 		});
@@ -40,7 +40,7 @@ class Navigator {
 	}
 
 	returnHome() {
-		console.log("Returning to home position: ", this.bot.autobot.homePosition);
+		//console.log("Returning to home position: ", this.bot.autobot.homePosition);
 		this.bot.pathfinder.setGoal(null);
 		this.backupBot(() => {
 			const p = this.bot.autobot.homePosition;

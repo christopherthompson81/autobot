@@ -93,7 +93,7 @@ class Landscaping {
 		}
 	}
 
-	flattenCube(position, callback, targetSubstrate, substrateList) {
+	flattenCube(position, targetSubstrate, substrateList, callback) {
 		const eventName = 'autobot.landscaping.flattenCube.done';
 		let result = {};
 		if (!this.flatteningCube) this.flatteningCube = true;
