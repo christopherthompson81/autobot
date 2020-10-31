@@ -8,20 +8,6 @@ class Landscaping {
 		this.flatteningCube = false;
 	}
 
-	blockBreakable(block) {
-		//['void_air', 'cave_air', 'air'].includes(block.name)
-		const airBlocks = ['void_air', 'cave_air', 'air'];
-		const liquidBlocks = [];
-		const utilityBlocks = [
-			'blast_furnace',
-			'chest',
-			'crafting_table',
-			'furnace',
-			'hopper',
-		];
-		const specialBlocks = [];
-	}
-
 	placeNext(placeQueue, callback) {
 		const eventName = 'autobot.landscaping.placeQueue.done';
 		let result = {};
@@ -155,12 +141,12 @@ class Landscaping {
 			const digQueue = [];
 			for (const offset of clearPattern) {
 				const block = this.bot.blockAt(position.offset(...offset));
-				if (block.boundingBox === 'block') digQueue.push(position.offset(...offset).clone());
+				if (!['void_air', 'cave_air', 'air'].includes(block.name)) digQueue.push(position.offset(...offset).clone());
 			}
 			const dirtPlaceQueue = []
 			for (const offset of dirtPattern) {
 				const block = this.bot.blockAt(position.offset(...offset));
-				if (block.boundingBox === 'block' && !substrateList.includes(block.name)) {
+				if (!substrateList.includes(block.name)) {
 					// Don't dig out the block we're standing on.
 					if (JSON.stringify(offset) !== JSON.stringify([0, -1, 0])) {
 						//console.log(`Digging out ${block.name}`);
@@ -184,11 +170,31 @@ class Landscaping {
 				// TODO: add a collectBlocks routine
 				let dirtCount = this.bot.autobot.inventory.getInventoryDictionary().dirt || 0;
 				if (dirtCount < dirtPlaceQueue.length) {
-					this.backupBot(() => callback(false));
+					this.backupBot(() => {
+						result = {
+							error: true,
+							errorCode: "insufficientMaterials",
+							errorDescription: "Insufficient materials to flatten with.",
+							dirtCount: dirtCount,
+							dirtPlaceQueue: dirtPlaceQueue
+						};
+						if (callback) callback(result);
+						this.bot.emit(eventName, result);
+						this.flatteningCube = false;
+					});
 					return;
 				}
 				this.placeNext(dirtPlaceQueue, () => {
-					this.backupBot(() => callback(true));
+					this.backupBot(() => {
+						result = {
+							error: false,
+							errorCode: "success",
+							errorDescription: "Successfully flattened cube.",
+						};
+						if (callback) callback(result);
+						this.bot.emit(eventName, result);
+						this.flatteningCube = false;
+					});
 				});
 			});
 		}

@@ -13,6 +13,7 @@ function getSQL(filename) {
 }
 
 db.serialize(function generateDB() {
+	// Blocks
 	db.run(getSQL('sql/create_table_blocks.sql'));
 	db.run(getSQL('sql/create_table_block_drops.sql'));
 	db.run(getSQL('sql/create_table_block_harvest_tools.sql'));
@@ -58,6 +59,7 @@ db.serialize(function generateDB() {
 	insertBlockDrop.finalize();
 	insertBlockHarvestTool.finalize();
 	insertBlockState.finalize();
+	// Items
 	db.run(getSQL('sql/create_table_items.sql'));
 	const insertItem = db.prepare(getSQL('sql/insert_item.sql'));
 	for (const itemId in minecraftData.items) {
@@ -65,6 +67,7 @@ db.serialize(function generateDB() {
 		insertItem.run(item.id, item.displayName, item.name, item.stackSize);
 	}
 	insertItem.finalize();
+	// Recipes
 	db.run(getSQL('sql/create_table_recipes.sql'));
 	db.run(getSQL('sql/create_table_recipe_ingredients.sql'));
 	const insertRecipe = db.prepare(getSQL('sql/insert_recipe.sql'));

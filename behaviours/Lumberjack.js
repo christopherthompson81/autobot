@@ -6,6 +6,7 @@ class Lumberjack {
 		this.bot = bot;
 		this.mcData = mcData;
 		this.callback = () => {};
+		this.active = false;
 	}
 
 	/**************************************************************************
@@ -32,9 +33,7 @@ class Lumberjack {
 		while (!bottom) {
 			point.subtract(new Vec3(0, 1, 0));
 			let block = this.bot.blockAt(point);
-			//console.log(`Checking if ${block.name} is not like '%_log'`);
 			if (!block.name.match(/_log$/)) {
-				//console.log(`Checking if ${block.name} is not 'dirt'`);
 				if (block.name === 'dirt') {
 					bottom = block.position.clone().add(new Vec3(0, 1, 0));
 				}
@@ -48,9 +47,7 @@ class Lumberjack {
 		while (!top) {
 			point.add(new Vec3(0, 1, 0));
 			const block = this.bot.blockAt(point);
-			//console.log(`Checking if ${block.name} is not like '%_log'`);
 			if (!block.name.match(/_log$/)) {
-				//console.log(`Checking if ${block.name} is like '%_leaves'`);
 				if (block.name.match(/_leaves$/)) {
 					top = point.clone().subtract(new Vec3(0, 1, 0));
 				}
@@ -96,6 +93,8 @@ class Lumberjack {
 	}
 
 	cutTreeNext(tree, callback) {
+		const eventName = 'autobot.lumberjack.done';
+		let result = {};
 		const current = tree[0];
 		const remainder = tree.slice(1, tree.length);
 		const block = this.bot.blockAt(current, false);
@@ -113,7 +112,16 @@ class Lumberjack {
 			this.currentTask = null;
 			sleep(1500).then(() => {
 				//console.log('Picking up uncollected blocks.');
-				this.bot.autobot.pickUpBrokenBlocks(callback);
+				this.bot.autobot.pickUpBrokenBlocks(() => {
+					result = {
+						error: false,
+						errorCode: "success",
+						errorDescription: "Finished cutting tree and collecting logs."
+					}
+					if (callback) callback(result);
+					this.bot.emit(eventName, result);
+					this.active = false;
+				});
 			});
 		}
 	}
@@ -127,7 +135,10 @@ class Lumberjack {
 	}
 
 	harvestNearestTree(callback, threshold) {
-		// count logs if a threshold was set
+		const eventName = 'autobot.lumberjack.done';
+		let result = {};
+		this.active = true;
+		// count logs in inventory if a threshold was set
 		if (threshold) {
 			const inventoryDict = this.getInventoryDictionary();
 			let logCount = 0;
@@ -137,26 +148,30 @@ class Lumberjack {
 				}
 			}
 			if (logCount > threshold) {
-				callback({
+				result = {
 					error: true,
 					errorCode: "unnecessary",
-					errorDescription: "The bot possesses sufficient logs"
-				});
+					errorDescription: "The bot possesses sufficient logs and therefore harvesting a tree is unnecessary."
+				};
+				if (callback) callback();
+				this.bot.emit(eventName, result);
+				this.active = false;
 				return;
 			}
 		}
-		//this.bot.autobot.currentTask = 'cutTree';
 		const tree = this.findNearestTree();
 		if (tree) {
-			//console.log("Cutting tree: ", tree[0].position);
 			this.cutTree(tree, callback);
 		}
 		else {
-			callback({
+			result = {
 				error: true,
 				errorCode: "noTrees",
 				errorDescription: "No valid trees located."
-			});
+			};
+			if (callback) callback(result);
+			this.bot.emit(eventName, result);
+			this.active = false;
 		}
 	}
 }

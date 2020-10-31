@@ -5,6 +5,9 @@ class Mining {
 	constructor(bot, mcData) {
 		this.bot = bot;
 		this.mcData = mcData;
+		this.nearbyThreshold = 6;
+		this.callback = () => {};
+		this.active = false;
 	}
 	
 	/**************************************************************************
@@ -13,21 +16,28 @@ class Mining {
 	 * 
 	 **************************************************************************/
 
-	/*
-	Return an array of blocks forming a contiguous ore vein (of combined types)
+	equipBestHarvestTool(block, callback) {
+		const tool = bestHarvestTool(this.bot, block);
+		this.bot.equip(tool, 'hand', (err) => {
+			if (err) {
+				callback({
+					error: true,
+					errorCode: "equipError",
+					errorDescription: `Failed to equip tool (${JSON.stringify(tool)}) for ${block.displayName}`,
+					parentError: err
+				});
+			}
+			else {
+				callback({
+					error: false,
+					errorCode: "success",
+					errorDescription: `Successfully equiped best harvest tool for ${block.displayName}`
+				});
+			}
+		});
+	}
 
-	const oreBlocks = [
-		'coal_ore',
-		'diamond_ore',
-		'emerald_ore',
-		'iron_ore',
-		'gold_ore',
-		'lapis_ore',
-		'nether_gold_ore',
-		'nether_quartz_ore',
-		"redstone_ore",
-	]
-	*/
+	// Return an array of blocks forming a contiguous ore vein (of combined types)
 	blockToVein(p, oldVein) {
 		// Scan the cube 9-8-9, all new positve cubes recursively scan. 
 		let point = p.clone();
@@ -65,69 +75,9 @@ class Mining {
 		return vein;
 	}
 
-	/*
-	findNearestCoalVein() {
-		let coalBlocks = this.bot.findBlocks({
-			point: this.homePosition,
-			matching: this.bot.autobot.inventory.listBlocksByRegEx(/_ore$/),
-			maxDistance: 128,
-			count: 1000,
-		});
-		// filter bad targets
-		coalBlocks = coalBlocks.filter((p) => {
-			for (const badTarget of this.badTargets) {
-				if (p.equals(badTarget)) return false;
-			}
-			return true;
-		});
-		coalBlocks = sortByDistanceFromBot(coalBlocks);
-		let nearby = [];
-		for (const p of coalBlocks) {
-			if (this.bot.entity.position.distanceTo(new Vec3(p.x, p.y, p.z)) < 5) {
-				nearby.push(p);
-			}
-		}
-		if (nearby.length > 0) {
-			console.log("Unmined ore close by. Cleaning it up.");
-			nearby = sortByDistanceFromBot(nearby);
-			return this.blockToVein(nearby[0], [this.bot.blockAt(nearby[0])]);
-		}
-		//console.log('Nearby coal ore blocks are: ', coalBlocks);
-		// If no coal ore was found, return false
-		if (coalBlocks.length === 0) {
-			return false;
-		}
-		// Resort by Y highest to lowest.
-		//coalBlocks = coalBlocks.sort((a, b) => { return b.y - a.y });
-		return this.blockToVein(coalBlocks[0], [this.bot.blockAt(coalBlocks[0])]);
-	}
-	*/
-
-	findBestOreVein() {
-		// First handle nearby cleanup
-		// Very large number of blocks returned because otherwise many nearby blocks will be overlooked
-		let oreBlocks = this.bot.findBlocks({
-			point: this.bot.autobot.homePosition,
-			matching: this.bot.autobot.inventory.listBlocksByRegEx(/_ore$/),
-			maxDistance: 128,
-			count: 10000,
-		});
-		// filter bad targets and y < 5 (Bots get stuck on unbreakables)
-		//console.log(`Found ${oreBlocks.length}/1000 ore blocks in the search`);
-		oreBlocks = oreBlocks.filter((p) => {
-			if (p.y < 5) return false;
-			if (this.bot.entity.position.distanceTo(p) > this.nearbyThreshold) return false;
-			for (const badTarget of this.bot.autobot.badTargets) {
-				if (p.equals(badTarget)) return false;
-			}
-			return true;
-		});
-		oreBlocks = sortByDistanceFromBot(oreBlocks);
-		if (oreBlocks.length > 0) {
-			console.log("Unmined ore close by. Cleaning it up.");
-			return this.blockToVein(oreBlocks[0], [this.bot.blockAt(oreBlocks[0])]);
-		}
-		// Resort by desireability highest to lowest. (eliminate ones we don't have tools for right now)
+	getCurrentlyHarvestableOres() {
+		// Find viable ore types by eliminate ores we don't have tools for right now
+		// In order of desirability
 		const desirable = [
 			'ancient_debris',
 			'diamond_ore',
@@ -149,22 +99,65 @@ class Mining {
 				harvestable.push(material);
 			}
 		}
+		return harvestable;
+	}
+
+	oreFilter(p) {
+		if (p.y < 5) return false;
+		for (const badTarget of this.badTargets) {
+			if (p.equals(badTarget)) return false;
+		}
+		return true;
+	}
+
+	findNearestOreVein() {
+		const harvestable = this.getCurrentlyHarvestableOres();
+		let oreBlocks = this.bot.findBlocks({
+			point: this.homePosition,
+			matching: (b) => harvestable.includes(b.name),
+			maxDistance: 128,
+			count: 1000,
+		});
+		// filter bad targets
+		oreBlocks = oreBlocks.filter(oreFilter);
+		oreBlocks = sortByDistanceFromBot(oreBlocks);
+		// If no harvestable ore was found, return false
+		if (oreBlocks.length === 0) {
+			return false;
+		}
+		return this.blockToVein(oreBlocks[0], [this.bot.blockAt(oreBlocks[0])]);
+	}
+
+	findBestOreVein() {
+		// First handle nearby cleanup
+		// Very large number of blocks returned because otherwise many nearby blocks will be overlooked
+		const harvestable = this.getCurrentlyHarvestableOres();
+		let oreBlocks = this.bot.findBlocks({
+			point: this.bot.autobot.homePosition,
+			matching: (b) => harvestable.includes(b.name),
+			maxDistance: 128,
+			count: 10000,
+		});
+		// filter bad targets and y < 5 (Bots get stuck on unbreakables)
+		//console.log(`Found ${oreBlocks.length}/1000 ore blocks in the search`);
+		oreBlocks = oreBlocks.filter(oreFilter);
+		oreBlocks = oreBlocks.filter((p) => this.bot.entity.position.distanceTo(p) <= this.nearbyThreshold);
+		oreBlocks = sortByDistanceFromBot(oreBlocks);
+		if (oreBlocks.length > 0) {
+			//console.log("Unmined ore close by. Cleaning it up.");
+			return this.blockToVein(oreBlocks[0], [this.bot.blockAt(oreBlocks[0])]);
+		}
+		// Otherwise, sequentially search by desirability
 		for (const targetType of harvestable) {
 			oreBlocks = this.bot.findBlocks({
-				point: this.homePosition,
+				point: this.bot.autobot.homePosition,
 				matching: this.mcData.blocksByName[targetType].id,
 				maxDistance: 128,
 				count: 1000,
 			});
 			// filter bad targets and y < 5 (Bots get stuck on unbreakables)
 			//console.log(`Found ${oreBlocks.length}/1000 ${targetType} blocks in the search`);
-			oreBlocks = oreBlocks.filter((p) => {
-				if (p.y < 5) return false;
-				for (const badTarget of this.bot.autobot.badTargets) {
-					if (p.equals(badTarget)) return false;
-				}
-				return true;
-			});
+			oreBlocks = oreBlocks.filter(oreFilter);
 			oreBlocks = sortByDistanceFromBot(oreBlocks);
 			if (oreBlocks.length > 0) {
 				const targetBlock = this.bot.blockAt(oreBlocks[0]);
@@ -183,127 +176,149 @@ class Mining {
 		return false;
 	}
 
-	equipPickaxe(callback) {
-		// There needs to be a way to prefer iron, to stone, to wood by inventory
-		const inventoryDictionary = this.bot.autobot.getInventoryDictionary();
-		let pickaxe = "pickaxe";
-		if (Object.keys(inventoryDictionary).includes('iron_pickaxe')) {
-			pickaxe = "iron_pickaxe";
-		}
-		else if (Object.keys(inventoryDictionary).includes('stone_pickaxe')) {
-			pickaxe = "stone_pickaxe";
-		}
-		else {
-			pickaxe = "pickaxe";
-		}
-		if (this.bot.heldItem) {
-			if (this.bot.heldItem.name.match(new RegExp(pickaxe, "i"))) {
-				callback();
-				return;
-			}
-		}
-		let craftPickaxe = 585;
-		if (Object.keys(inventoryDictionary).includes('iron_ingot')) {
-			craftPickaxe = this.bot.autobot.inventory.listItemsByRegEx(/iron_pickaxe/)[0];
-		}
-		else if (Object.keys(inventoryDictionary).includes('cobblestone')) {
-			craftPickaxe = this.bot.autobot.inventory.listItemsByRegEx(/stone_pickaxe/)[0];
-		}
-		else {
-			craftPickaxe = this.bot.autobot.inventory.listItemsByRegEx(/wooden_pickaxe/)[0];
-		}
-		this.equipByName(pickaxe, () => {
-			const hand = this.bot.heldItem;
-			//console.log(this.bot.heldItem);
-			if (!hand) {
-				this.bot.autobot.autocraft.autoCraft(craftPickaxe, 1, () => {
-					sleep(350).then(() => {
-						this.bot.autobot.inventory.equipByName(
-							this.mcData.items[craftPickaxe].name,
-							callback
-						);
-					});
-				});
-			}
-			else {
-				console.log("Hand: ", hand.displayName);
-				const regex = RegExp(`pickaxe$`, "i");
-				const axes = thisbot.autobot.inventory.listItemsByRegEx(regex);
-				if (!axes.includes(hand.type)) {
-					this.bot.autobot.autocraft.autoCraft(craftPickaxe, 1, () => {
-						sleep(350).then(() => {
-							this.bot.autobot.inventory.equipByName(
-								this.mcData.items[craftPickaxe].name,
-								callback
-							);
-						});
-					});
-				}
-				else {
-					callback();
-				}
-			}
-		});
-	}
-
 	mineVeinNext(vein, callback) {
+		let result = {};
 		const current = vein[0];
 		this.remainder = vein.slice(1, vein.length);
 		if (!this.havePickaxe()) {
-			this.bot.autobot.collectDrops.pickUpBrokenBlocks(callback);
-			// emit
+			this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
+				result = {
+					error: true,
+					errorCode: "noPickaxe",
+					errorDescription: "Bot can't continue mining ore without a pickaxe."
+				};
+				if (callback) callback(result);
+				this.bot.emit('autobot.mining.digging', result);
+				this.active = false;
+			});
 			return;
 		}
 		if (current) {
 			if (!this.defaultMove.safeToBreak(current)) {
-				console.log(`Target ${current.displayName} block is not safe to break. Skipping.`);
 				this.badTargets.push(current.position.clone());
 				this.mineVeinNext(this.remainder);
+				result = {
+					error: false,
+					errorCode: "notSafe",
+					errorDescription: `Target ${current.displayName} block is not safe to break. Skipping.`,
+					block: current
+				}
+				this.bot.emit('autobot.mining.digging', result);
 				return;
 			}
-			//console.log(`Current:`, current);
-			this.equipPickaxe(() => {
+			this.equipBestHarvestTool(current, (cbResult) => {
+				if (cbResult.error) {
+					if (callback) callback(result);
+					this.bot.emit(eventName, cbResult);
+					return;
+				}
 				if (this.bot.entity.position.distanceTo(current.position) > 3) {
-					console.log("The bot is too far from the object block to mine.");
 					//this.currentTask = 'mineVein';
 					const p = current.position;
 					const goal = new GoalGetToBlock(p.x, p.y, p.z);
 					this.bot.pathfinder.setGoal(goal);
+					this.callback = () => {
+						self.mineVeinNext(vein, callback);
+					};
+					result = {
+						error: false,
+						errorCode: "tooFar",
+						errorDescription: `The bot is too far from the object block to mine.`,
+						block: current
+					}
+					this.bot.emit('autobot.mining.digging', result);
 					return;
 				}
 				this.bot.dig(current, true, (err) => {
+					if (err) {
+						result = {
+							error: true,
+							errorCode: "digError",
+							errorDescription: `Digging error`,
+							block: current,
+							parentError: err
+						}
+						this.bot.emit('autobot.mining.digging', result);
+					}
 					this.mineVeinNext(this.remainder);
 				});
 			});
 		}
 		else {
-			console.log('Finished mining. Waiting for drops.');
+			//console.log('Finished mining. Waiting for drops.');
 			//this.currentTask = null;
 			sleep(1000).then(() => {
 				console.log('Picking up uncollected blocks.');
-				this.pickUpBrokenBlocks();
+				this.bot.autobot.pickUpBrokenBlocks(() => {
+					result = {
+						error: false,
+						errorCode: "success",
+						errorDescription: "Finished mining and collecting drops."
+					}
+					if (callback) callback(result);
+					this.bot.emit('autobot.mining.done', result);
+					this.active = false;
+				});
 			});
 		}
 	}
 
-	mineVein(vein) {
+	mineVein(vein, callback) {
 		// Go to a tree and cut it down
-		this.remainder = vein;
+		const self = this;
 		const p = vein[0].position;
 		const goal = new GoalGetToBlock(p.x, p.y, p.z);
+		this.callback = () => {
+			self.mineVeinNext(vein, callback);
+		};
 		this.bot.pathfinder.setGoal(goal);
 	}
 
-	mineNearestOreVein() {
-		//this.currentTask = 'mineVein';
-		//const vein = this.findNearestCoalVein();
+	mineNearestOreVein(callback) {
+		let result = {};
+		this.active = true;
 		const vein = this.findBestOreVein();
 		if (vein) {
-			console.log("Mining Vein: ", vein[0].position);
+			result = {
+				error: false,
+				errorCode: "foundVein",
+				errorDescription: `Found an ore vein`,
+				vein: vein
+			}
+			this.bot.emit('autobot.mining.digging', result);
 			this.mineVein(vein);
 		}
 		else {
-			console.log("No valid coal veins found.");
+			result = {
+				error: true,
+				errorCode: "noVeinFound",
+				errorDescription: "No valid ore veins found."
+			}
+			this.bot.emit('autobot.mining.done', result);
+		}
+	}
+
+	mineBestOreVein() {
+		let result = {};
+		this.active = true;
+		const vein = this.findBestOreVein();
+		if (vein) {
+			result = {
+				error: false,
+				errorCode: "foundVein",
+				errorDescription: `Found an ore vein`,
+				vein: vein
+			}
+			this.bot.emit('autobot.mining.digging', result);
+			this.mineVein(vein);
+		}
+		else {
+			result = {
+				error: true,
+				errorCode: "noVeinFound",
+				errorDescription: "No valid ore veins found."
+			}
+			this.bot.emit('autobot.mining.done', result);
 		}
 	}
 }
