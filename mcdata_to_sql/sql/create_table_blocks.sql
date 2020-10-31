@@ -1,8 +1,8 @@
 CREATE TABLE blocks (
-	block_id INTEGER PRIMARY KEY,
+	block_id INTEGER,
     display_name TEXT,
     name TEXT,
-    hardness INTEGER,
+    hardness NUMERIC,
     min_state_id INTEGER,
     max_state_id INTEGER,
     diggable BOOLEAN,

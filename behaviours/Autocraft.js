@@ -24,21 +24,14 @@ class Autocraft {
 			//console.log(recipe);
 			for (const row of recipe.inShape) {
 				for (const item of row) {
-					if (item.id < 0) {
-						continue;
-					}
-					if (ingredientDict[item.id] === undefined) {
-						ingredientDict[item.id] = item.count;
-					}
-					else {
-						ingredientDict[item.id] =
-							ingredientDict[item.id] + item.count;
-					}
+					if (item.id < 0) continue;
+					if (ingredientDict[item.id] === undefined) ingredientDict[item.id] = 0;
+					ingredientDict[item.id] += item.count;
 				}
 			}
 			const ingredients = Array();
 			for (const i in ingredientDict) {
-				ingredients.push({"id": i, "count": ingredientDict[i]})
+				ingredients.push({"id": i, "count": ingredientDict[i]});
 			}
 			return ingredients;
 		}
