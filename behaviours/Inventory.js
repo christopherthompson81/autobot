@@ -1,7 +1,9 @@
+const autoBind = require('auto-bind');
 const toolItems = require('./constants').toolItems;
 
 class Inventory {
 	constructor(bot, mcData) {
+		autoBind(this);
 		this.bot = bot;
 		this.mcData = mcData;
 		this.craftingTools = false;

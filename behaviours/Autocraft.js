@@ -1,3 +1,4 @@
+const autoBind = require('auto-bind');
 const compressableItems = require('./constants').compressableItems;
 
 class Autocraft {

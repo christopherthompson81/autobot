@@ -1,12 +1,11 @@
+const autoBind = require('auto-bind');
+
 class Navigator {
 	constructor(bot, mcData) {
+		autoBind(this);
 		this.bot = bot;
 		this.mcData = mcData;
 		this.bot.autobot.homePosition = this.setHomePosition();
-	}
-
-	getPosHash(p) {
-		return p.x + ',' + p.y + ',' + p.z;
 	}
 
 	setHomePosition() {

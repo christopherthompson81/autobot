@@ -1,5 +1,8 @@
+const autoBind = require('auto-bind');
+
 class Smelting {
 	constructor(bot, mcData) {
+		autoBind(this);
 		this.bot = bot;
 		this.mcData = mcData;
 		this.callback = () => {};

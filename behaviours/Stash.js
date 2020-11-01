@@ -1,15 +1,16 @@
 const toolItems = require('./constants').toolItems;
 const essentialItems = require('./constants').essentialItems;
 const compressableItems = require('./constants').compressableItems;
+const getPosHash = require('./autoBotLib').getPosHash;
 
 class Stash {
 	constructor(bot, mcData) {
+		autoBind(this);
 		this.bot = bot;
 		this.mcData = mcData;
 		this.callback = () => {};
 		this.active = false;
 		this.smeltingCheck = false;
-		this.getPosHash = this.bot.autobot.navigator.getPosHash;
 	}
 
 	/**************************************************************************
@@ -48,17 +49,13 @@ class Stash {
 		for (const tool of toolItems.names) {
 			let toolKeepCount = 2;
 			for (const material of toolItems.materials) {
-				if (toolKeepCount === 0) {
-					break;
-				}
+				if (toolKeepCount === 0) break;
 				inventory = inventory.filter(item => {
 					if (item.name === `${material}_${tool}` && toolKeepCount > 0) {
 						toolKeepCount--;
 						return false;
 					}
-					else {
-						return true;
-					}
+					else return true;
 				});
 			}
 		}
@@ -68,21 +65,11 @@ class Stash {
 			let count = 0;
 			for (const item of inventory) {
 				let essential = false;
-				if (eItem.type === 'regex') {
-					essential = item.name.match(eItem.regex);
-				}
-				else if (eItem.type === 'name') {
-					essential = item.name === eItem.name;
-				}
-				else if (eItem.type === 'nameList') {
-					essential = eItem.list.includes(item.name);
-				}
-				if (essential && count < eItem.maxSlots) {
-					count++;
-				}
-				else {
-					filtered.push(item);
-				}
+				if (eItem.type === 'regex') essential = item.name.match(eItem.regex);
+				else if (eItem.type === 'name') essential = item.name === eItem.name;
+				else if (eItem.type === 'nameList') essential = eItem.list.includes(item.name);
+				if (essential && count < eItem.maxSlots) count++;
+				else filtered.push(item);
 			}
 			inventory = filtered;
 		}
@@ -98,13 +85,9 @@ class Stash {
 		const nonEssentialInventory = this.listNonEssentialInventory();
 		//console.log(nonEssentialInventory);
 		if (nonEssentialInventory.length > 0) {
-			if (this.bot.entity.position.distanceTo(this.bot.autobot.homePosition) < 5) {
-				return true;
-			}
+			if (this.bot.entity.position.distanceTo(this.bot.autobot.homePosition) < 5) return true;
 			for (const item of nonEssentialInventory) {
-				if (item.count === item.stackSize) {
-					return true;
-				}
+				if (item.count === item.stackSize) return true;
 			}
 		}
 		return false;
@@ -161,16 +144,18 @@ class Stash {
 			if (this.canStash(chestWindow, current)) {
 				chest.deposit(current.type, null, current.count, (err) => {
 					this.saveChestWindow(chestWindow.position, chest.window);
-					if (err) {						
+					if (err) {	
+						// Find a different chest					
 						chest.close();
 						this.stashNonEssentialInventory(callback);
 						return;
 					}
-					chestWindow = this.chestMap[this.getPosHash(chestWindow.position)];
+					chestWindow = this.chestMap[getPosHash(chestWindow.position)];
 					this.stashNext(chest, remainder, chestWindow, callback);
 				});
 			}
 			else {
+				// Find a different chest
 				chest.close();
 				this.stashNonEssentialInventory(callback);
 			}
@@ -233,7 +218,7 @@ class Stash {
 
 	saveChestWindow(position, chestWindow) {
 		const p = position;
-		const posHash = this.getPosHash(position);
+		const posHash = getPosHash(position);
 		let contents;
 		if (chestWindow.type === 'minecraft:generic_9x6') {
 			contents = chestWindow.slots.slice(0, 54);
@@ -254,10 +239,7 @@ class Stash {
 	findChest() {
 		for (const posHash in this.chestMap) {
 			const chest = this.chestMap[posHash];
-			if (chest.freeSlotCount > 0) {
-				//console.log(`Known Chest: `, chest);
-				return this.bot.blockAt(chest.position);
-			}
+			if (chest.freeSlotCount > 0) return this.bot.blockAt(chest.position);
 		}
 		let chestsToOpen = this.bot.findBlocks({
 			point: this.homePosition,
@@ -273,100 +255,16 @@ class Stash {
 			}
 			return true;
 		});
-		if (chestsToOpen.length > 0) {
-			return this.bot.blockAt(chestsToOpen[0]);
-		}
-		else {
-			return false;
-		}
+		if (chestsToOpen.length > 0) return this.bot.blockAt(chestsToOpen[0]);
+		else return false;
 	}
 
-	placeNewChest() {
-		/*
-		craft chest if needed
-		home position is anchor; chest grid is interpreted
-		use a concentric growth pattern.
-		rings are: [
-			[x -2, z -2 to x 2, z 2]
-			[x -4, z -4 to x 4, z 4]
-			[x -6, z -6 to x 6, z 6]
-			etc...
-		]
-		flatten surface surrounding target block. (3x3x3 cube) bottom: dirt, middle: air, top: air
-		valid targets are:
-			* air
-			* block below having material "dirt" or "rock"
-			* block above also being air
-		Replicate orientation. If new, use -Z (North), X (East), Z (South), -X (West)
-		directions [
-			[0, 0, -1],
-			[1, 0, 0],
-			[0, 0, 1],
-			[-1, 0, 0],
-		]
-		Opportunistically use direction as player standing position offset from target block.
-		
-		set a goal to the player standing position, then place
-		*/
-		const chestId = this.listItemsByRegEx(/^chest$/)[0];
-		let chest = this.getInventoryItemById(chestId);
-		if (!chest) {
-			console.log('Autocrafting chest.');
-			this.autoCraft(chestId, 1, (success) => {
-				if (!success) {
-					// Probably lack wood
-					console.log('Failed to make chest.');
-					this.harvestNearestTree();
-				}
-				else {
-					// Wait timing might need to be adjusted up
-					sleep(350).then(this.placeNewChest);
-				}
-			});
-			return;
-		}
-		let ringSize = 1;
-		let buildPos = null;
-		let targetPos = null;
-		let x, z;
-		while (!buildPos && ringSize < 5) {
-			for (x = -2 * ringSize; x <= (2 * ringSize); x += 2) {
-				for (z = -2 * ringSize; z <= (2 * ringSize); z += 2) {
-					targetPos = this.homePosition.offset(x, 0, z);
-					if (!['chest', 'crafting_table', 'furnace'].includes(this.bot.blockAt(targetPos).name)) {
-						buildPos = targetPos.clone();
-						break;
-					}
-				}
-				if (buildPos != null) {
-					console.log(`x: ${x}. z: ${z}`);
-					break;
-				}
-			}
-			ringSize++;
-		}
-		if (buildPos) {
-			this.flattenCube(buildPos, (success) => {
-				if (!success) {
-					console.log('Error flattening');
-					return;
-				}
-				chest = this.getInventoryItemById(chestId);
-				this.bot.equip(chest, 'hand', (err) => {
-					if (err) console.log('Error equipping chest');
-					const referenceBlock = this.bot.blockAt(buildPos);
-					sleep(350).then(() => {
-						this.bot.placeBlock(referenceBlock, new Vec3(1, 0, 0), (err) => {
-							if (err) console.log('Error placing chest', err);
-							this.stashNonEssentialInventory();
-						});
-					});
-				});
-			});
-		}
-		else {
-			console.log('Could not find a spot for a new chest.');
-		}
+	placeNewChest(callback) {
+		const eventName = 'autobot.stashing.newChest';
+		this.bot.autobot.landscaping.placeNewStorageObject('chest', (result) => {
+			if (callback) callback(result);
+			this.bot.emit(eventName, result);
+		});
 	}
 
 	chestArrival(chestToOpen, callback) {
@@ -374,11 +272,11 @@ class Stash {
 		chest.on('open', () => {
 			//console.log('Chest opened.');
 			this.saveChestWindow(chestToOpen.position, chest.window);
-			const chestWindow = this.chestMap[this.getPosHash(chestToOpen.position)];
+			const chestWindow = this.chestMap[getPosHash(chestToOpen.position)];
 			if (chestWindow.freeSlotCount === 0) {
 				//console.log('Chest is full. Trying to find another');
 				chest.close();
-				this.stashNonEssentialInventory();
+				this.stashNonEssentialInventory(callback);
 				return;
 			}
 			const itemsToStash = this.listNonEssentialInventory();
