@@ -24,7 +24,6 @@ class Smelting {
 					fuelAmount,
 					(err) => {
 						if (err) {
-							console.log(`Put fuel (adding ${fuelAmount} coal to ${fuel.count}): `, err)
 							result = {
 								error: true,
 								errorCode: "restokeFailed",
@@ -68,7 +67,7 @@ class Smelting {
 				inputAmount = 64 - currentInput.count;
 			}
 			furnace.putInput(
-				this.listItemsByRegEx(/^iron_ore$/)[0],
+				this.bot.inventory.listItemsByRegEx(/^iron_ore$/)[0],
 				null,
 				inputAmount,
 				(err) => {
@@ -88,7 +87,6 @@ class Smelting {
 						};
 					}
 					furnace.close();
-					this.active = false;
 					sleep(350).then(() => {
 						if (callback) callback(result);
 						this.bot.emit(eventName, result);
@@ -104,7 +102,6 @@ class Smelting {
 				errorDescription: `No input was added to the furnace.`
 			};
 			sleep(350).then(() => {
-				this.active = false;
 				if (callback) callback(result);
 				this.bot.emit(eventName, result);
 			});
@@ -112,21 +109,40 @@ class Smelting {
 	}
 
 	smeltingCallback(furnaceBlock, callback) {
+		let result = {};
+		const eventName = 'autobot.smelting.done';
+		const self = this;
 		const furnace = this.bot.openFurnace(furnaceBlock);
 		furnace.on('open', () => {
 			if (furnace.outputItem()) {
-				furnace.takeOutput(() => {
-					this.restoke(furnace, () => {
-						this.resupplyFurnace(furnace, (result) => {
+				furnace.takeOutput((err, item) => {
+					self.restoke(furnace, (restokeResult) => {
+						self.resupplyFurnace(furnace, (resupplyResult) => {
+							if (err || restokeResult.error || resupplyResult.error) {
+								result.error = true;
+							}
+							result.takeOutputResult = err;
+							result.restokeResult = restokeResult;
+							result.resupplyResult = resupplyResult;
 							if (callback) callback(result);
+							self.bot.emit(eventName, result);
+							self.active = false;
 						});
 					});
 				});
 			}
 			else {
-				this.restoke(furnace, () => {
-					this.resupplyFurnace(furnace, (result) => {
+				self.restoke(furnace, (restokeResult) => {
+					self.resupplyFurnace(furnace, (resupplyResult) => {
+						if (restokeResult.error || resupplyResult.error) {
+							result.error = true;
+						}
+						result.takeOutputResult = null;
+						result.restokeResult = restokeResult;
+						result.resupplyResult = resupplyResult;
 						if (callback) callback(result);
+						self.bot.emit(eventName, result);
+						self.active = false;
 					});
 				});
 			}
@@ -138,82 +154,16 @@ class Smelting {
 
 	placeNewFurnace(callback) {
 		const eventName = 'autobot.smelting.newFurnace';
-		let result = {};
-		const furnaceId = this.mcData.itemsByName['furnace'].id;
-		let furnace = this.bot.autobot.inventory.getInventoryItemById(furnaceId);
-		if (!furnace) {
-			//console.log('Autocrafting furnace.');
-			this.autoCraft(furnaceId, 1, (cbResult) => {
-				if (cbResult.error) {
-					result = {
-						error: true,
-						errorCode: "furnaceCraftingFailed",
-						errorDescription: "Failed to make a new furnace.",
-						parentError: cbResult
-					};
-					if (callback) callback(result);
-					this.bot.emit('autobot.smelting.newFurnace', result);
-				}
-				else {
-					// Wait timing might need to be adjusted up
-					sleep(350).then(() => {
-						this.placeNewFurnace(callback);
-					});
-				}
-			});
-			return;
-		}
-		const buildPos = this.bot.autobot.landscaping.getNextStorageGridSpot();
-		if (buildPos) {
-			this.bot.autobot.landscaping.flattenCube(buildPos, null, null, (cbResult) => {
-				if (cbResult.error) {
-					if (callback) callback(cbResult);
-					this.bot.emit(eventName, cbResult);
-					return;
-				}
-				furnace = this.bot.autobot.inventory.getInventoryItemById(furnaceId);
-				this.bot.equip(furnace, 'hand', (err) => {
-					if (err) {
-						//console.log('Error equipping chest');
-					}
-					const referenceBlock = this.bot.blockAt(buildPos);
-					sleep(350).then(() => {
-						this.bot.placeBlock(referenceBlock, new Vec3(1, 0, 0), (err) => {
-							if (err) {
-								result = {
-									error: true,
-									errorCode: "furnacePlacingFailed",
-									errorDescription: "Failed to place a new furnace.",
-									parentError: err
-								};
-							}
-							else {
-								result = {
-									error: false,
-									errorCode: "success",
-									errorDescription: "Placed a new furnace."
-								};
-							}
-							if (callback) callback(result);
-							this.bot.emit(eventName, result);
-						});
-					});
-				});
-			});
-		}
-		else {
-			result = {
-				error: true,
-				errorCode: "noSpot",
-				errorDescription: "Could not find a spot for a new furnace."
-			};
+		const self = this;
+		this.bot.autobot.landscaping.placeNewStorageObject('furnace', (result) => {
 			if (callback) callback(result);
-			this.bot.emit(eventName, result);
-		}
+			self.bot.emit(eventName, result);
+		});
 	}
 
-	smeltOre() {
+	smeltOre(callback) {
 		const self = this;
+		this.active = true;
 		const furnaceIds = [
 			this.mcData.blocksByName['furnace'].id,
 			this.mcData.blocksByName['lit_furnace'].id
@@ -225,15 +175,22 @@ class Smelting {
 		});
 		// Only stash to surface / near surface chests
 		if (furnaceBlock) {
-			//console.log("Furnace found. Moving to: ", furnaceBlock.position);
-			//this.currentTask = 'smelting';
 			const p = furnaceBlock.position;
 			const goal = new GoalNear(p.x, p.y, p.z, 3);
-			this.callback = () => { self.smeltingCallback(furnaceBlock) };
+			this.callback = () => { self.smeltingCallback(furnaceBlock, callback) };
 			this.bot.pathfinder.setGoal(goal);
 		}
 		else {
-			this.placeNewFurnace(this.smeltOre);
+			this.placeNewFurnace((result) => {
+				if (result.error) {
+					if (callback) callback(result);
+					self.bot.emit('autobot.smelting.done', result);
+					this.active = false;
+				}
+				else {
+					self.smeltOre(callback);
+				}
+			});
 		}
 	}
 }

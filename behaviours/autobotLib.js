@@ -29,6 +29,10 @@ function sortByDistanceFromBot(bot, vec3Array) {
 	});
 }
 
+function getPosHash(p) {
+	return p.x + ',' + p.y + ',' + p.z;
+}
+
 /*
 Considering a generic approach (but it might require too much config):
 	* pick best tool (done)
@@ -100,3 +104,4 @@ mineVeinNext(vein) {
 
 exports.sortByDistanceFromBot = sortByDistanceFromBot;
 exports.bestHarvestTool = bestHarvestTool;
+exports.getPosHash = getPosHash;

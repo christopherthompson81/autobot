@@ -7,6 +7,9 @@ class Stash {
 		this.bot = bot;
 		this.mcData = mcData;
 		this.callback = () => {};
+		this.active = false;
+		this.smeltingCheck = false;
+		this.getPosHash = this.bot.autobot.navigator.getPosHash;
 	}
 
 	/**************************************************************************
@@ -115,78 +118,96 @@ class Stash {
 			const missingTools = this.missingTools();
 			if (missingTools.length > 0) {
 				//console.log('Returning to cutting trees because of missing tools.', missingTools);
-				this.bot.autobot.inventory.craftTools(this.harvestNearestTree);
+				this.bot.autobot.inventory.craftTools(
+					this.bot.autobot.lumberjack.harvestNearestTree
+				);
 			}
 			else {
-				console.log('Returning to mining.');
-				this.craftTools(this.mineNearestOreVein);
+				//console.log('Returning to mining.');
+				this.bot.autobot.inventory.craftTools(
+					this.bot.autobot.mining.mineBestOreVein
+				);
 			}
 		}
 		else {
-			//console.log(inventoryDict);
-			console.log('Returning to cutting trees.', inventoryDict);
-			this.craftTools(this.harvestNearestTree);
+			//console.log('Returning to cutting trees.', inventoryDict);
+			this.bot.autobot.inventory.craftTools(
+				this.bot.autobot.lumberjack.harvestNearestTree
+			);
 		}
 	}
 
-	stashNext(chest, stashList) {
+	canStash(chestWindow, item) {
+		const stacksize = this.mcData.itemsByName[item.name].stacksize;
+		if (chestWindow.freeSlotCount >= Math.ceil(item.count / stacksize)) {
+			return true;
+		}
+		let roomForItem = stacksize * chestWindow.freeSlotCount;
+		for (const slot of chestWindow.slots) {
+			if (slot === null) continue;
+			if (slot.name !== item.name) continue;
+			roomForItem += slot.stacksize - slot.count;
+		}
+		if (roomForItem >= item.count) return true;
+		return false;
+	}
+
+	stashNext(chest, stashList, chestWindow, callback) {
+		let result = {};
+		const eventName = 'autobot.stashing.done';
 		const current = stashList[0];
 		const remainder = stashList.slice(1, stashList.length);
 		if (current) {
-			chest.deposit(current.type, null, current.count, (err) => {
-				if (err) {
-					console.log(`Unable to stash ${current.count} ${current.name}`);
-					chest.close();
-					this.placeNewChest();
-					return;
-				} else {
-					console.log(`Stashed ${current.count} ${current.name}`);
-				}
-				this.stashNext(chest, remainder);
-			});
+			if (this.canStash(chestWindow, current)) {
+				chest.deposit(current.type, null, current.count, (err) => {
+					this.saveChestWindow(chestWindow.position, chest.window);
+					if (err) {						
+						chest.close();
+						this.stashNonEssentialInventory(callback);
+						return;
+					}
+					chestWindow = this.chestMap[this.getPosHash(chestWindow.position)];
+					this.stashNext(chest, remainder, chestWindow, callback);
+				});
+			}
+			else {
+				chest.close();
+				this.stashNonEssentialInventory(callback);
+			}
 		}
 		else {
 			chest.close();
-			console.log('Finished stashing.');
-			//this.currentTask = null;
-			sleep(1000).then(() => {
-				// If we have logs, mine, if we don't lumberjack
-				const inventoryDict = this.getInventoryDictionary();
-				//console.log(inventoryDict, Object.keys(inventoryDict));
-				if (Object.keys(inventoryDict).some(id => id.match(/_log$/))) {
-					// Don't start mining without a full set of tools
-					const missingTools = this.missingTools();
-					if (missingTools.length > 0) {
-						console.log('Returning to cutting trees because of missing tools.', missingTools);
-						this.craftTools(this.harvestNearestTree);
-					}
-					else {
-						console.log('Returning to mining.');
-						this.craftTools(this.mineNearestOreVein);
-					}
-				}
-				else {
-					//console.log(inventoryDict);
-					console.log('Returning to cutting trees.', inventoryDict);
-					this.craftTools(this.harvestNearestTree);
-				}
-			});
+			result = {
+				error: false,
+				errorCode: "success",
+				errorDescription: "Successfully stashed unneeded items."
+			};
+			if (callback) callback(result);
+			this.bot.emit(eventName, result);
 		}
 	}
 
 	compressNext(compressList, callback) {
+		let result = {};
+		const eventName = 'autobot.compression.done';
 		const current = compressList[0];
 		const remainder = compressList.slice(1, compressList.length);
 		if (current) {
-			console.log(`Compressing to ${this.mcData.items[current.id].displayName}`);
-			this.autoCraft(current.id, current.count, (success) => {
+			//console.log(`Compressing to ${this.mcData.items[current.id].displayName}`);
+			this.autoCraft(current.id, current.count, (craftResult) => {
 				sleep(100).then(() => {
 					this.compressNext(remainder, callback);
 				});
 			});	
 		}
 		else {
-			callback(true);
+			result = {
+				error: false,
+				errorCode: "success",
+				errorDescription: "Successfully compressed all compressable items."
+			}
+			if (callback) callback(result);
+			this.bot.emit(eventName, result);
 		}
 	}
 
@@ -208,10 +229,6 @@ class Stash {
 			}
 		}
 		return compressList;
-	}
-
-	compressItems(compressList) {
-		this.compressNext(compressList, this.stashNonEssentialInventory);
 	}
 
 	saveChestWindow(position, chestWindow) {
@@ -352,89 +369,81 @@ class Stash {
 		}
 	}
 
-	stashNonEssentialInventory() {
+	chestArrival(chestToOpen, callback) {
+		const chest = this.bot.openChest(chestToOpen);
+		chest.on('open', () => {
+			//console.log('Chest opened.');
+			this.saveChestWindow(chestToOpen.position, chest.window);
+			const chestWindow = this.chestMap[this.getPosHash(chestToOpen.position)];
+			if (chestWindow.freeSlotCount === 0) {
+				//console.log('Chest is full. Trying to find another');
+				chest.close();
+				this.stashNonEssentialInventory();
+				return;
+			}
+			const itemsToStash = this.listNonEssentialInventory();
+			// TODO: write a function to check the stashing queue against the chest
+			// ...probably in the findChest function to return an appropriate chest
+			this.stashNext(chest, itemsToStash, chestWindow, callback);
+		});
+		chest.on('close', () => {
+			//console.log('Chest closed');
+		});
+	}
+
+	/*
+	The stashing routine involves several prerequisite tasks. I'm not sure if this will work well split out yet.
+	*/
+	stashNonEssentialInventory(callback) {
+		this.active = true;
 		if (this.checkInventoryToStash()) {
 			const inventoryDict = this.getInventoryDictionary();
-			if (this.currentTask != 'smelting' && inventoryDict['iron_ore']) {
-				this.smeltOre();
+			// Smelt before stashing
+			if (!this.smeltingCheck && inventoryDict['iron_ore']) {
+				this.smeltingCheck = true;
+				this.bot.autobot.smelting.smeltOre(() => this.stashNonEsstentialInventory(callback));
 				return;
 			}
 			// Do compressables before stashing
 			const compressList = this.getCompressList();
 			if (compressList.length > 0) {
-				this.compressItems(compressList);
+				this.compressNext(compressList, () => this.stashNonEssentialInventory(callback));
 				return;
 			}
-			console.log("Stashing non-essential inventory");
-			const chestToOpen = this.findChest();
-			if (chestToOpen) {
-				console.log("Chest found. Moving to: ", chestToOpen.position);
-				//this.currentTask = 'stashing';
-				const p = chestToOpen.position;
+			//console.log("Stashing non-essential inventory");
+			const chest = this.findChest();
+			if (chest) {
+				//console.log("Chest found. Moving to: ", chest.position);
+				const p = chest.position;
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				this.callback = () => {
-					console.log('Stashing callback.');
-					const chest = this.bot.openChest(chestToOpen);
-					chest.on('open', () => {
-						console.log('Chest opened.');
-						this.saveChestWindow(chestToOpen.position, chest.window);
-						if (this.chestMap[this.getPosHash(chestToOpen.position)].freeSlotCount === 0) {
-							console.log('Chest is full. Trying to find another');
-							chest.close();
-							this.stashNonEssentialInventory();
-							return;
-						}
-						//console.log('chestWindow: ', chest.window);
-						//console.log('chest.items(): ', chest.items());
-						const itemsToStash = this.listNonEssentialInventory();
-						// TODO: write a function to check the stashing queue against the chest... probably in the findChest function to return an appropriate chest
-						this.stashNext(chest, itemsToStash);
-					});
-					chest.on('close', () => {
-						console.log('Chest closed');
-					});
+					this.chestArrival(chestToOpen, callback);
 				}
 				this.bot.pathfinder.setGoal(goal);
 			}
 			else {
-				console.log("No chest located.");
-				this.placeNewChest();
+				//console.log("No chest located.");
+				this.placeNewChest((result) => {
+					if (result.error) {
+						if (callback) callback(result);
+						this.bot.emit('autobot.stashing.done', result);
+					}
+					else {
+						this.stashNonEssentialInventory(callback);
+					}
+				});
 			}
 		}
 		else {
-			// If we have logs, mine, if we don't lumberjack
-			const inventoryDict = this.getInventoryDictionary();
-			//console.log(inventoryDict, Object.keys(inventoryDict));
-			let logCount = 0;
-			for (const item in inventoryDict) {
-				if (item.match(/_log$/)) {
-					logCount += inventoryDict[item];
-				}
+			let result = {
+				error: false,
+				errorCode: "skipping",
+				errorDescription: "No non-essential inventory to stash."
 			}
-			if (logCount > 0) {
-				console.log(`Log Count: ${logCount}`);
-				const missingTools = this.missingTools();
-				// Don't start mining without a full set of tools
-				if (missingTools.length > 0) {
-					if (logCount > 32) {
-						// Do a stashing loop
-						this.craftTools(this.stashNonEssentialInventory);
-					}
-					else {
-						console.log('Returning to cutting trees because of missing tools.', missingTools);
-						this.craftTools(this.harvestNearestTree);
-					}
-				}
-				else {
-					console.log('Returning to mining.');
-					this.craftTools(this.mineNearestOreVein);
-				}
-			}
-			else {
-				//console.log(inventoryDict);
-				console.log('Returning to cutting trees.', inventoryDict);
-				this.craftTools(this.harvestNearestTree);
-			}
+			if (callback) callback(result);
+			this.bot.emit('autobot.stashing.done', result);
+			this.smeltingCheck = false;
+			this.active = false;
 		}
 	}
 }

@@ -219,6 +219,83 @@ class Landscaping {
 		}
 		return false;
 	}
+
+	placeNewStorageObject(storageObjectName, callback) {
+		const eventName = 'autobot.landscaping.newStorageObject';
+		let result = {};
+		const storageObjectType = this.mcData.itemsByName[storageObjectName];
+		let storageObject = this.bot.autobot.inventory.getInventoryItemById(storageObjectType.id);
+		if (!storageObject) {
+			//console.log('Autocrafting storageObject.');
+			this.autoCraft(storageObjectType.id, 1, (cbResult) => {
+				if (cbResult.error) {
+					result = {
+						error: true,
+						errorCode: "storageObjectCraftingFailed",
+						errorDescription: `Failed to make a new ${storageObjectType.displayName}.`,
+						storageObjectType: storageObjectType,
+						parentError: cbResult
+					};
+					if (callback) callback(result);
+					this.bot.emit(eventName, result);
+				}
+				else {
+					// Wait timing might need to be adjusted up
+					sleep(350).then(() => {
+						this.placeNewStorageObject(storageObjectName, callback);
+					});
+				}
+			});
+			return;
+		}
+		const buildPos = this.getNextStorageGridSpot();
+		if (buildPos) {
+			this.flattenCube(buildPos, null, null, (cbResult) => {
+				if (cbResult.error) {
+					if (callback) callback(cbResult);
+					this.bot.emit(eventName, cbResult);
+					return;
+				}
+				storageObject = this.bot.autobot.inventory.getInventoryItemById(storageObjectType.id);
+				this.bot.equip(storageObject, 'hand', (err) => {
+					if (err) {
+						//console.log('Error equipping chest');
+					}
+					const referenceBlock = this.bot.blockAt(buildPos);
+					sleep(350).then(() => {
+						this.bot.placeBlock(referenceBlock, new Vec3(1, 0, 0), (err) => {
+							if (err) {
+								result = {
+									error: true,
+									errorCode: "storageObjectPlacingFailed",
+									errorDescription: `Failed to place a new ${storageObjectType.displayName}.`,
+									parentError: err
+								};
+							}
+							else {
+								result = {
+									error: false,
+									errorCode: "success",
+									errorDescription: `Placed a new ${storageObjectType.displayName}.`
+								};
+							}
+							if (callback) callback(result);
+							this.bot.emit(eventName, result);
+						});
+					});
+				});
+			});
+		}
+		else {
+			result = {
+				error: true,
+				errorCode: "noSpot",
+				errorDescription: `Could not find a spot for a new ${storageObjectType.displayName}.`
+			};
+			if (callback) callback(result);
+			this.bot.emit(eventName, result);
+		}
+	}
 }
 
 module.exports = Landscaping;
