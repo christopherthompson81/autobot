@@ -40,17 +40,45 @@ function getPosHash(p) {
 /*
 Considering a generic approach (but it might require too much config):
 	* pick best tool (done)
-	* tooltype or quit
+	* tooltype or move on
 	* safeToBreak
 	* move closer
 
-function digQueue(bot, blockList, callback) {
+function digBlockQueueNext(blockList, callback) {
+	const eventName = 'autobot.landscaping.digBlockQueue.done';
+	let result = {};
 	const current = blockList[0];
 	const remainder = blockList.slice(1, blockList.length);
-	const block = bot.blockAt(current, false)
-	const tool = bot.pathfinder.bestHarvestTool(block)
 	if (current) {
-		//console.log(`Current:`, current);
+		const block = this.bot.blockAt(current, false)
+		const tool = this.bot.pathfinder.bestHarvestTool(block)
+		if (block.harvestTools) {
+			if (!block.harvestTools.includes(tool)) {
+				result = {
+					error: true,
+					errorCode: "noSuitableTool",
+					errorDescription "The bot lacks a suitable tool to break a block in the queue",
+					block: block,
+					bestTool: tool
+				}
+				this.bot.emit(eventName, result);
+				this.digBlockQueueNext(remainder, callback);
+				return;
+			}
+		}
+		if (!this.defaultMove.safeToBreak(block)) {
+			console.log(`Target ${block.displayName} block is not safe to break. Skipping.`);
+			this.bot.autobot.mining.badTargets.push(block.position.clone());
+			this.digBlockQueueNext(remainder, callback);
+			return;
+		}
+		if (this.bot.entity.position.distanceTo(block.position) > 3) {
+			//console.log("The bot is too far from the object block to break it.");
+			const p = block.position;
+			const goal = new GoalGetToBlock(p.x, p.y, p.z);
+			this.bot.pathfinder.setGoal(goal);
+			return;
+		}
 		bot.equip(tool, 'hand', function () {
 			bot.dig(current, true, (err) => {
 				digQueue(bot, remainder, callback);

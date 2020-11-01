@@ -2,7 +2,8 @@
 Experimental Minecraft Bot - plugin
 
 The goal of this framework is to allow people to write bots at a high level
-that can function independantly from an operator.
+that can function independantly from an operator by responding to behaviour
+events.
 
 */
 'use strict';
@@ -88,15 +89,11 @@ function inject (bot) {
 			bot.autobot.navigator.backupBot(() => bot.pathfinder.setGoal(goal));
 			return;
 		}
-		if (bot.autobot.autocraft.active) {
-			bot.autobot.autocraft.callback();
+		// navigating first
+		if (bot.autobot.navigator.active) {
+			bot.autobot.navigator.arrivedHome();
 		}
-		else if (bot.autobot.collectDrops.active) {
-			bot.autobot.collectDrops.callback();
-		}
-		else if (bot.autobot.lumberjack.active) {
-			bot.autobot.lumberjack.callback();
-		}
+		// landscaping next
 		else if (bot.autobot.landscaping.flatteningCube) {
 			bot.autobot.landscaping.callback();
 		}
@@ -106,11 +103,18 @@ function inject (bot) {
 		else if (bot.autobot.landscaping.placing) {
 			bot.autobot.landscaping.callback();
 		}
+		// then the rest
+		else if (bot.autobot.autocraft.active) {
+			bot.autobot.autocraft.callback();
+		}
+		else if (bot.autobot.collectDrops.active) {
+			bot.autobot.collectDrops.callback();
+		}
+		else if (bot.autobot.lumberjack.active) {
+			bot.autobot.lumberjack.callback();
+		}
 		else if (bot.autobot.mining.active) {
 			bot.autobot.mining.callback();
-		}
-		else if (bot.autobot.smelting.active) {
-			bot.autobot.smelting.callback();
 		}
 		else if (bot.autobot.smelting.active) {
 			bot.autobot.smelting.callback();
@@ -147,6 +151,10 @@ function inject (bot) {
 	}
 
 	bot.autobot.onMiningDone = function (result) {
+		bot.autobot.stash.stashNonEssentialInventory();
+	}
+
+	bot.autobot.onArrivedHome = function () {
 		bot.autobot.stash.stashNonEssentialInventory();
 	}
 }

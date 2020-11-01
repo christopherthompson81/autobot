@@ -7,6 +7,8 @@ class Navigator {
 		autoBind(this);
 		this.bot = bot;
 		this.mcData = mcData;
+		this.callback = () => {};
+		this.active = false;
 	}
 
 	setHomePosition() {
@@ -39,13 +41,17 @@ class Navigator {
 		});
 	}
 
+	arrivedHome() {
+		this.bot.emit('autobot.navigator.arrivedHome');
+		this.active = false;
+	}
+		
 	returnHome() {
 		//console.log("Returning to home position: ", this.bot.autobot.homePosition);
+		this.active = true;
 		this.bot.pathfinder.setGoal(null);
 		this.backupBot(() => {
 			const p = this.bot.autobot.homePosition;
-			//this.currentTask = 'stashing';
-			this.callback = this.bot.autobot.stash.stashNonEssentialInventory;
 			const goal = new GoalNear(p.x, p.y, p.z, 3);
 			this.bot.pathfinder.setGoal(goal);
 		});
