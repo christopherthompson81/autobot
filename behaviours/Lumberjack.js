@@ -1,6 +1,8 @@
 const autoBind = require('auto-bind');
 const sortByDistanceFromBot = require('./autoBotLib').sortByDistanceFromBot;
 const bestHarvestTool = require('./autoBotLib').bestHarvestTool;
+const { GoalGetToBlock } = require('./pathfinder/pathfinder').goals;
+const sleep = require('./autoBotLib').sleep;
 
 class Lumberjack {
 	constructor(bot, mcData) {
@@ -114,7 +116,7 @@ class Lumberjack {
 			this.currentTask = null;
 			sleep(1500).then(() => {
 				//console.log('Picking up uncollected blocks.');
-				this.bot.autobot.pickUpBrokenBlocks(() => {
+				this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
 					result = {
 						error: false,
 						errorCode: "success",
@@ -136,7 +138,7 @@ class Lumberjack {
 		this.bot.pathfinder.setGoal(goal);
 	}
 
-	harvestNearestTree(callback, threshold) {
+	harvestNearestTree(threshold, callback) {
 		const eventName = 'autobot.lumberjack.done';
 		let result = {};
 		this.active = true;

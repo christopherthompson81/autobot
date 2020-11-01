@@ -1,11 +1,12 @@
 const autoBind = require('auto-bind');
+const { GoalNear } = require('./pathfinder/pathfinder').goals;
+const sleep = require('./autoBotLib').sleep;
 
 class Navigator {
 	constructor(bot, mcData) {
 		autoBind(this);
 		this.bot = bot;
 		this.mcData = mcData;
-		this.bot.autobot.homePosition = this.setHomePosition();
 	}
 
 	setHomePosition() {

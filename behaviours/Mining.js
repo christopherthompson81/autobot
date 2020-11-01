@@ -1,6 +1,8 @@
 const autoBind = require('auto-bind');
 const sortByDistanceFromBot = require('./autoBotLib').sortByDistanceFromBot;
 const bestHarvestTool = require('./autoBotLib').bestHarvestTool;
+const sleep = require('./autoBotLib').sleep;
+const { GoalGetToBlock } = require('./pathfinder/pathfinder').goals;
 
 class Mining {
 	constructor(bot, mcData) {
@@ -10,6 +12,7 @@ class Mining {
 		this.nearbyThreshold = 6;
 		this.callback = () => {};
 		this.active = false;
+		this.badTargets = [];
 	}
 	
 	/**************************************************************************

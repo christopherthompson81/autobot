@@ -1,5 +1,6 @@
 const autoBind = require('auto-bind');
 const toolItems = require('./constants').toolItems;
+const sleep = require('./autoBotLib').sleep;
 
 class Inventory {
 	constructor(bot, mcData) {
@@ -90,7 +91,7 @@ class Inventory {
 		const remainder = toolIds.slice(1, toolIds.length);
 		if (current) {
 			console.log(`Crafting ${this.mcData.items[current].displayName}`);
-			this.autoCraft(current, 1, (success) => {
+			this.bot.autobot.autocraft.autoCraft(current, 1, (success) => {
 				sleep(100).then(() => {
 					this.craftToolNext(remainder, callback);
 				});

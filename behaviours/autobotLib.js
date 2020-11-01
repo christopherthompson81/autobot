@@ -1,5 +1,9 @@
 const nbt = require('prismarine-nbt');
 
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 function bestHarvestTool(bot, block) {
 	const availableTools = bot.inventory.items();
 	const effects = bot.entity.effects;
@@ -102,6 +106,7 @@ mineVeinNext(vein) {
 }
 */
 
+exports.sleep = sleep;
 exports.sortByDistanceFromBot = sortByDistanceFromBot;
 exports.bestHarvestTool = bestHarvestTool;
 exports.getPosHash = getPosHash;

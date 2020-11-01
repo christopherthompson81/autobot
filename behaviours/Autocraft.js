@@ -1,8 +1,10 @@
 const autoBind = require('auto-bind');
 const compressableItems = require('./constants').compressableItems;
+const { GoalNear } = require('./pathfinder/pathfinder').goals;
 
 class Autocraft {
 	constructor(bot, mcData) {
+		autoBind(this);
 		this.bot = bot;
 		this.mcData = mcData;
 		this.recipe = require("prismarine-recipe")(this.bot.version).Recipe;
@@ -263,7 +265,7 @@ class Autocraft {
 
 	// Recursively craft an item (craft parents if needed)
 	autoCraftNext(craftingQueue, callback) {
-		const eventName = 'autobot.autoCraft.done';
+		const eventName = 'autobot.autocraft.done';
 		let result = {};
 		const current = craftingQueue[0];
 		const remainder = craftingQueue.slice(1, craftingQueue.length);
@@ -474,7 +476,7 @@ class Autocraft {
 	// Recursively craft an item (craft parents if needed)
 	autoCraft(itemId, count, callback) {
 		this.active = true;
-		const eventName = 'autobot.autoCraft.done';
+		const eventName = 'autobot.autocraft.done';
 		let result = {};
 		const craftingQueue = this.getCraftingQueue(itemId, count);
 		if (craftingQueue.length === 0) {

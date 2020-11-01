@@ -2,6 +2,8 @@ const toolItems = require('./constants').toolItems;
 const essentialItems = require('./constants').essentialItems;
 const compressableItems = require('./constants').compressableItems;
 const getPosHash = require('./autoBotLib').getPosHash;
+const sleep = require('./autoBotLib').sleep;
+const { GoalNear } = require('./pathfinder/pathfinder').goals;
 
 class Stash {
 	constructor(bot, mcData) {
@@ -11,6 +13,7 @@ class Stash {
 		this.callback = () => {};
 		this.active = false;
 		this.smeltingCheck = false;
+		this.chestMap = {};
 	}
 
 	/**************************************************************************
@@ -102,7 +105,7 @@ class Stash {
 			if (missingTools.length > 0) {
 				//console.log('Returning to cutting trees because of missing tools.', missingTools);
 				this.bot.autobot.inventory.craftTools(
-					this.bot.autobot.lumberjack.harvestNearestTree
+					() => this.bot.autobot.lumberjack.harvestNearestTree(32)
 				);
 			}
 			else {
@@ -115,7 +118,7 @@ class Stash {
 		else {
 			//console.log('Returning to cutting trees.', inventoryDict);
 			this.bot.autobot.inventory.craftTools(
-				this.bot.autobot.lumberjack.harvestNearestTree
+				() => this.bot.autobot.lumberjack.harvestNearestTree(32)
 			);
 		}
 	}
@@ -179,7 +182,7 @@ class Stash {
 		const remainder = compressList.slice(1, compressList.length);
 		if (current) {
 			//console.log(`Compressing to ${this.mcData.items[current.id].displayName}`);
-			this.autoCraft(current.id, current.count, (craftResult) => {
+			this.bot.autobot.autocraft.autoCraft(current.id, current.count, (craftResult) => {
 				sleep(100).then(() => {
 					this.compressNext(remainder, callback);
 				});

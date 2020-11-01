@@ -1,4 +1,6 @@
 const autoBind = require('auto-bind');
+const { GoalBlock } = require('./pathfinder/pathfinder').goals;
+const sleep = require('./autoBotLib').sleep;
 
 class CollectDrops {
 	constructor(bot, mcData) {

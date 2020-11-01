@@ -1,4 +1,6 @@
 const autoBind = require('auto-bind');
+const { GoalNear } = require('./pathfinder/pathfinder').goals;
+const sleep = require('./autoBotLib').sleep;
 
 class Smelting {
 	constructor(bot, mcData) {

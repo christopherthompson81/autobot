@@ -1,4 +1,9 @@
 const autoBind = require('auto-bind');
+const { GoalBlock } = require('./pathfinder/pathfinder').goals;
+const sleep = require('./autoBotLib').sleep;
+const airBlocks = require('./constants').airBlocks;
+const clearPattern = require('./constants').clearPattern;
+const dirtPattern = require('./constants').dirtPattern;
 
 class Landscaping {
 	constructor(bot, mcData) {
@@ -34,6 +39,7 @@ class Landscaping {
 						};
 						if (callback) callback(result);
 						this.bot.emit(eventName, result);
+						this.placing = false;
 					}
 					else {
 						sleep(100).then(() => this.placeNext(remainder, callback));
@@ -79,6 +85,7 @@ class Landscaping {
 						};
 						if (callback) callback(result);
 						this.bot.emit(eventName, result);
+						this.digging = false;
 					}
 					this.digNext(remainder, callback)
 				});
@@ -107,49 +114,21 @@ class Landscaping {
 		const goal = new GoalBlock(p.x, p.y, p.z);
 		//this.bot.autobot.currentTask = 'flattenCube';
 		this.callback = () => {
-			const clearPattern = [
-				// Body space (probably unneeded)
-				[0, 0, 0],
-				[0, 1, 0],
-				// Foot level
-				[0, 0, -1], // N
-				[1, 0, -1], // NE
-				[1, 0, 0], // E
-				[1, 0, 1], // SE
-				[0, 0, 1], // S
-				[-1, 0, 1], // SW
-				[-1, 0, 0], // W
-				[-1, 0, -1], // NW
-				// Eye-level
-				[0, 1, -1], // N
-				[1, 1, -1], // NE
-				[1, 1, 0], // E
-				[1, 1, 1], // SE
-				[0, 1, 1], // S
-				[-1, 1, 1], // SW
-				[-1, 1, 0], // W
-				[-1, 1, -1], // NW
-			];
-			const dirtPattern = [
-				[-1, -1, -1], // NW
-				[0, -1, -1], // N
-				[1, -1, -1], // NE
-				[-1, -1, 0], // W
-				[0, -1, 0], // center
-				[1, -1, 0], // E
-				[-1, -1, 1], // SW
-				[0, -1, 1], // S
-				[1, -1, 1], // SE
-			];
 			const digQueue = [];
 			for (const offset of clearPattern) {
 				const block = this.bot.blockAt(position.offset(...offset));
-				if (!['void_air', 'cave_air', 'air'].includes(block.name)) digQueue.push(position.offset(...offset).clone());
+				if (!airBlocks.includes(block.name)) digQueue.push(position.offset(...offset).clone());
 			}
 			const dirtPlaceQueue = []
 			for (const offset of dirtPattern) {
 				const block = this.bot.blockAt(position.offset(...offset));
-				if (!substrateList.includes(block.name)) {
+				if (airBlocks.includes(block.name)) {
+					dirtPlaceQueue.push({
+						position: position.offset(...offset).clone(),
+						name: targetSubstrate,
+					});
+				}
+				else if (!substrateList.includes(block.name)) {
 					// Don't dig out the block we're standing on.
 					if (JSON.stringify(offset) !== JSON.stringify([0, -1, 0])) {
 						//console.log(`Digging out ${block.name}`);
@@ -159,12 +138,6 @@ class Landscaping {
 							name: targetSubstrate,
 						});
 					}
-				}
-				else if (['void_air', 'cave_air', 'air'].includes(block.name)) {
-					dirtPlaceQueue.push({
-						position: position.offset(...offset).clone(),
-						name: targetSubstrate,
-					});
 				}
 			}
 			this.digNext(digQueue, (success) => {
@@ -230,7 +203,7 @@ class Landscaping {
 		let storageObject = this.bot.autobot.inventory.getInventoryItemById(storageObjectType.id);
 		if (!storageObject) {
 			//console.log('Autocrafting storageObject.');
-			this.autoCraft(storageObjectType.id, 1, (cbResult) => {
+			this.bot.autobot.autocraft.autoCraft(storageObjectType.id, 1, (cbResult) => {
 				if (cbResult.error) {
 					result = {
 						error: true,

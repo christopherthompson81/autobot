@@ -321,6 +321,40 @@ const naturalBlocks = [
 	'white_tulip',
 	'wither_rose'
 ];
+const clearPattern = [
+	// Body space (probably unneeded)
+	[0, 0, 0],
+	[0, 1, 0],
+	// Foot level
+	[0, 0, -1], // N
+	[1, 0, -1], // NE
+	[1, 0, 0], // E
+	[1, 0, 1], // SE
+	[0, 0, 1], // S
+	[-1, 0, 1], // SW
+	[-1, 0, 0], // W
+	[-1, 0, -1], // NW
+	// Eye-level
+	[0, 1, -1], // N
+	[1, 1, -1], // NE
+	[1, 1, 0], // E
+	[1, 1, 1], // SE
+	[0, 1, 1], // S
+	[-1, 1, 1], // SW
+	[-1, 1, 0], // W
+	[-1, 1, -1], // NW
+];
+const dirtPattern = [
+	[-1, -1, -1], // NW
+	[0, -1, -1], // N
+	[1, -1, -1], // NE
+	[-1, -1, 0], // W
+	[0, -1, 0], // center
+	[1, -1, 0], // E
+	[-1, -1, 1], // SW
+	[0, -1, 1], // S
+	[1, -1, 1], // SE
+];
 
 exports.armorSlots = armorSlots;
 exports.toolItems = toolItems;
@@ -329,3 +363,6 @@ exports.essentialItems = essentialItems;
 exports.compressableItems = compressableItems;
 exports.utilityBlocks = utilityBlocks;
 exports.playerMadeBlocks = playerMadeBlocks;
+exports.naturalBlocks = naturalBlocks;
+exports.clearPattern = clearPattern;
+exports.dirtPattern = dirtPattern;
