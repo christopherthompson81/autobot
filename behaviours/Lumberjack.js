@@ -1,14 +1,14 @@
 const autoBind = require('auto-bind');
+const Vec3 = require('vec3').Vec3;
 const sortByDistanceFromBot = require('./autoBotLib').sortByDistanceFromBot;
 const bestHarvestTool = require('./autoBotLib').bestHarvestTool;
-const { GoalGetToBlock } = require('./pathfinder/pathfinder').goals;
+const { GoalGetToBlock } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
 
 class Lumberjack {
-	constructor(bot, mcData) {
+	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
-		this.mcData = mcData;
 		this.callback = () => {};
 		this.active = false;
 	}
@@ -101,11 +101,10 @@ class Lumberjack {
 		let result = {};
 		const current = tree[0];
 		const remainder = tree.slice(1, tree.length);
-		const block = this.bot.blockAt(current, false);
-		const tool = bestHarvestTool(bot, block);
 		if (current) {
 			//console.log(`Current:`, current);
-			this.bot.equip(tool, 'hand', function () {
+			const tool = bestHarvestTool(this.bot, current);
+			this.bot.equip(tool, 'hand', () => {
 				this.bot.dig(current, true, (err) => {
 					this.cutTreeNext(remainder, callback);
 				});
@@ -144,7 +143,7 @@ class Lumberjack {
 		this.active = true;
 		// count logs in inventory if a threshold was set
 		if (threshold) {
-			const inventoryDict = this.getInventoryDictionary();
+			const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
 			let logCount = 0;
 			for (const item in inventoryDict) {
 				if (item.match(/_log$/)) {

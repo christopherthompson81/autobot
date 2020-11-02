@@ -3,17 +3,16 @@ const toolItems = require('./constants').toolItems;
 const sleep = require('./autoBotLib').sleep;
 
 class Inventory {
-	constructor(bot, mcData) {
+	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
-		this.mcData = mcData;
 		this.craftingTools = false;
 	}
 
 	listBlocksByRegEx(regex) {
 		const blockList = [];
-		for (const i in this.mcData.blocks) {
-			const block = this.mcData.blocks[i];
+		for (const i in this.bot.mcData.blocks) {
+			const block = this.bot.mcData.blocks[i];
 			if (block.name.match(regex)) {
 				blockList.push(block.id);
 			}
@@ -23,8 +22,8 @@ class Inventory {
 
 	listItemsByRegEx(regex) {
 		const itemList = [];
-		for (const i in this.mcData.items) {
-			const item = this.mcData.items[i];
+		for (const i in this.bot.mcData.items) {
+			const item = this.bot.mcData.items[i];
 			if (item.name.match(regex)) {
 				itemList.push(item.id);
 			}
@@ -49,7 +48,7 @@ class Inventory {
 				return item;
 			}
 		}
-		//console.log(`We do not have item(${itemId}): ${this.mcData.items[itemId].displayName}`);
+		//console.log(`We do not have item(${itemId}): ${this.bot.mcData.items[itemId].displayName}`);
 		return null;
 	}
 
@@ -130,7 +129,7 @@ class Inventory {
 		const current = toolIds[0];
 		const remainder = toolIds.slice(1, toolIds.length);
 		if (current) {
-			console.log(`Crafting ${this.mcData.items[current].displayName}`);
+			console.log(`Crafting ${this.bot.mcData.items[current].displayName}`);
 			this.bot.autobot.autocraft.autoCraft(current, 1, (success) => {
 				sleep(100).then(() => {
 					this.craftToolNext(remainder, callback);
@@ -163,11 +162,11 @@ class Inventory {
 				}
 			}
 			if (inventoryDictionary[`iron_${tool}`] && toolCount >= 2) continue;
-			else if (inventoryDictionary.iron_ingot > 3) toolId = this.mcData.itemsByName[`iron_${tool}`].id;
+			else if (inventoryDictionary.iron_ingot > 3) toolId = this.bot.mcData.itemsByName[`iron_${tool}`].id;
 			else if (inventoryDictionary[`stone_${tool}`] && toolCount >= 2) continue;
-			else if (inventoryDictionary.cobblestone > 3) toolId = this.mcData.itemsByName[`stone_${tool}`].id;
+			else if (inventoryDictionary.cobblestone > 3) toolId = this.bot.mcData.itemsByName[`stone_${tool}`].id;
 			else if (inventoryDictionary[`wooden_${tool}`] && toolCount >= 2) continue;
-			else toolId = this.mcData.itemsByName[`wooden_${tool}`].id;
+			else toolId = this.bot.mcData.itemsByName[`wooden_${tool}`].id;
 			toolIds.push(toolId);
 		}
 		return toolIds;

@@ -1,4 +1,5 @@
 const nbt = require('prismarine-nbt');
+const Vec3 = require('vec3').Vec3;
 
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));

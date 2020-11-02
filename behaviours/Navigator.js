@@ -1,19 +1,18 @@
 const autoBind = require('auto-bind');
-const { GoalNear } = require('./pathfinder/pathfinder').goals;
+const { GoalNear } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
 
 class Navigator {
-	constructor(bot, mcData) {
+	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
-		this.mcData = mcData;
 		this.callback = () => {};
 		this.active = false;
 	}
 
 	setHomePosition() {
 		const craftingTables = this.bot.findBlocks({
-			matching: this.mcData.blocksByName('crafting_table').id,
+			matching: this.bot.mcData.blocksByName['crafting_table'].id,
 			maxDistance: 128,
 			count: 10
 		});

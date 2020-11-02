@@ -1,12 +1,12 @@
 const autoBind = require('auto-bind');
+const Vec3 = require('vec3').Vec3;
 const compressableItems = require('./constants').compressableItems;
-const { GoalNear } = require('./pathfinder/pathfinder').goals;
+const { GoalNear } = require('../pathfinder/pathfinder').goals;
 
 class Autocraft {
-	constructor(bot, mcData) {
+	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
-		this.mcData = mcData;
 		this.recipe = require("prismarine-recipe")(this.bot.version).Recipe;
 		this.active = false;
 	}
@@ -56,18 +56,18 @@ class Autocraft {
 	}
 
 	getCraftingTree(itemId, count) {
-		if (this.mcData.items[itemId] === undefined) return;
+		if (this.bot.mcData.items[itemId] === undefined) return;
 		if (count === -1) count = 1;
 		const craftQueue = [];
 		// Get a list of recipes
 		const recipes = this.recipe.find(itemId);
 		// Treat compressables as having no recipe
-		if (recipes.length === 0 || Object.keys(compressableItems).includes(this.mcData.items[itemId].name)) {
+		if (recipes.length === 0 || Object.keys(compressableItems).includes(this.bot.mcData.items[itemId].name)) {
 			// No recipe means the item needs to be acquired
 			// Acquisition items can indicate more than necessary are needed (would require a new parameter to fix)
 			const disposition = this.haveIngredient(itemId, count) ? "possess" : "missing";
 			craftQueue.push({
-				name: this.mcData.items[itemId].name,
+				name: this.bot.mcData.items[itemId].name,
 				disposition: disposition,
 				id: itemId,
 				count: count,
@@ -75,8 +75,8 @@ class Autocraft {
 			return craftQueue;
 		}
 		else {
-			//console.log(`${this.mcData.items[itemId].name} can be crafted.`);
-			//console.log(`${this.mcData.items[itemId].displayName} has ${recipes.length} recipes`);
+			//console.log(`${this.bot.mcData.items[itemId].name} can be crafted.`);
+			//console.log(`${this.bot.mcData.items[itemId].displayName} has ${recipes.length} recipes`);
 			for (const recipe of recipes) {
 				const queueBranch = [];
 				const ingredients = this.getIngredients(recipe);
@@ -93,7 +93,7 @@ class Autocraft {
 				}
 				if (queueBranch.length > 1) {
 					craftQueue.push({
-						name: this.mcData.items[itemId].name,
+						name: this.bot.mcData.items[itemId].name,
 						recipe: recipe,
 						disposition: "requires",
 						requires: queueBranch
@@ -105,7 +105,7 @@ class Autocraft {
 			}
 			return [
 				{
-					name: this.mcData.items[itemId].name,
+					name: this.bot.mcData.items[itemId].name,
 					disposition: "craft",
 					id: itemId,
 					count: count,
@@ -217,8 +217,8 @@ class Autocraft {
 	itemsToBlocks(items) {
 		// Find all blocks that drop any items from a list
 		const blocks = [];
-		for (const blockId in this.mcData.blocks) {
-			const block = this.mcData.blocks[blockId];
+		for (const blockId in this.bot.mcData.blocks) {
+			const block = this.bot.mcData.blocks[blockId];
 			const found = block.drops.some(r => items.indexOf(r) >= 0);
 			if (found) {
 				blocks.push(block.id);
@@ -270,23 +270,23 @@ class Autocraft {
 		const current = craftingQueue[0];
 		const remainder = craftingQueue.slice(1, craftingQueue.length);
 		if (current) {
-			//console.log(`Crafting ${this.mcData.items[current.id].displayName}`);
+			//console.log(`Crafting ${this.bot.mcData.items[current.id].displayName}`);
 			let recipe = this.findUsableRecipe(current.id);
 			let targetCount = current.count;
 			if (
 				this.haveIngredient(current.id, targetCount) &&
 				remainder.length > 0
 			) {
-				//console.log(`Already have ${targetCount} ${this.mcData.items[current.id].displayName}(s)`);
+				//console.log(`Already have ${targetCount} ${this.bot.mcData.items[current.id].displayName}(s)`);
 				this.autoCraftNext(remainder, callback);
 				return;
 			}
 			if (!recipe) {
-				//console.log(`Can't craft ${this.mcData.items[current.id].displayName} because there is no usable recipe`);
+				//console.log(`Can't craft ${this.bot.mcData.items[current.id].displayName} because there is no usable recipe`);
 				result = {
 					error: true,
 					resultCode: 'noRecipe',
-					description: `Can't craft ${this.mcData.items[current.id].displayName} because there is no usable recipe`
+					description: `Can't craft ${this.bot.mcData.items[current.id].displayName} because there is no usable recipe`
 				};
 				if (callback) callback(result);
 				this.bot.emit(eventName, result);
@@ -303,7 +303,7 @@ class Autocraft {
 				//console.log("Needs crafting table", this.bot.autobot.homePosition);
 				craftingTable = this.bot.findBlock({
 					point: this.bot.autobot.homePosition,
-					matching: this.mcData.blocksByName['crafting_table'],id,
+					matching: this.bot.mcData.blocksByName['crafting_table'],id,
 					maxDistance: 20,
 					count: 10
 				});
@@ -359,7 +359,7 @@ class Autocraft {
 			result = {
 				error: false,
 				resultCode: 'success',
-				description: `Successfully crafted a(n) ${this.mcData.items[current.id].displayName}`
+				description: `Successfully crafted a(n) ${this.bot.mcData.items[current.id].displayName}`
 			};
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);
@@ -409,7 +409,7 @@ class Autocraft {
 
 	placeCraftingTable(callBack) {
 		let result = {};
-		const craftingTableId = this.mcData.itemsByName['crafting_table'].id;
+		const craftingTableId = this.bot.mcData.itemsByName['crafting_table'].id;
 		const craftingTable = this.bot.autobot.inventory.getInventoryItemById(craftingTableId);
 		const placementVector = this.findPlacementVector();
 		const referenceBlock = this.bot.blockAt(this.bot.entity.position.offset(
@@ -446,7 +446,7 @@ class Autocraft {
 		// TODO: This function doesn't actually make planks from logs if needed
 		//  Things only work normally because of the typical order of operations in auto-crafting tools
 		let result = {};
-		const craftingTableId = this.mcData.itemsByName['crafting_table'].id;
+		const craftingTableId = this.bot.mcData.itemsByName['crafting_table'].id;
 		// If we have one, place it
 		if (this.haveIngredient(craftingTableId, 1)) {
 			this.placeCraftingTable(() => { callback(); });
@@ -485,7 +485,7 @@ class Autocraft {
 			result = {
 				error: true,
 				resultCode: 'missingAcquisitionObligateItems',
-				description: `No path to craft a ${this.mcData.items[itemId].displayName} due to lack of acquisition-obligate resources.`,
+				description: `No path to craft a ${this.bot.mcData.items[itemId].displayName} due to lack of acquisition-obligate resources.`,
 				missingItems: missing,
 				nearbyResources: blocks
 			};
@@ -495,7 +495,7 @@ class Autocraft {
 			return;
 		}
 		if (this.checkNeedsCraftingTable(craftingQueue)) {
-			const craftingTableId = this.mcData.blocksByName('crafting_table').id;
+			const craftingTableId = this.bot.mcData.blocksByName('crafting_table').id;
 			const craftingTable = this.bot.findBlock({
 				point: this.bot.autobot.homePosition,
 				matching: craftingTableId,

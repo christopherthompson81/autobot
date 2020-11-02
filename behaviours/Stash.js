@@ -1,15 +1,15 @@
+const autoBind = require('auto-bind');
 const toolItems = require('./constants').toolItems;
 const essentialItems = require('./constants').essentialItems;
 const compressableItems = require('./constants').compressableItems;
 const getPosHash = require('./autoBotLib').getPosHash;
 const sleep = require('./autoBotLib').sleep;
-const { GoalNear } = require('./pathfinder/pathfinder').goals;
+const { GoalNear } = require('../pathfinder/pathfinder').goals;
 
 class Stash {
-	constructor(bot, mcData) {
+	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
-		this.mcData = mcData;
 		this.callback = () => {};
 		this.active = false;
 		this.smeltingCheck = false;
@@ -124,7 +124,7 @@ class Stash {
 	}
 
 	canStash(chestWindow, item) {
-		const stacksize = this.mcData.itemsByName[item.name].stacksize;
+		const stacksize = this.bot.mcData.itemsByName[item.name].stacksize;
 		if (chestWindow.freeSlotCount >= Math.ceil(item.count / stacksize)) {
 			return true;
 		}
@@ -181,7 +181,7 @@ class Stash {
 		const current = compressList[0];
 		const remainder = compressList.slice(1, compressList.length);
 		if (current) {
-			//console.log(`Compressing to ${this.mcData.items[current.id].displayName}`);
+			//console.log(`Compressing to ${this.bot.mcData.items[current.id].displayName}`);
 			this.bot.autobot.autocraft.autoCraft(current.id, current.count, (craftResult) => {
 				sleep(100).then(() => {
 					this.compressNext(remainder, callback);
@@ -208,7 +208,7 @@ class Stash {
 		for (const item in inventoryDict) {
 			if (Object.keys(compressableItems).includes(item)) {
 				if (inventoryDict[item] >= 9) {
-					const targetId = this.mcData.itemsByName[compressableItems[item]].id;
+					const targetId = this.bot.mcData.itemsByName[compressableItems[item]].id;
 					compressList.push({
 						id: targetId,
 						count: Math.floor(inventoryDict[item] / 9),

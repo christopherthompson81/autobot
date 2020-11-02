@@ -12,9 +12,9 @@ const pathfinder = require('./pathfinder/pathfinder').pathfinder;
 const Movements = require('./pathfinder/pathfinder').Movements;
 //const { GoalBlock, GoalNear, GoalGetToBlock } = require('./pathfinder/pathfinder').goals;
 const minecraftData = require('minecraft-data');
-const Vec3 = require('vec3').Vec3
+const Vec3 = require('vec3').Vec3;
 
-const sleep = require('./autoBotLib').sleep;
+const sleep = require('./behaviours/autobotLib').sleep;
 
 const Autocraft = require('./behaviours/Autocraft');
 const CollectDrops = require('./behaviours/CollectDrops');
@@ -27,7 +27,17 @@ const Smelting = require('./behaviours/Smelting');
 const Stash = require('./behaviours/Stash');
 
 function inject (bot) {
+	bot.mcData = null;
 	bot.autobot = {};
+	bot.autobot.autocraft = new Autocraft(bot);
+	bot.autobot.collectDrops = new CollectDrops(bot);
+	bot.autobot.inventory = new Inventory(bot);
+	bot.autobot.landscaping = new Landscaping(bot);
+	bot.autobot.lumberjack = new Lumberjack(bot);
+	bot.autobot.mining = new Mining(bot);
+	bot.autobot.navigator = new Navigator(bot);
+	bot.autobot.smelting = new Smelting(bot);
+	bot.autobot.stash = new Stash(bot);
 	bot.loadPlugin(pathfinder);
 	let defaultMove = null;
 	//let currentTask = null;
@@ -35,38 +45,26 @@ function inject (bot) {
 		posHash: '',
 		errorCount: 0
 	};
+	
 	bot.once('spawn', autoBotLoader);
-	//bot.on('excessive_break_time', this.onExcessiveBreakTime);
-	//bot.on('bot_stuck', this.onBotStuck);
 
 	function autoBotLoader() {
-		const mcData = minecraftData(this.bot.version);
-		bot.mcData = mcData;
-		defaultMove = new Movements(bot, mcData);
+		bot.mcData = minecraftData(bot.version);
+		defaultMove = new Movements(bot, bot.mcData);
 		bot.pathfinder.setMovements(defaultMove);
-		bot.autobot.autocraft = new Autocraft(bot, mcData);
-		bot.autobot.collectDrops = new CollectDrops(bot, mcData);
-		bot.autobot.inventory = new Inventory(bot, mcData);
-		bot.autobot.landscaping = new Landscaping(bot, mcData);
-		bot.autobot.lumberjack = new Lumberjack(bot, mcData);
-		bot.autobot.mining = new Mining(bot, mcData);
-		bot.autobot.navigator = new Navigator(bot, mcData);
-		bot.autobot.smelting = new Smelting(bot, mcData);
-		bot.autobot.stash = new Stash(bot, mcData);
 		bot.on('goal_reached', onGoalReached);
 		bot.waitForChunksToLoad(() => {
 			//console.log('Waiting for 5 seconds to allow world to load.');
 			sleep(5000).then(() => {
-				this.bot.autobot.homePosition = this.bot.autobot.navigaator.setHomePosition();
-				//console.log(`Home Position: ${this.bot.autobot.homePosition}`);
-				//this.bot.autobot.stash.stashNonEssentialInventory();
+				bot.autobot.homePosition = bot.autobot.navigator.setHomePosition();
+				//console.log(`Home Position: ${bot.autobot.homePosition}`);
+				//bot.autobot.stash.stashNonEssentialInventory();
 				bot.emit('autobot.ready', {error: false, resultCode: "ready", description: "autoBot is ready to run"});
 			});
 		});
 	}
 
 	function onGoalReached (goal) {
-		//console.log("Goal Reached!", goal, this.currentTask, this.bot.entity.position);
 		const goalVec3 = new Vec3(goal.x, goal.y, goal.z);
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(bot.entity.position));
 		if (distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3)) {

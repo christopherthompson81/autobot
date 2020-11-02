@@ -1,12 +1,11 @@
 const autoBind = require('auto-bind');
-const { GoalNear } = require('./pathfinder/pathfinder').goals;
+const { GoalNear } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
 
 class Smelting {
-	constructor(bot, mcData) {
+	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
-		this.mcData = mcData;
 		this.callback = () => {};
 		this.active = false;
 	}
@@ -170,8 +169,8 @@ class Smelting {
 		const self = this;
 		this.active = true;
 		const furnaceIds = [
-			this.mcData.blocksByName['furnace'].id,
-			this.mcData.blocksByName['lit_furnace'].id
+			this.bot.mcData.blocksByName['furnace'].id,
+			this.bot.mcData.blocksByName['lit_furnace'].id
 		];
 		const furnaceBlock = this.bot.findBlock({
 			point: this.homePosition,

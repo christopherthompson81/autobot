@@ -2,13 +2,12 @@ const autoBind = require('auto-bind');
 const sortByDistanceFromBot = require('./autoBotLib').sortByDistanceFromBot;
 const bestHarvestTool = require('./autoBotLib').bestHarvestTool;
 const sleep = require('./autoBotLib').sleep;
-const { GoalGetToBlock } = require('./pathfinder/pathfinder').goals;
+const { GoalGetToBlock } = require('../pathfinder/pathfinder').goals;
 
 class Mining {
-	constructor(bot, mcData) {
+	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
-		this.mcData = mcData;
 		this.nearbyThreshold = 6;
 		this.callback = () => {};
 		this.active = false;
@@ -99,7 +98,7 @@ class Mining {
 		const items = Object.keys(this.getInventoryDictionary());
 		const harvestable = [];
 		for (const material of desirable) {
-			const harvestTools = Object.keys(this.mcData.blocksByName[material].harvestTools);
+			const harvestTools = Object.keys(this.bot.mcData.blocksByName[material].harvestTools);
 			const currentlyHarvestable = harvestTools.some(r => items.indexOf(r) >= 0);
 			if (currentlyHarvestable) {
 				harvestable.push(material);
@@ -157,7 +156,7 @@ class Mining {
 		for (const targetType of harvestable) {
 			oreBlocks = this.bot.findBlocks({
 				point: this.bot.autobot.homePosition,
-				matching: this.mcData.blocksByName[targetType].id,
+				matching: this.bot.mcData.blocksByName[targetType].id,
 				maxDistance: 128,
 				count: 1000,
 			});

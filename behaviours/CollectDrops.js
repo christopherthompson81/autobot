@@ -1,12 +1,11 @@
 const autoBind = require('auto-bind');
-const { GoalBlock } = require('./pathfinder/pathfinder').goals;
+const { GoalBlock } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
 
 class CollectDrops {
-	constructor(bot, mcData) {
+	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
-		this.mcData = mcData;
 		this.callback = () => {};
 		this.collected = {};
 		this.active = false;
@@ -31,7 +30,7 @@ class CollectDrops {
 					continue;
 				}
 				//console.log(entity);
-				//console.log(`Found a(n) ${this.mcData.items[entity.entityType].displayName}`);
+				//console.log(`Found a(n) ${this.bot.mcData.items[entity.entityType].displayName}`);
 				drops.push(entity);
 			}
 		}
@@ -46,7 +45,7 @@ class CollectDrops {
 		if (current) {
 			const itemId = current.metadata[7].itemId;
 			if (itemId) {
-				const name = this.mcData.items[itemId].name;
+				const name = this.bot.mcData.items[itemId].name;
 				if (!this.collected[name]) this.collected[name] = 0;
 				this.collected[name]++;
 			}

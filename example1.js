@@ -7,7 +7,7 @@ This script will find trees and cut them down.
 'use strict';
 
 const mineflayer = require('mineflayer');
-const autoBot = require("./autoBot_plugin.js").autobot;
+const autoBot = require("./autoBot_plugin.js").autoBot;
 const fs = require('fs');
 let config = JSON.parse(fs.readFileSync('autobot_config.json'));
 
@@ -21,12 +21,14 @@ const bot = mineflayer.createBot({
 	password: config.password
 });
 
-bot.loadPlugin(autobot);
-bot.on('autobot.ready', bot.autobot.lumberjack.harvestNearestTree);
-bot.on('bot_stuck', bot.autobot.onBotStuck);
-bot.on('autobot.navigator.arrivedHome', bot.autobot.lumberjack.harvestNearestTree);
-bot.on('autobot.lumberjack.done', (result) => {
-	console.log(result.description);
-	if (result.error) return;
-	bot.autobot.lumberjack.harvestNearestTree();
+bot.loadPlugin(autoBot);
+bot.once('spawn', () => {
+	bot.on('autobot.ready', bot.autobot.lumberjack.harvestNearestTree);
+	bot.on('bot_stuck', bot.autobot.onBotStuck);
+	bot.on('autobot.navigator.arrivedHome', bot.autobot.lumberjack.harvestNearestTree);
+	bot.on('autobot.lumberjack.done', (result) => {
+		console.log(result.description);
+		if (result.error) return;
+		bot.autobot.lumberjack.harvestNearestTree();
+	});
 });

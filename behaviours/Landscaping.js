@@ -1,15 +1,15 @@
 const autoBind = require('auto-bind');
-const { GoalBlock } = require('./pathfinder/pathfinder').goals;
+const Vec3 = require('vec3').Vec3;
+const { GoalBlock } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
 const airBlocks = require('./constants').airBlocks;
 const clearPattern = require('./constants').clearPattern;
 const dirtPattern = require('./constants').dirtPattern;
 
 class Landscaping {
-	constructor(bot, mcData) {
+	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
-		this.mcData = mcData;
 		this.callback = () => {};
 		this.digging = false;
 		this.placing = false;
@@ -23,7 +23,7 @@ class Landscaping {
 		const current = placeQueue[0];
 		const remainder = placeQueue.slice(1, placeQueue.length);
 		if (current) {
-			const item = this.bot.autobot.inventory.getInventoryItemById(this.mcData.itemsByName[current.name].id);
+			const item = this.bot.autobot.inventory.getInventoryItemById(this.bot.mcData.itemsByName[current.name].id);
 			const referenceBlock = this.bot.blockAt(current.position);
 			const placementVector = new Vec3(1, 0, 0);
 			this.bot.equip(item, 'hand', () => {
@@ -199,7 +199,7 @@ class Landscaping {
 	placeNewStorageObject(storageObjectName, callback) {
 		const eventName = 'autobot.landscaping.newStorageObject';
 		let result = {};
-		const storageObjectType = this.mcData.itemsByName[storageObjectName];
+		const storageObjectType = this.bot.mcData.itemsByName[storageObjectName];
 		let storageObject = this.bot.autobot.inventory.getInventoryItemById(storageObjectType.id);
 		if (!storageObject) {
 			//console.log('Autocrafting storageObject.');

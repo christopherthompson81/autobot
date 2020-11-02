@@ -32,6 +32,7 @@ Unmonitored Events:
 */
 'use strict';
 
+const mineflayer = require('mineflayer');
 const autoBot = require("./autoBot_plugin.js").autobot;
 const fs = require('fs');
 let config = JSON.parse(fs.readFileSync('autobot_config.json'));
