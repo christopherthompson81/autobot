@@ -105,7 +105,7 @@ function inject (bot) {
 		}
 		// navigating first
 		if (bot.autobot.navigator.active) {
-			bot.autobot.navigator.arrivedHome();
+			sleep(350).then(bot.autobot.navigator.arrivedHome);
 			activeFunction = "navigator";
 		}
 		// landscaping next

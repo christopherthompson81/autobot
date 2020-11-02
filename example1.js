@@ -49,8 +49,7 @@ bot.once('spawn', () => {
 	bot.on('autobot.navigator.arrivedHome', (result) => {
 		logResult(result);
 		console.log('Harvesting Tree');
-		// rapid changes to pathfinding goals sometimes don't work, hence the delay
-		sleep(350).then(bot.autobot.lumberjack.harvestNearestTree);
+		bot.autobot.lumberjack.harvestNearestTree();
 	});
 	bot.on('autobot.lumberjack.done', (result) => {
 		console.log(result.description);
