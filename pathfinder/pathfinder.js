@@ -344,7 +344,7 @@ function inject (bot) {
 					resultCode: "reachedNextPoint",
 					description: "Pathfinder reached the next point on its path"
 				};
-				bot.emit('pathfinder.progress', result)
+				bot.emit('autobot.pathfinder.progress', result)
 				setGoalProgress();
 			}
 			lastNodeTime = performance.now()
