@@ -65,10 +65,11 @@ function inject (bot) {
 	}
 
 	function onGoalReached (goal) {
+		console.log(goal);
 		const goalVec3 = new Vec3(goal.x, goal.y, goal.z);
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(bot.entity.position));
 		if (distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3)) {
-			//console.log("An error happened in attempting to reach the goal. Distance", distanceFromGoal);
+			console.log("An error happened in attempting to reach the goal. Distance", distanceFromGoal);
 			const goalPos = new Vec3(goal.x, goal.y, goal.z);
 			const posHash = goal.x + ',' + goal.y + ',' + goal.z;
 			if (currentTarget.posHash === posHash) {
@@ -77,6 +78,7 @@ function inject (bot) {
 					if (bot.autobot.mining.active) {
 						bot.autobot.mining.badTargets.push(goalPos.clone());
 					}
+					console.log('Bad target, returning home');
 					bot.autobot.navigator.returnHome();
 					return;
 				}
@@ -107,10 +109,10 @@ function inject (bot) {
 			bot.autobot.autocraft.callback();
 		}
 		else if (bot.autobot.collectDrops.active) {
-			bot.autobot.collectDrops.callback();
+			sleep(350).then(bot.autobot.collectDrops.pickUpNext);
 		}
 		else if (bot.autobot.lumberjack.active) {
-			bot.autobot.lumberjack.callback();
+			bot.autobot.lumberjack.cutTreeNext();
 		}
 		else if (bot.autobot.mining.active) {
 			bot.autobot.mining.callback();

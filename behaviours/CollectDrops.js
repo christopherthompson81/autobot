@@ -6,6 +6,7 @@ class CollectDrops {
 	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
+		this.remainder = [];
 		this.callback = () => {};
 		this.collected = {};
 		this.active = false;
@@ -37,11 +38,11 @@ class CollectDrops {
 		return drops;
 	}
 
-	pickUpNext(drops, callback) {
+	pickUpNext() {
 		const eventName = 'autobot.collectDrops.done';
 		let result = {};
-		const current = drops[0];
-		const remainder = drops.slice(1, drops.length);
+		const current = this.remainder[0];
+		this.remainder = this.remainder.slice(1, this.remainder.length);
 		if (current) {
 			const itemId = current.metadata[7].itemId;
 			if (itemId) {
@@ -53,7 +54,6 @@ class CollectDrops {
 				if (!this.collected['unknown']) this.collected['unknown'] = 0;
 				this.collected['unknown']++;
 			}
-			this.callback = () => { this.pickUpNext(remainder, callback); };
 			const p = current.position;
 			const goal = new GoalBlock(p.x, p.y, p.z);
 			this.bot.pathfinder.setGoal(goal);
@@ -67,7 +67,9 @@ class CollectDrops {
 					description: "Finished picking up drops.",
 					collectedItems: this.collected
 				};
-				if (callback) callback(result);
+				if (this.callback) {
+					this.callback(result);
+				}
 				this.bot.emit(eventName, result);
 			});
 		}
@@ -76,9 +78,10 @@ class CollectDrops {
 	pickUpBrokenBlocks(callback) {
 		this.active = true;
 		this.collected = {};
-		const drops = this.findNearbyDrops(10);
+		this.callback = callback;
+		this.remainder = this.findNearbyDrops(10);
 		//console.log(`Found ${drops.length} broken blocks to collect.`)
-		this.pickUpNext(drops, callback);
+		this.pickUpNext();
 	}
 }
 

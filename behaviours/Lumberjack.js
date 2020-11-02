@@ -9,6 +9,7 @@ class Lumberjack {
 	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
+		this.tree = [];
 		this.callback = () => {};
 		this.active = false;
 	}
@@ -96,17 +97,17 @@ class Lumberjack {
 		return [this.bot.blockAt(logs[0])];
 	}
 
-	cutTreeNext(tree, callback) {
+	cutTreeNext() {
 		const eventName = 'autobot.lumberjack.done';
 		let result = {};
-		const current = tree[0];
-		const remainder = tree.slice(1, tree.length);
+		const current = this.tree[0];
+		this.tree = this.tree.slice(1, this.tree.length);
 		if (current) {
 			//console.log(`Current:`, current);
 			const tool = bestHarvestTool(this.bot, current);
 			this.bot.equip(tool, 'hand', () => {
 				this.bot.dig(current, true, (err) => {
-					this.cutTreeNext(remainder, callback);
+					this.cutTreeNext();
 				});
 			});
 		}
@@ -116,14 +117,15 @@ class Lumberjack {
 			sleep(1500).then(() => {
 				//console.log('Picking up uncollected blocks.');
 				this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
+					this.active = false;
 					result = {
 						error: false,
 						resultCode: "success",
 						description: "Finished cutting tree and collecting logs."
 					}
-					if (callback) callback(result);
+					if (this.callback) this.callback(result);
+					//console.log("emitting: ", eventName, result)
 					this.bot.emit(eventName, result);
-					this.active = false;
 				});
 			});
 		}
@@ -131,7 +133,8 @@ class Lumberjack {
 
 	cutTree(tree, callback) {
 		// Go to a tree and cut it down
-		this.callback = () => { this.cutTreeNext(tree, callback); };
+		this.tree = tree;
+		this.callback = callback;
 		const p = tree[0].position;
 		const goal = new GoalGetToBlock(p.x, p.y, p.z);
 		this.bot.pathfinder.setGoal(goal);

@@ -41,7 +41,12 @@ class Navigator {
 	}
 
 	arrivedHome() {
-		this.bot.emit('autobot.navigator.arrivedHome');
+		const result = {
+			error: false,
+			resultCode: "arrivedHome",
+			description: "Bot arrived back at the home position."
+		};
+		this.bot.emit('autobot.navigator.arrivedHome', result);
 		this.active = false;
 	}
 		
