@@ -272,6 +272,7 @@ function inject (bot) {
 				goalProgress.threshold += (blockBreakTime / 1000);
 				// Break time is in ms; Emit a message when breaking will take more than 3 seconds
 				if (blockBreakTime > 3000) {
+					// TODO: Rewrite event in autobot event format
 					bot.emit('excessive_break_time', block, blockBreakTime);
 				}
 				fullStop()
@@ -279,6 +280,7 @@ function inject (bot) {
 					bot.dig(block, function (err) {
 						lastNodeTime = performance.now()
 						if (err) {
+							// TODO: Convert to event
 							console.log("Digging error");
 							//resetPath();
 						}
