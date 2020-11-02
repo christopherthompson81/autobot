@@ -6,7 +6,7 @@
 * Pathfinder can stall out - Added some code to log a message to the console if a goal reached event is emitted, but the bot is nowhere near it.
 * Dumb paths sometimes, not determined by travel time where breaking time is calculated:
 	* Tunnelling when there's a perfectly good above-ground route.
-	* Pointlessly digging one block along the path.
+	* Pointlessly digging one block along the path. This results in 1x1x1 bot-holes.
 	* Falling
 	* Sometimes drowns when goals are near water
 	* Fences are treated as open
@@ -29,5 +29,5 @@
 I think I'm going to have to fork mineflayer-pathfinder (hopefully resulting in a PR) to get it to work properly.
 
 
-* difficulty with gravel
+* difficulty with gravel (*fixed by implementing gravity cavitation check)
 * dry out both water and lava lakes

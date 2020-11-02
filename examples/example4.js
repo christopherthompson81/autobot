@@ -4,10 +4,12 @@ This script will harvest trees and ore.
 
 - It will quit if no trees are found.
 - It uses the default behaviour to get the pathfinder routine unstuck
-- It will craft a wooden axe if it needs one
-AND
+(X) - It will craft a wooden axe if it needs one
 - It will mine ore if it has a pickaxe
-- It will craft a wooden pickaxe if it needs one
+(X) - It will craft a wooden pickaxe if it needs one
+AND
+- it will craft all tools of the best type (up to iron) it can make, with spares
+- (*) Not self-sufficient on iron production at this point.
 */
 'use strict';
 
