@@ -14,6 +14,12 @@ class Lumberjack {
 		this.active = false;
 	}
 
+	resetBehaviour() {
+		this.tree = [];
+		this.callback = () => {};
+		this.active = false;
+	}
+
 	/**************************************************************************
 	 * 
 	 * Lumberjack / cutting down trees

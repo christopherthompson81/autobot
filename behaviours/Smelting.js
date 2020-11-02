@@ -10,6 +10,11 @@ class Smelting {
 		this.active = false;
 	}
 
+	resetBehaviour() {
+		this.callback = () => {};
+		this.active = false;
+	}
+
 	restoke(furnace, callback) {
 		let result = {};
 		const eventName = 'autobot.smelting.restoke';

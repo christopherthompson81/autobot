@@ -172,7 +172,7 @@ function inject (bot) {
 		//console.log("Path: ", path);
 		//console.log("Goal: ", goal);
 		bot.autobot.mining.badTargets.push(new Vec3(goal.x, goal.y, goal.z));
-		bot.autobot.navigator.returnHome();
+		bot.autobot.resetAllBehaviours(bot.autobot.navigator.returnHome);
 	}
 
 	bot.autobot.onStashingDone = function (result) {
@@ -189,6 +189,19 @@ function inject (bot) {
 
 	bot.autobot.onArrivedHome = function () {
 		bot.autobot.stash.stashNonEssentialInventory();
+	}
+
+	bot.autobot.resetAllBehaviours = function (callback) {
+		bot.autobot.autocraft.resetBehaviour();
+		bot.autobot.collectDrops.resetBehaviour();
+		bot.autobot.inventory.resetBehaviour();
+		bot.autobot.landscaping.resetBehaviour();
+		bot.autobot.lumberjack.resetBehaviour();
+		bot.autobot.mining.resetBehaviour();
+		bot.autobot.navigator.resetBehaviour();
+		bot.autobot.smelting.resetBehaviour();
+		bot.autobot.stash.resetBehaviour();
+		callback();
 	}
 }
 

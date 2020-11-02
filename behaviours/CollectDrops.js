@@ -11,6 +11,13 @@ class CollectDrops {
 		this.collected = {};
 		this.active = false;
 	}
+
+	resetBehaviour() {
+		this.remainder = [];
+		this.callback = () => {};
+		this.collected = {};
+		this.active = false;
+	}
 	
 	/**************************************************************************
 	 * 

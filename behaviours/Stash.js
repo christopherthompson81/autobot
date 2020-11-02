@@ -16,6 +16,12 @@ class Stash {
 		this.chestMap = {};
 	}
 
+	resetBehaviour() {
+		this.callback = () => {};
+		this.active = false;
+		this.smeltingCheck = false;
+	}
+
 	/**************************************************************************
 	 * 
 	 * Stash Inventory

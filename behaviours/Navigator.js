@@ -10,6 +10,11 @@ class Navigator {
 		this.active = false;
 	}
 
+	resetBehaviour() {
+		this.callback = () => {};
+		this.active = false;
+	}
+
 	setHomePosition() {
 		const craftingTables = this.bot.findBlocks({
 			matching: this.bot.mcData.blocksByName['crafting_table'].id,

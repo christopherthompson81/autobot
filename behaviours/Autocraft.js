@@ -11,6 +11,10 @@ class Autocraft {
 		this.active = false;
 	}
 
+	resetBehaviour() {
+		this.active = false;
+	}
+
 	/**************************************************************************
 	 * 
 	 * Automatic Crafting

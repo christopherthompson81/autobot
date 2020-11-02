@@ -8,7 +8,6 @@ This script will find trees and cut them down.
 
 const mineflayer = require('mineflayer');
 const autoBot = require("./autoBot_plugin.js").autoBot;
-const sleep = require('./behaviours/autoBotLib').sleep;
 const fs = require('fs');
 let config = JSON.parse(fs.readFileSync('autobot_config.json'));
 
@@ -33,7 +32,7 @@ bot.once('spawn', () => {
 		console.log('Harvesting Tree');
 		bot.autobot.lumberjack.harvestNearestTree();
 	});
-	bot.on('autobot.pathfinder.progress', (result) => { console.log("+"); });
+	bot.on('autobot.pathfinder.progress', () => { console.log("+"); });
 	bot.on('autobot.pathfinder.goalReached', (result) => {
 		logResult(result);
 		if (result.resultCode === 'reachedGoal') {

@@ -9,6 +9,10 @@ class Inventory {
 		this.craftingTools = false;
 	}
 
+	resetBehaviour() {
+		this.craftingTools = false;
+	}
+
 	listBlocksByRegEx(regex) {
 		const blockList = [];
 		for (const i in this.bot.mcData.blocks) {

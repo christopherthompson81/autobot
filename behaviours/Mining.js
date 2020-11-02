@@ -14,6 +14,11 @@ class Mining {
 		this.badTargets = [];
 		this.havePickaxe = bot.autobot.inventory.havePickaxe;
 	}
+
+	resetBehaviour() {
+		this.callback = () => {};
+		this.active = false;
+	}
 	
 	/**************************************************************************
 	 * 

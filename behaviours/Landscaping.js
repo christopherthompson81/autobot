@@ -16,6 +16,13 @@ class Landscaping {
 		this.flatteningCube = false;
 	}
 
+	resetBehaviour() {
+		this.callback = () => {};
+		this.digging = false;
+		this.placing = false;
+		this.flatteningCube = false;
+	}
+
 	placeNext(placeQueue, callback) {
 		const eventName = 'autobot.landscaping.placeQueue.done';
 		let result = {};
