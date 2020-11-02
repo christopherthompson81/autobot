@@ -48,25 +48,29 @@ const bot = mineflayer.createBot({
 
 bot.loadPlugin(autobot);
 
-const botLoop = bot.autobot.stash.defaultPostStashingBehaviour;
+const stash = bot.autobot.stash.stashNonEssentialInventory;
 
 function logResult(result) {
 	console.log(result.description);
 }
 
-bot.on('autobot.ready', botLoop);
+bot.on('autobot.ready', stash);
 bot.on('bot_stuck', bot.autobot.onBotStuck);
-bot.on('autobot.navigator.arrivedHome', botLoop);
+bot.on('autobot.navigator.arrivedHome', stash);
 bot.on('autobot.lumberjack.done', (result) => {
 	console.log(result.description);
 	if (result.error) return;
-	botLoop();
+	stash();
 });
 bot.on('autobot.craftTools.done', logResult);
 bot.on('autobot.mining.digging', logResult);
 bot.on('autobot.mining.done', (result) => {
 	console.log(result.description);
 	if (result.resultCode === 'noVeinFound') return;
-	botLoop();
+	stash();
 });
-bot.on('autobot.stashing.done', botLoop);
+bot.on('autobot.stashing.done', (result) => {
+	console.log(result.description);
+	if (result.error) return;
+	bot.autobot.stash.defaultPostStashingBehaviour();
+});
