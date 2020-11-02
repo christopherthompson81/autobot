@@ -36,6 +36,11 @@ bot.once('spawn', () => {
 	bot.on('autobot.pathfinder.progress', (result) => { console.log("+"); });
 	bot.on('autobot.pathfinder.goalReached', (result) => {
 		logResult(result);
+		if (result.resultCode === 'reachedGoal') {
+			console.log("Goal position:", result.goalPosition);
+			console.log("Distance from goal:", result.distanceFromGoal);
+			console.log("Active Function:", result.activeFunction);
+		}
 	});
 	bot.on('bot_stuck', (goalProgress, path, stateGoal) => {
 		console.log("Bot Stuck. Returning to home position.");
