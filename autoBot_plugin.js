@@ -65,11 +65,13 @@ function inject (bot) {
 	}
 
 	function onGoalReached (goal) {
+		const eventName = 'autobot.pathfinder.goalReached';
+		let result = {error: false, resultCode: "", description: ""};
+		let activeFunction = "";
 		console.log(goal);
 		const goalVec3 = new Vec3(goal.x, goal.y, goal.z);
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(bot.entity.position));
 		if (distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3)) {
-			console.log("An error happened in attempting to reach the goal. Distance", distanceFromGoal);
 			const goalPos = new Vec3(goal.x, goal.y, goal.z);
 			const posHash = goal.x + ',' + goal.y + ',' + goal.z;
 			if (currentTarget.posHash === posHash) {
@@ -78,8 +80,13 @@ function inject (bot) {
 					if (bot.autobot.mining.active) {
 						bot.autobot.mining.badTargets.push(goalPos.clone());
 					}
-					console.log('Bad target, returning home');
 					bot.autobot.navigator.returnHome();
+					result = {
+						error: true,
+						resultCode: "badTarget",
+						description: "Many successive pathfinding errors at this position (>5). Target is possibly unreachable. Marking as a bad target and returning home"
+					};
+					bot.emit(eventName, result);
 					return;
 				}
 			}
@@ -88,41 +95,66 @@ function inject (bot) {
 				currentTarget.errorCount = 1;
 			}
 			bot.autobot.navigator.backupBot(() => bot.pathfinder.setGoal(goal));
+			result = {
+				error: true,
+				resultCode: "tooFar",
+				description: `An error happened in attempting to reach the goal. Distance: ${distanceFromGoal}`
+			};
+			bot.emit(eventName, result);
 			return;
 		}
 		// navigating first
 		if (bot.autobot.navigator.active) {
 			bot.autobot.navigator.arrivedHome();
+			activeFunction = "navigator";
 		}
 		// landscaping next
 		else if (bot.autobot.landscaping.flatteningCube) {
 			bot.autobot.landscaping.callback();
+			activeFunction = "landscaping.flatteningCube";
 		}
 		else if (bot.autobot.landscaping.digging) {
 			bot.autobot.landscaping.callback();
+			activeFunction = "landscaping.digging";
 		}
 		else if (bot.autobot.landscaping.placing) {
 			bot.autobot.landscaping.callback();
+			activeFunction = "landscaping.placing";
 		}
 		// then the rest
 		else if (bot.autobot.autocraft.active) {
 			bot.autobot.autocraft.callback();
+			activeFunction = "autocraft";
 		}
 		else if (bot.autobot.collectDrops.active) {
 			sleep(350).then(bot.autobot.collectDrops.pickUpNext);
+			activeFunction = "collectDrops";
 		}
 		else if (bot.autobot.lumberjack.active) {
 			bot.autobot.lumberjack.cutTreeNext();
+			activeFunction = "lumberjack";
 		}
 		else if (bot.autobot.mining.active) {
 			bot.autobot.mining.callback();
+			activeFunction = "mining";
 		}
 		else if (bot.autobot.smelting.active) {
 			bot.autobot.smelting.callback();
+			activeFunction = "smelting";
 		}
 		else if (bot.autobot.stash.active) {
 			bot.autobot.stash.callback();
+			activeFunction = "stash";
 		}
+		result = {
+			error: false,
+			resultCode: "reachedGoal",
+			description: "Reached the target goal successfully.",
+			goalPosition: goalVec3,
+			distanceFromGoal: distanceFromGoal,
+			activeFunction: activeFunction
+		};
+		bot.emit(eventName, result);
 	}
 
 	bot.autobot.onExcessiveBreakTime = function (block, breakTime) {

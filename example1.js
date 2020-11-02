@@ -34,6 +34,9 @@ bot.once('spawn', () => {
 		bot.autobot.lumberjack.harvestNearestTree();
 	});
 	bot.on('autobot.pathfinder.progress', (result) => { console.log("+"); });
+	bot.on('autobot.pathfinder.goalReached', (result) => {
+		logResult(result);
+	});
 	bot.on('bot_stuck', (goalProgress, path, stateGoal) => {
 		console.log("Bot Stuck. Returning to home position.");
 		bot.autobot.onBotStuck(goalProgress, path, stateGoal);
@@ -41,9 +44,9 @@ bot.once('spawn', () => {
 	bot.on('autobot.navigator.arrivedHome', (result) => {
 		logResult(result);
 		console.log('Harvesting Tree');
+		// rapid changes to pathfinding goals sometimes don't work, hence the delay
 		sleep(350).then(bot.autobot.lumberjack.harvestNearestTree);
 	});
-	bot.on('autobot.collectDrops.done', logResult);
 	bot.on('autobot.lumberjack.done', (result) => {
 		console.log(result.description);
 		if (result.error) {
