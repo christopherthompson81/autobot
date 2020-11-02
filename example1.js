@@ -33,6 +33,7 @@ bot.once('spawn', () => {
 		console.log('Harvesting Tree');
 		bot.autobot.lumberjack.harvestNearestTree();
 	});
+	bot.on('pathfinder.progress', (result) => { console.log("+"); });
 	bot.on('bot_stuck', (goalProgress, path, stateGoal) => {
 		console.log("Bot Stuck");
 		bot.autobot.onBotStuck(goalProgress, path, stateGoal);

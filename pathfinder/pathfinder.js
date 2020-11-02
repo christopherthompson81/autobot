@@ -338,7 +338,13 @@ function inject (bot) {
 		if ((dx * dx + dz * dz) <= 0.15 * 0.15 && (bot.entity.onGround || bot.entity.isInWater)) {
 			// arrived at next point
 			if (!goalProgress.position.equals(bot.entity.position.floored())) {
-				console.log('+');
+				//console.log('+');
+				const result = {
+					error: false,
+					resultCode: "reachedNextPoint",
+					description: "Pathfinder reached the next point on its path"
+				};
+				bot.emit('pathfinder.progress', result)
 				setGoalProgress();
 			}
 			lastNodeTime = performance.now()
