@@ -13,6 +13,7 @@ class Mining {
 		this.callback = () => {};
 		this.active = false;
 		this.badTargets = [];
+		this.havePickaxe = bot.autobot.inventory.havePickaxe;
 	}
 	
 	/**************************************************************************
@@ -27,16 +28,16 @@ class Mining {
 			if (err) {
 				callback({
 					error: true,
-					errorCode: "equipError",
-					errorDescription: `Failed to equip tool (${JSON.stringify(tool)}) for ${block.displayName}`,
+					resultCode: "equipError",
+					description: `Failed to equip tool (${JSON.stringify(tool)}) for ${block.displayName}`,
 					parentError: err
 				});
 			}
 			else {
 				callback({
 					error: false,
-					errorCode: "success",
-					errorDescription: `Successfully equiped best harvest tool for ${block.displayName}`
+					resultCode: "success",
+					description: `Successfully equiped best harvest tool for ${block.displayName}`
 				});
 			}
 		});
@@ -189,12 +190,12 @@ class Mining {
 			this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
 				result = {
 					error: true,
-					errorCode: "noPickaxe",
-					errorDescription: "Bot can't continue mining ore without a pickaxe."
+					resultCode: "noPickaxe",
+					description: "Bot can't continue mining ore without a pickaxe."
 				};
-				if (callback) callback(result);
-				this.bot.emit('autobot.mining.digging', result);
 				this.active = false;
+				if (callback) callback(result);
+				this.bot.emit('autobot.mining.done', result);
 			});
 			return;
 		}
@@ -204,8 +205,8 @@ class Mining {
 				this.mineVeinNext(this.remainder);
 				result = {
 					error: false,
-					errorCode: "notSafe",
-					errorDescription: `Target ${current.displayName} block is not safe to break. Skipping.`,
+					resultCode: "notSafe",
+					description: `Target ${current.displayName} block is not safe to break. Skipping.`,
 					block: current
 				}
 				this.bot.emit('autobot.mining.digging', result);
@@ -227,8 +228,8 @@ class Mining {
 					};
 					result = {
 						error: false,
-						errorCode: "tooFar",
-						errorDescription: `The bot is too far from the object block to mine.`,
+						resultCode: "tooFar",
+						description: `The bot is too far from the object block to mine.`,
 						block: current
 					}
 					this.bot.emit('autobot.mining.digging', result);
@@ -238,8 +239,8 @@ class Mining {
 					if (err) {
 						result = {
 							error: true,
-							errorCode: "digError",
-							errorDescription: `Digging error`,
+							resultCode: "digError",
+							description: `Digging error`,
 							block: current,
 							parentError: err
 						}
@@ -257,8 +258,8 @@ class Mining {
 				this.bot.autobot.pickUpBrokenBlocks(() => {
 					result = {
 						error: false,
-						errorCode: "success",
-						errorDescription: "Finished mining and collecting drops."
+						resultCode: "success",
+						description: "Finished mining and collecting drops."
 					}
 					if (callback) callback(result);
 					this.bot.emit('autobot.mining.done', result);
@@ -286,8 +287,8 @@ class Mining {
 		if (vein) {
 			result = {
 				error: false,
-				errorCode: "foundVein",
-				errorDescription: `Found an ore vein`,
+				resultCode: "foundVein",
+				description: `Found an ore vein`,
 				vein: vein
 			}
 			this.bot.emit('autobot.mining.digging', result);
@@ -296,8 +297,8 @@ class Mining {
 		else {
 			result = {
 				error: true,
-				errorCode: "noVeinFound",
-				errorDescription: "No valid ore veins found."
+				resultCode: "noVeinFound",
+				description: "No valid ore veins found."
 			}
 			this.bot.emit('autobot.mining.done', result);
 		}
@@ -310,8 +311,8 @@ class Mining {
 		if (vein) {
 			result = {
 				error: false,
-				errorCode: "foundVein",
-				errorDescription: `Found an ore vein`,
+				resultCode: "foundVein",
+				description: `Found an ore vein`,
 				vein: vein
 			}
 			this.bot.emit('autobot.mining.digging', result);
@@ -320,8 +321,8 @@ class Mining {
 		else {
 			result = {
 				error: true,
-				errorCode: "noVeinFound",
-				errorDescription: "No valid ore veins found."
+				resultCode: "noVeinFound",
+				description: "No valid ore veins found."
 			}
 			this.bot.emit('autobot.mining.done', result);
 		}

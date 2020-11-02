@@ -31,8 +31,8 @@ class Landscaping {
 					if (err) {
 						result = {
 							error: true,
-							errorCode: "placingError",
-							errorDescription: "Could not place block.",
+							resultCode: "placingError",
+							description: "Could not place block.",
 							parentError: err,
 							currentTarget: current,
 							queueRemainder: remainder
@@ -50,7 +50,7 @@ class Landscaping {
 		else {
 			result = {
 				error: false,
-				errorCode: "success",
+				resultCode: "success",
 				errorDecription: "Finished placing blocks"
 			};
 			if (callback) callback(result);
@@ -77,8 +77,8 @@ class Landscaping {
 					if (err) {
 						result = {
 							error: true,
-							errorCode: "diggingError",
-							errorDescription: "Could not dig block.",
+							resultCode: "diggingError",
+							description: "Could not dig block.",
 							parentError: err,
 							currentTarget: current,
 							queueRemainder: remainder
@@ -94,7 +94,7 @@ class Landscaping {
 		else {
 			result = {
 				error: false,
-				errorCode: "success",
+				resultCode: "success",
 				errorDecription: "Finished digging blocks"
 			};
 			if (callback) callback(result);
@@ -149,8 +149,8 @@ class Landscaping {
 					this.backupBot(() => {
 						result = {
 							error: true,
-							errorCode: "insufficientMaterials",
-							errorDescription: "Insufficient materials to flatten with.",
+							resultCode: "insufficientMaterials",
+							description: "Insufficient materials to flatten with.",
 							dirtCount: dirtCount,
 							dirtPlaceQueue: dirtPlaceQueue
 						};
@@ -164,8 +164,8 @@ class Landscaping {
 					this.backupBot(() => {
 						result = {
 							error: false,
-							errorCode: "success",
-							errorDescription: "Successfully flattened cube.",
+							resultCode: "success",
+							description: "Successfully flattened cube.",
 						};
 						if (callback) callback(result);
 						this.bot.emit(eventName, result);
@@ -207,8 +207,8 @@ class Landscaping {
 				if (cbResult.error) {
 					result = {
 						error: true,
-						errorCode: "storageObjectCraftingFailed",
-						errorDescription: `Failed to make a new ${storageObjectType.displayName}.`,
+						resultCode: "storageObjectCraftingFailed",
+						description: `Failed to make a new ${storageObjectType.displayName}.`,
 						storageObjectType: storageObjectType,
 						parentError: cbResult
 					};
@@ -243,16 +243,16 @@ class Landscaping {
 							if (err) {
 								result = {
 									error: true,
-									errorCode: "storageObjectPlacingFailed",
-									errorDescription: `Failed to place a new ${storageObjectType.displayName}.`,
+									resultCode: "storageObjectPlacingFailed",
+									description: `Failed to place a new ${storageObjectType.displayName}.`,
 									parentError: err
 								};
 							}
 							else {
 								result = {
 									error: false,
-									errorCode: "success",
-									errorDescription: `Placed a new ${storageObjectType.displayName}.`
+									resultCode: "success",
+									description: `Placed a new ${storageObjectType.displayName}.`
 								};
 							}
 							if (callback) callback(result);
@@ -265,8 +265,8 @@ class Landscaping {
 		else {
 			result = {
 				error: true,
-				errorCode: "noSpot",
-				errorDescription: `Could not find a spot for a new ${storageObjectType.displayName}.`
+				resultCode: "noSpot",
+				description: `Could not find a spot for a new ${storageObjectType.displayName}.`
 			};
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);

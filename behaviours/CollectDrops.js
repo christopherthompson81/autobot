@@ -64,8 +64,8 @@ class CollectDrops {
 				this.active = false;
 				result = {
 					error: false,
-					errorCode: "success",
-					errorDescription: "Finished picking up drops.",
+					resultCode: "success",
+					description: "Finished picking up drops.",
 					collectedItems: this.collected
 				};
 				if (callback) callback(result);

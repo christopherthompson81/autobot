@@ -56,8 +56,8 @@ function digBlockQueueNext(blockList, callback) {
 			if (!block.harvestTools.includes(tool)) {
 				result = {
 					error: true,
-					errorCode: "noSuitableTool",
-					errorDescription "The bot lacks a suitable tool to break a block in the queue",
+					resultCode: "noSuitableTool",
+					description "The bot lacks a suitable tool to break a block in the queue",
 					block: block,
 					bestTool: tool
 				}

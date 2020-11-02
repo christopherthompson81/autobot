@@ -49,8 +49,48 @@ class Inventory {
 				return item;
 			}
 		}
-		console.log(`We do not have item(${itemId}): ${this.mcData.items[itemId].displayName}`);
+		//console.log(`We do not have item(${itemId}): ${this.mcData.items[itemId].displayName}`);
 		return null;
+	}
+
+	haveSword() {
+		const inventoryDict = this.getInventoryDictionary();
+		if (Object.keys(inventoryDict).some(id => id.match(/_sword$/))) {
+			return true;
+		}
+		return false;
+	}
+
+	havePickaxe() {
+		const inventoryDict = this.getInventoryDictionary();
+		if (Object.keys(inventoryDict).some(id => id.match(/_pickaxe$/))) {
+			return true;
+		}
+		return false;
+	}
+
+	haveAxe() {
+		const inventoryDict = this.getInventoryDictionary();
+		if (Object.keys(inventoryDict).some(id => id.match(/_axe$/))) {
+			return true;
+		}
+		return false;
+	}
+
+	haveShovel() {
+		const inventoryDict = this.getInventoryDictionary();
+		if (Object.keys(inventoryDict).some(id => id.match(/_shovel$/))) {
+			return true;
+		}
+		return false;
+	}
+
+	haveHoe() {
+		const inventoryDict = this.getInventoryDictionary();
+		if (Object.keys(inventoryDict).some(id => id.match(/_hoe$/))) {
+			return true;
+		}
+		return false;
 	}
 
 	equipByName(itemName, callback) {
@@ -100,8 +140,8 @@ class Inventory {
 		else {
 			result = {
 				error: false,
-				errorCode: "success",
-				errorDescription: "Finished crafting tools.",
+				resultCode: "success",
+				description: "Finished crafting tools.",
 			};
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);

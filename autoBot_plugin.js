@@ -27,9 +27,10 @@ const Smelting = require('./behaviours/Smelting');
 const Stash = require('./behaviours/Stash');
 
 function inject (bot) {
+	bot.autobot = {};
 	bot.loadPlugin(pathfinder);
 	let defaultMove = null;
-	let currentTask = null;
+	//let currentTask = null;
 	let currentTarget = {
 		posHash: '',
 		errorCount: 0
@@ -39,10 +40,10 @@ function inject (bot) {
 	//bot.on('bot_stuck', this.onBotStuck);
 
 	function autoBotLoader() {
-		mcData = minecraftData(this.bot.version);
+		const mcData = minecraftData(this.bot.version);
+		bot.mcData = mcData;
 		defaultMove = new Movements(bot, mcData);
 		bot.pathfinder.setMovements(defaultMove);
-		bot.autobot = {};
 		bot.autobot.autocraft = new Autocraft(bot, mcData);
 		bot.autobot.collectDrops = new CollectDrops(bot, mcData);
 		bot.autobot.inventory = new Inventory(bot, mcData);
@@ -59,7 +60,7 @@ function inject (bot) {
 				this.bot.autobot.homePosition = this.bot.autobot.navigaator.setHomePosition();
 				//console.log(`Home Position: ${this.bot.autobot.homePosition}`);
 				//this.bot.autobot.stash.stashNonEssentialInventory();
-				bot.emit('autobot.ready', {error: false, errorCode: "ready", errorDescription: "autoBot is ready to run"});
+				bot.emit('autobot.ready', {error: false, resultCode: "ready", description: "autoBot is ready to run"});
 			});
 		});
 	}
@@ -75,7 +76,7 @@ function inject (bot) {
 			if (currentTarget.posHash === posHash) {
 				currentTarget.errorCount++;
 				if (currentTarget.errorCount > 5) {
-					if (currentTask === 'mining') {
+					if (bot.autobot.mining.active) {
 						bot.autobot.mining.badTargets.push(goalPos.clone());
 					}
 					bot.autobot.navigator.returnHome();

@@ -119,8 +119,8 @@ class Lumberjack {
 				this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
 					result = {
 						error: false,
-						errorCode: "success",
-						errorDescription: "Finished cutting tree and collecting logs."
+						resultCode: "success",
+						description: "Finished cutting tree and collecting logs."
 					}
 					if (callback) callback(result);
 					this.bot.emit(eventName, result);
@@ -154,8 +154,8 @@ class Lumberjack {
 			if (logCount > threshold) {
 				result = {
 					error: true,
-					errorCode: "unnecessary",
-					errorDescription: "The bot possesses sufficient logs and therefore harvesting a tree is unnecessary."
+					resultCode: "unnecessary",
+					description: "The bot possesses sufficient logs and therefore harvesting a tree is unnecessary."
 				};
 				if (callback) callback();
 				this.bot.emit(eventName, result);
@@ -170,8 +170,8 @@ class Lumberjack {
 		else {
 			result = {
 				error: true,
-				errorCode: "noTrees",
-				errorDescription: "No valid trees located."
+				resultCode: "noTrees",
+				description: "No valid trees located."
 			};
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);

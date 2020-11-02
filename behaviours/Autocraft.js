@@ -285,8 +285,8 @@ class Autocraft {
 				//console.log(`Can't craft ${this.mcData.items[current.id].displayName} because there is no usable recipe`);
 				result = {
 					error: true,
-					errorCode: 'noRecipe',
-					errorDescription: `Can't craft ${this.mcData.items[current.id].displayName} because there is no usable recipe`
+					resultCode: 'noRecipe',
+					description: `Can't craft ${this.mcData.items[current.id].displayName} because there is no usable recipe`
 				};
 				if (callback) callback(result);
 				this.bot.emit(eventName, result);
@@ -326,12 +326,12 @@ class Autocraft {
 							console.log(err, JSON.stringify(recipe), current.count, craftingTable);
 							result = {
 								error: true,
-								errorCode: 'craftingError',
+								resultCode: 'craftingError',
 								parentError: err,
 								recipe: JSON.stringify(recipe),
 								targetCount: targetCount,
 								craftingTable: JSON.stringify(craftingTable),
-								errorDescription: `Error occurred on crafting call`
+								description: `Error occurred on crafting call`
 							};
 							if (callback) callback(result);
 							this.bot.emit(eventName, result);
@@ -358,8 +358,8 @@ class Autocraft {
 		else {
 			result = {
 				error: false,
-				errorCode: 'success',
-				errorDescription: `Successfully crafted a(n) ${this.mcData.items[current.id].displayName}`
+				resultCode: 'success',
+				description: `Successfully crafted a(n) ${this.mcData.items[current.id].displayName}`
 			};
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);
@@ -425,7 +425,7 @@ class Autocraft {
 						this.bot.placeBlock(referenceBlock, placementVector, (err) => {
 							result = {
 								error: true,
-								errorCode: "failedToPlaceCraftingTable",
+								resultCode: "failedToPlaceCraftingTable",
 								parentError: err
 							};
 							callback(result);
@@ -435,7 +435,7 @@ class Autocraft {
 				}
 				result = {
 					error: false,
-					errorCode: 'success'
+					resultCode: 'success'
 				};
 				callBack(result);
 			});
@@ -458,7 +458,7 @@ class Autocraft {
 				this.placeCraftingTable(() => {
 					result = {
 						error: false,
-						errorDescription: "Successfully crafted the crafting table."
+						description: "Successfully crafted the crafting table."
 					};
 					callback(result);
 				});
@@ -467,7 +467,7 @@ class Autocraft {
 		else {
 			result = {
 				error: true,
-				errorDescription: "Could not create a crafting table because we lack the required resources."
+				description: "Could not create a crafting table because we lack the required resources."
 			};
 			callback(result);
 		}
@@ -484,8 +484,8 @@ class Autocraft {
 			const blocks = this.findMissingItemsNearby(missing);
 			result = {
 				error: true,
-				errorCode: 'missingAcquisitionObligateItems',
-				errorDescription: `No path to craft a ${this.mcData.items[itemId].displayName} due to lack of acquisition-obligate resources.`,
+				resultCode: 'missingAcquisitionObligateItems',
+				description: `No path to craft a ${this.mcData.items[itemId].displayName} due to lack of acquisition-obligate resources.`,
 				missingItems: missing,
 				nearbyResources: blocks
 			};

@@ -31,16 +31,16 @@ class Smelting {
 						if (err) {
 							result = {
 								error: true,
-								errorCode: "restokeFailed",
-								errorDescription: `Error adding ${fuelAmount} coal to ${fuel.count}`,
+								resultCode: "restokeFailed",
+								description: `Error adding ${fuelAmount} coal to ${fuel.count}`,
 								parentError: err
 							};
 						}
 						else {
 							result = {
 								error: false,
-								errorCode: "success",
-								errorDescription: `Added ${fuelAmount} coal to ${fuel.count}`
+								resultCode: "success",
+								description: `Added ${fuelAmount} coal to ${fuel.count}`
 							};
 						}
 						sleep(350).then(() => {
@@ -53,8 +53,8 @@ class Smelting {
 		}
 		result = {
 			error: false,
-			errorCode: "skipped",
-			errorDescription: `No fuel was added to the furnace.`
+			resultCode: "skipped",
+			description: `No fuel was added to the furnace.`
 		};
 		callback(result);
 		this.bot.emit(eventName, result);
@@ -79,16 +79,16 @@ class Smelting {
 					if (err) {
 						result = {
 							error: true,
-							errorCode: "resupplyFailed",
-							errorDescription: `Error adding ${inputAmount} iron ore to ${inputCount}`,
+							resultCode: "resupplyFailed",
+							description: `Error adding ${inputAmount} iron ore to ${inputCount}`,
 							parentError: err
 						};
 					}
 					else {
 						result = {
 							error: false,
-							errorCode: "success",
-							errorDescription: `Added ${inputAmount} iron ore to ${inputCount}`
+							resultCode: "success",
+							description: `Added ${inputAmount} iron ore to ${inputCount}`
 						};
 					}
 					furnace.close();
@@ -103,8 +103,8 @@ class Smelting {
 			furnace.close();
 			result = {
 				error: false,
-				errorCode: "skipped",
-				errorDescription: `No input was added to the furnace.`
+				resultCode: "skipped",
+				description: `No input was added to the furnace.`
 			};
 			sleep(350).then(() => {
 				if (callback) callback(result);

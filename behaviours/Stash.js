@@ -167,8 +167,8 @@ class Stash {
 			chest.close();
 			result = {
 				error: false,
-				errorCode: "success",
-				errorDescription: "Successfully stashed unneeded items."
+				resultCode: "success",
+				description: "Successfully stashed unneeded items."
 			};
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);
@@ -191,8 +191,8 @@ class Stash {
 		else {
 			result = {
 				error: false,
-				errorCode: "success",
-				errorDescription: "Successfully compressed all compressable items."
+				resultCode: "success",
+				description: "Successfully compressed all compressable items."
 			}
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);
@@ -338,8 +338,8 @@ class Stash {
 		else {
 			let result = {
 				error: false,
-				errorCode: "skipping",
-				errorDescription: "No non-essential inventory to stash."
+				resultCode: "skipping",
+				description: "No non-essential inventory to stash."
 			}
 			if (callback) callback(result);
 			this.bot.emit('autobot.stashing.done', result);
