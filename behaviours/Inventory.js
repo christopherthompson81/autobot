@@ -180,6 +180,7 @@ class Inventory {
 		// Prefer iron, to stone, to wood by inventory
 		this.craftingTools = true;
 		const toolIds = this.missingTools();
+		// Emit a skipping message if no missing tools
 		this.craftToolNext(toolIds, callback);
 	}
 }

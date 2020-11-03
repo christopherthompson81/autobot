@@ -1,34 +1,17 @@
 
 /*
-This script will harvest trees and ore, then process and store them.
+This script will harvest trees and ore.
 
 - It will quit if no trees are found.
 - It uses the default behaviour to get the pathfinder routine unstuck
-- It will mine ore if it has no missing tools
-- it will craft all tools of the best type (up to iron) it can make, with spares
-- It will not harvest trees if there are 32 or greater logs in inventory
+(X) - It will craft a wooden axe if it needs one
+(X) - It will mine ore if it has a pickaxe
+(X) - It will craft a wooden pickaxe if it needs one
 AND
-- It will build chests on the storage grid
-- It will build furnaces on the storage grid
-- It will clear and flatten the target storage grid spaces
-- It will smelt iron ore
-- It will compress compressables
-- It will stash non-essential items, valuables, and superfluous tools
-- It will remember chests and their contents so as to optimize stashing
-
-Unmonitored Events:
-	* autobot.autocraft.done
-	* autobot.collectDrops.done
-	* autobot.compression.done
-	* autobot.landscaping.digQueue.done
-	* autobot.landscaping.flattenCube.done
-	* autobot.landscaping.newStorageObject
-	* autobot.landscaping.placeQueue.done
-	* autobot.smelting.done
-	* autobot.smelting.resupply
-	* autobot.smelting.restoke
-	* autobot.smelting.newFurnace
-	* autobot.stashing.newChest
+- it will craft all tools of the best type (up to iron) it can make, with spares
+- (*) Not self-sufficient on iron production at this point.
+- It will mine ore if it has no missing tools
+- It will not harvest trees if there are 32 or greater logs in inventory
 */
 'use strict';
 
@@ -53,16 +36,26 @@ function logResult(result) {
 
 bot.loadPlugin(autoBot);
 
-const stash = bot.autobot.stash.stashNonEssentialInventory;
-
-function logResult(result) {
-	console.log(result.description);
+function botLoop() {
+	const missingTools = bot.autobot.inventory.missingTools();
+	if (missingTools.length > 0) {
+		console.log('Returning to cutting trees because of missing tools.', missingTools);
+		bot.autobot.inventory.craftTools((result) => {
+			bot.autobot.lumberjack.harvestNearestTree(32);
+		});
+	}
+	else {
+		console.log('Returning to mining.');
+		bot.autobot.inventory.craftTools((result) => {
+			bot.autobot.mining.mineBestOreVein();
+		});
+	}
 }
 
 bot.once('spawn', () => {
 	bot.on('autobot.ready', (result) => {
 		logResult(result);
-		stash();
+		botLoop();
 	});
 	bot.on('autobot.pathfinder.progress', () => { console.log("+"); });
 	bot.on('autobot.pathfinder.goalReached', (result) => {
@@ -83,12 +76,12 @@ bot.once('spawn', () => {
 			bot.pathfinder.setGoal(null);
 			bot.autobot.mining.active = false;
 			console.log('Excess break time forcing tool crafting. Mining Abandoned.');
-			stash();
+			botLoop();
 		}
 	});
 	bot.on('autobot.navigator.arrivedHome', (result) => {
 		logResult(result);
-		stash();
+		botLoop();
 	});
 	bot.on('autobot.lumberjack.done', (result) => {
 		logResult(result);
@@ -96,7 +89,7 @@ bot.once('spawn', () => {
 			console.log('Exiting');
 			return;
 		}
-		stash();
+		botLoop();
 	});
 	bot.on('autobot.craftTools.done', logResult);
 	bot.on('autobot.mining.digging', logResult);
@@ -106,19 +99,6 @@ bot.once('spawn', () => {
 			console.log('Exiting');
 			return;
 		}
-		stash();
+		botLoop();
 	});
-	bot.on('autobot.stashing.done', (result) => {
-		logResult(result);
-		if (result.error) {
-			console.log('Exiting');
-			return;
-		}
-		bot.autobot.stash.defaultPostStashingBehaviour();
-	});
-	bot.on('autobot.autocraft.done', logResult);
-	bot.on('autobot.compression.done', logResult);
-	bot.on('autobot.smelting.done', logResult);
-	bot.on('autobot.smelting.newFurnace', logResult);
-	bot.on('autobot.stashing.newChest', logResult);
 });

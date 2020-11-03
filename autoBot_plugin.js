@@ -39,7 +39,6 @@ function inject (bot) {
 	bot.autobot.smelting = new Smelting(bot);
 	bot.autobot.stash = new Stash(bot);
 	bot.loadPlugin(pathfinder);
-	let defaultMove = null;
 	//let currentTask = null;
 	let currentTarget = {
 		posHash: '',
@@ -50,8 +49,8 @@ function inject (bot) {
 
 	function autoBotLoader() {
 		bot.mcData = minecraftData(bot.version);
-		defaultMove = new Movements(bot, bot.mcData);
-		bot.pathfinder.setMovements(defaultMove);
+		bot.defaultMove = new Movements(bot, bot.mcData);
+		bot.pathfinder.setMovements(bot.defaultMove);
 		bot.on('goal_reached', onGoalReached);
 		bot.waitForChunksToLoad(() => {
 			//console.log('Waiting for 5 seconds to allow world to load.');
@@ -80,7 +79,7 @@ function inject (bot) {
 					if (bot.autobot.mining.active) {
 						bot.autobot.mining.badTargets.push(goalPos.clone());
 					}
-					bot.autobot.navigator.returnHome();
+					bot.autobot.resetAllBehaviours(bot.autobot.navigator.returnHome);
 					result = {
 						error: true,
 						resultCode: "badTarget",
@@ -110,20 +109,20 @@ function inject (bot) {
 		}
 		// landscaping next
 		else if (bot.autobot.landscaping.flatteningCube) {
-			bot.autobot.landscaping.callback();
+			sleep(350).then(bot.autobot.landscaping.callback);
 			activeFunction = "landscaping.flatteningCube";
 		}
 		else if (bot.autobot.landscaping.digging) {
-			bot.autobot.landscaping.callback();
+			sleep(350).then(bot.autobot.landscaping.callback);
 			activeFunction = "landscaping.digging";
 		}
 		else if (bot.autobot.landscaping.placing) {
-			bot.autobot.landscaping.callback();
+			sleep(350).then(bot.autobot.landscaping.callback);
 			activeFunction = "landscaping.placing";
 		}
 		// then the rest
 		else if (bot.autobot.autocraft.active) {
-			bot.autobot.autocraft.callback();
+			sleep(350).then(bot.autobot.autocraft.callback);
 			activeFunction = "autocraft";
 		}
 		else if (bot.autobot.collectDrops.active) {
@@ -135,15 +134,15 @@ function inject (bot) {
 			activeFunction = "lumberjack";
 		}
 		else if (bot.autobot.mining.active) {
-			bot.autobot.mining.callback();
+			sleep(350).then(bot.autobot.mining.callback);
 			activeFunction = "mining";
 		}
 		else if (bot.autobot.smelting.active) {
-			bot.autobot.smelting.callback();
+			sleep(350).then(bot.autobot.smelting.callback);
 			activeFunction = "smelting";
 		}
 		else if (bot.autobot.stash.active) {
-			bot.autobot.stash.callback();
+			sleep(350).then(bot.autobot.stash.callback);
 			activeFunction = "stash";
 		}
 		result = {

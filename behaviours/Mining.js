@@ -100,7 +100,7 @@ class Mining {
 			'iron_ore',
 			'coal_ore',
 		];
-		const items = Object.keys(this.getInventoryDictionary());
+		const items = Object.keys(this.bot.autobot.inventory.getInventoryDictionary());
 		const harvestable = [];
 		for (const material of desirable) {
 			const harvestTools = Object.keys(this.bot.mcData.blocksByName[material].harvestTools);
@@ -129,8 +129,8 @@ class Mining {
 			count: 1000,
 		});
 		// filter bad targets
-		oreBlocks = oreBlocks.filter(oreFilter);
-		oreBlocks = sortByDistanceFromBot(oreBlocks);
+		oreBlocks = oreBlocks.filter(this.oreFilter);
+		oreBlocks = sortByDistanceFromBot(this.bot, oreBlocks);
 		// If no harvestable ore was found, return false
 		if (oreBlocks.length === 0) {
 			return false;
@@ -150,9 +150,9 @@ class Mining {
 		});
 		// filter bad targets and y < 5 (Bots get stuck on unbreakables)
 		//console.log(`Found ${oreBlocks.length}/1000 ore blocks in the search`);
-		oreBlocks = oreBlocks.filter(oreFilter);
+		oreBlocks = oreBlocks.filter(this.oreFilter);
 		oreBlocks = oreBlocks.filter((p) => this.bot.entity.position.distanceTo(p) <= this.nearbyThreshold);
-		oreBlocks = sortByDistanceFromBot(oreBlocks);
+		oreBlocks = sortByDistanceFromBot(this.bot, oreBlocks);
 		if (oreBlocks.length > 0) {
 			//console.log("Unmined ore close by. Cleaning it up.");
 			return this.blockToVein(oreBlocks[0], [this.bot.blockAt(oreBlocks[0])]);
@@ -167,8 +167,8 @@ class Mining {
 			});
 			// filter bad targets and y < 5 (Bots get stuck on unbreakables)
 			//console.log(`Found ${oreBlocks.length}/1000 ${targetType} blocks in the search`);
-			oreBlocks = oreBlocks.filter(oreFilter);
-			oreBlocks = sortByDistanceFromBot(oreBlocks);
+			oreBlocks = oreBlocks.filter(this.oreFilter);
+			oreBlocks = sortByDistanceFromBot(this.bot, oreBlocks);
 			if (oreBlocks.length > 0) {
 				const targetBlock = this.bot.blockAt(oreBlocks[0]);
 				//console.log(`Mining a(n) ${targetBlock.displayName} vein. Distance: ${Math.floor(this.bot.entity.position.distanceTo(oreBlocks[0]))}`);
@@ -189,7 +189,7 @@ class Mining {
 	mineVeinNext(vein, callback) {
 		let result = {};
 		const current = vein[0];
-		this.remainder = vein.slice(1, vein.length);
+		const remainder = vein.slice(1, vein.length);
 		if (!this.havePickaxe()) {
 			this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
 				result = {
@@ -204,9 +204,9 @@ class Mining {
 			return;
 		}
 		if (current) {
-			if (!this.defaultMove.safeToBreak(current)) {
+			if (!this.bot.defaultMove.safeToBreak(current)) {
 				this.badTargets.push(current.position.clone());
-				this.mineVeinNext(this.remainder);
+				this.mineVeinNext(remainder, callback);
 				result = {
 					error: false,
 					resultCode: "notSafe",
@@ -228,7 +228,7 @@ class Mining {
 					const goal = new GoalGetToBlock(p.x, p.y, p.z);
 					this.bot.pathfinder.setGoal(goal);
 					this.callback = () => {
-						self.mineVeinNext(vein, callback);
+						this.mineVeinNext(vein, callback);
 					};
 					result = {
 						error: false,
@@ -250,7 +250,7 @@ class Mining {
 						}
 						this.bot.emit('autobot.mining.digging', result);
 					}
-					this.mineVeinNext(this.remainder);
+					this.mineVeinNext(remainder, callback);
 				});
 			});
 		}
@@ -258,16 +258,18 @@ class Mining {
 			//console.log('Finished mining. Waiting for drops.');
 			//this.currentTask = null;
 			sleep(1000).then(() => {
-				console.log('Picking up uncollected blocks.');
-				this.bot.autobot.pickUpBrokenBlocks(() => {
+				//console.log('Picking up uncollected blocks.');
+				this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
+					this.active = false;
 					result = {
 						error: false,
 						resultCode: "success",
 						description: "Finished mining and collecting drops."
 					}
-					if (callback) callback(result);
+					if (callback) {
+						callback(result);
+					}
 					this.bot.emit('autobot.mining.done', result);
-					this.active = false;
 				});
 			});
 		}
@@ -275,11 +277,10 @@ class Mining {
 
 	mineVein(vein, callback) {
 		// Go to a tree and cut it down
-		const self = this;
 		const p = vein[0].position;
 		const goal = new GoalGetToBlock(p.x, p.y, p.z);
 		this.callback = () => {
-			self.mineVeinNext(vein, callback);
+			this.mineVeinNext(vein, callback);
 		};
 		this.bot.pathfinder.setGoal(goal);
 	}
@@ -296,7 +297,7 @@ class Mining {
 				vein: vein
 			}
 			this.bot.emit('autobot.mining.digging', result);
-			this.mineVein(vein);
+			this.mineVein(vein, callback);
 		}
 		else {
 			result = {
@@ -308,7 +309,7 @@ class Mining {
 		}
 	}
 
-	mineBestOreVein() {
+	mineBestOreVein(callback) {
 		let result = {};
 		this.active = true;
 		const vein = this.findBestOreVein();
@@ -320,7 +321,7 @@ class Mining {
 				vein: vein
 			}
 			this.bot.emit('autobot.mining.digging', result);
-			this.mineVein(vein);
+			this.mineVein(vein, callback);
 		}
 		else {
 			result = {

@@ -28,7 +28,7 @@ function logResult(result) {
 bot.loadPlugin(autoBot);
 bot.once('spawn', () => {
 	bot.on('autobot.ready', (result) => {
-		logResult(result)
+		logResult(result);
 		console.log('Harvesting Tree');
 		bot.autobot.lumberjack.harvestNearestTree();
 	});
@@ -53,7 +53,7 @@ bot.once('spawn', () => {
 	bot.on('autobot.lumberjack.done', (result) => {
 		console.log(result.description);
 		if (result.error) {
-			console.log('Exiting')
+			console.log('Exiting');
 			return;
 		}
 		console.log('Harvesting Tree');

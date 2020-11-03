@@ -14,7 +14,7 @@ AND
 'use strict';
 
 const mineflayer = require('mineflayer');
-const autoBot = require("./autoBot_plugin.js").autobot;
+const autoBot = require("./autoBot_plugin.js").autoBot;
 const fs = require('fs');
 let config = JSON.parse(fs.readFileSync('autobot_config.json'));
 
@@ -28,7 +28,7 @@ const bot = mineflayer.createBot({
 	password: config.password
 });
 
-bot.loadPlugin(autobot);
+bot.loadPlugin(autoBot);
 
 function botLoop() {
 	if (bot.autobot.inventory.havePickaxe()) {

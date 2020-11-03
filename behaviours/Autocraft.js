@@ -8,10 +8,14 @@ class Autocraft {
 		autoBind(this);
 		this.bot = bot;
 		this.recipe = require("prismarine-recipe")(this.bot.version).Recipe;
+		this.callback = () => {};
 		this.active = false;
+		this.craftTarget = null;
 	}
 
 	resetBehaviour() {
+		this.callback = () => {};
+		this.craftTarget = null;
 		this.active = false;
 	}
 
@@ -307,7 +311,7 @@ class Autocraft {
 				//console.log("Needs crafting table", this.bot.autobot.homePosition);
 				craftingTable = this.bot.findBlock({
 					point: this.bot.autobot.homePosition,
-					matching: this.bot.mcData.blocksByName['crafting_table'],id,
+					matching: this.bot.mcData.blocksByName['crafting_table'].id,
 					maxDistance: 20,
 					count: 10
 				});
@@ -363,7 +367,7 @@ class Autocraft {
 			result = {
 				error: false,
 				resultCode: 'success',
-				description: `Successfully crafted a(n) ${this.bot.mcData.items[current.id].displayName}`
+				description: `Successfully crafted a(n) ${this.bot.mcData.items[this.craftTarget].displayName}`
 			};
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);
@@ -480,6 +484,7 @@ class Autocraft {
 	// Recursively craft an item (craft parents if needed)
 	autoCraft(itemId, count, callback) {
 		this.active = true;
+		this.craftTarget = itemId;
 		const eventName = 'autobot.autocraft.done';
 		let result = {};
 		const craftingQueue = this.getCraftingQueue(itemId, count);

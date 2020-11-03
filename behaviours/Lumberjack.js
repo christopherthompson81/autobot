@@ -161,8 +161,8 @@ class Lumberjack {
 			}
 			if (logCount > threshold) {
 				result = {
-					error: true,
-					resultCode: "unnecessary",
+					error: false,
+					resultCode: "skipping",
 					description: "The bot possesses sufficient logs and therefore harvesting a tree is unnecessary."
 				};
 				if (callback) callback();
