@@ -27,7 +27,6 @@ Unmonitored Events:
 	* autobot.smelting.done
 	* autobot.smelting.resupply
 	* autobot.smelting.restoke
-	* autobot.smelting.newFurnace
 	* autobot.stashing.newChest
 */
 'use strict';
@@ -52,10 +51,6 @@ function logResult(result) {
 }
 
 bot.loadPlugin(autoBot);
-
-function logResult(result) {
-	console.log(result.description);
-}
 
 bot.once('spawn', () => {
 	const stash = bot.autobot.stash.stashNonEssentialInventory;
@@ -110,9 +105,10 @@ bot.once('spawn', () => {
 	bot.on('autobot.stashing.done', (result) => {
 		logResult(result);
 		if (result.error) {
-			console.log("Consider Exiting: ", result.resultCode);
+			console.log('Exiting');
+			return;
 		}
-		bot.autobot.stash.defaultPostStashBehaviour();
+		bot.autobot.smelting.smeltOre();
 	});
 	bot.on('autobot.autocraft.done', logResult);
 	bot.on('autobot.compression.done', logResult);
@@ -121,4 +117,8 @@ bot.once('spawn', () => {
 		console.log(result.restokeResult.description);
 		console.log(result.resupplyResult.description);
 	});
+	bot.on('autobot.smelting.newFurnace', logResult);
+	//bot.on('autobot.smelting.resupply', logResult);
+	//bot.on('autobot.smelting.restoke', logResult);
+	bot.on('autobot.stashing.newChest', logResult);
 });

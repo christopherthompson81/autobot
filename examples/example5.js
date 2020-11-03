@@ -53,13 +53,12 @@ function logResult(result) {
 
 bot.loadPlugin(autoBot);
 
-const stash = bot.autobot.stash.stashNonEssentialInventory;
-
 function logResult(result) {
 	console.log(result.description);
 }
 
 bot.once('spawn', () => {
+	const stash = bot.autobot.stash.stashNonEssentialInventory;
 	bot.on('autobot.ready', (result) => {
 		logResult(result);
 		stash();
@@ -111,14 +110,15 @@ bot.once('spawn', () => {
 	bot.on('autobot.stashing.done', (result) => {
 		logResult(result);
 		if (result.error) {
-			console.log('Exiting');
-			return;
+			console.log("Consider Exiting: ", result.resultCode);
 		}
-		bot.autobot.stash.defaultPostStashingBehaviour();
+		bot.autobot.stash.defaultPostStashBehaviour();
 	});
 	bot.on('autobot.autocraft.done', logResult);
 	bot.on('autobot.compression.done', logResult);
-	bot.on('autobot.smelting.done', logResult);
-	bot.on('autobot.smelting.newFurnace', logResult);
-	bot.on('autobot.stashing.newChest', logResult);
+	bot.on('autobot.smelting.done', (result) => {
+		console.log(result.takeOutputResult.description);
+		console.log(result.restokeResult.description);
+		console.log(result.resupplyResult.description);
+	});
 });

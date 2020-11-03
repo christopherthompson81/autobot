@@ -53,6 +53,7 @@ class Smelting {
 						});
 					},
 				);
+				return;
 			}
 		}
 		result = {
@@ -84,7 +85,7 @@ class Smelting {
 						result = {
 							error: true,
 							resultCode: "resupplyFailed",
-							description: `Error adding ${inputAmount} iron ore to ${inputCount}`,
+							description: `Error adding ${inputAmount} iron ore to input slot (${inputCount} currently)`,
 							parentError: err
 						};
 					}
@@ -92,7 +93,7 @@ class Smelting {
 						result = {
 							error: false,
 							resultCode: "success",
-							description: `Added ${inputAmount} iron ore to ${inputCount}`
+							description: `Added ${inputAmount} iron ore to input slot (${inputCount} currently)`
 						};
 					}
 					furnace.close();
@@ -102,6 +103,7 @@ class Smelting {
 					});
 				},
 			)
+
 		}
 		else {
 			furnace.close();
@@ -129,7 +131,22 @@ class Smelting {
 							if (err || restokeResult.error || resupplyResult.error) {
 								result.error = true;
 							}
-							result.takeOutputResult = err;
+							if (err) {
+								result.takeOutputResult = {
+									error: true,
+									resultCode: "takeOutputError",
+									description: "There was an error taking the output from the furnace.",
+									parentError: err
+								};
+							}
+							else {
+								result.takeOutputResult = {
+									error: Boolean(err),
+									resultCode: "tookOutput",
+									description: `Took ${item.count} ${item.name} from the furnace`,
+									item: item
+								};
+							}
 							result.restokeResult = restokeResult;
 							result.resupplyResult = resupplyResult;
 							if (callback) callback(result);
@@ -145,7 +162,11 @@ class Smelting {
 						if (restokeResult.error || resupplyResult.error) {
 							result.error = true;
 						}
-						result.takeOutputResult = null;
+						result.takeOutputResult = {
+							error: false,
+							resultCode: "skipping",
+							description: "No output in furnace to take"
+						};
 						result.restokeResult = restokeResult;
 						result.resupplyResult = resupplyResult;
 						if (callback) callback(result);
