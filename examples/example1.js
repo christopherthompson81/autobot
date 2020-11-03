@@ -11,7 +11,7 @@ const autoBot = require("./autoBot_plugin.js").autoBot;
 const fs = require('fs');
 let config = JSON.parse(fs.readFileSync('autobot_config.json'));
 
-let botId = process.argv[2]
+let botId = process.argv[2];
 botId = !botId ? '' : '_' + botId.toString();
 
 const bot = mineflayer.createBot({
@@ -28,7 +28,7 @@ function logResult(result) {
 bot.loadPlugin(autoBot);
 bot.once('spawn', () => {
 	bot.on('autobot.ready', (result) => {
-		logResult(result)
+		logResult(result);
 		console.log('Harvesting Tree');
 		bot.autobot.lumberjack.harvestNearestTree();
 	});
@@ -53,7 +53,7 @@ bot.once('spawn', () => {
 	bot.on('autobot.lumberjack.done', (result) => {
 		console.log(result.description);
 		if (result.error) {
-			console.log('Exiting')
+			console.log('Exiting');
 			return;
 		}
 		console.log('Harvesting Tree');

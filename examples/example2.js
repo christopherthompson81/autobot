@@ -13,7 +13,7 @@ const autoBot = require("./autoBot_plugin.js").autoBot;
 const fs = require('fs');
 let config = JSON.parse(fs.readFileSync('autobot_config.json'));
 
-let botId = process.argv[2]
+let botId = process.argv[2];
 botId = !botId ? '' : '_' + botId.toString();
 
 const bot = mineflayer.createBot({
