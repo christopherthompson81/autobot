@@ -18,7 +18,7 @@ class Smelting {
 	restoke(furnace, callback) {
 		let result = {};
 		const eventName = 'autobot.smelting.restoke';
-		const inventoryDict = this.getInventoryDictionary();
+		const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
 		const fuel = furnace.fuelItem();
 		let fuelAmount = (inventoryDict['coal'] || 0) >= 64 ? 64 : (inventoryDict['coal'] || 0);
 		let fuelCount = fuel ? fuel.count : 0;
@@ -36,7 +36,7 @@ class Smelting {
 							result = {
 								error: true,
 								resultCode: "restokeFailed",
-								description: `Error adding ${fuelAmount} coal to ${fuel.count}`,
+								description: `Error adding ${fuelAmount} coal to ${fuelCount}`,
 								parentError: err
 							};
 						}
@@ -44,7 +44,7 @@ class Smelting {
 							result = {
 								error: false,
 								resultCode: "success",
-								description: `Added ${fuelAmount} coal to ${fuel.count}`
+								description: `Added ${fuelAmount} coal to ${fuelCount}`
 							};
 						}
 						sleep(350).then(() => {
@@ -71,12 +71,12 @@ class Smelting {
 		if (inventoryDict["iron_ore"]) {
 			let inputAmount = inventoryDict["iron_ore"];
 			const currentInput = furnace.inputItem();
-			let inputCount = currentInput.count || 0;
+			let inputCount = currentInput ? currentInput.count : 0;
 			if (inputCount + inputAmount >= 64) {
 				inputAmount = 64 - currentInput.count;
 			}
 			furnace.putInput(
-				this.bot.inventory.listItemsByRegEx(/^iron_ore$/)[0],
+				this.bot.autobot.inventory.listItemsByRegEx(/^iron_ore$/)[0],
 				null,
 				inputAmount,
 				(err) => {
@@ -118,15 +118,14 @@ class Smelting {
 	}
 
 	smeltingCallback(furnaceBlock, callback) {
-		let result = {};
+		let result = {error: false};
 		const eventName = 'autobot.smelting.done';
-		const self = this;
 		const furnace = this.bot.openFurnace(furnaceBlock);
 		furnace.on('open', () => {
 			if (furnace.outputItem()) {
 				furnace.takeOutput((err, item) => {
-					self.restoke(furnace, (restokeResult) => {
-						self.resupplyFurnace(furnace, (resupplyResult) => {
+					this.restoke(furnace, (restokeResult) => {
+						this.resupplyFurnace(furnace, (resupplyResult) => {
 							if (err || restokeResult.error || resupplyResult.error) {
 								result.error = true;
 							}
@@ -134,15 +133,15 @@ class Smelting {
 							result.restokeResult = restokeResult;
 							result.resupplyResult = resupplyResult;
 							if (callback) callback(result);
-							self.bot.emit(eventName, result);
-							self.active = false;
+							this.bot.emit(eventName, result);
+							this.active = false;
 						});
 					});
 				});
 			}
 			else {
-				self.restoke(furnace, (restokeResult) => {
-					self.resupplyFurnace(furnace, (resupplyResult) => {
+				this.restoke(furnace, (restokeResult) => {
+					this.resupplyFurnace(furnace, (resupplyResult) => {
 						if (restokeResult.error || resupplyResult.error) {
 							result.error = true;
 						}
@@ -150,8 +149,8 @@ class Smelting {
 						result.restokeResult = restokeResult;
 						result.resupplyResult = resupplyResult;
 						if (callback) callback(result);
-						self.bot.emit(eventName, result);
-						self.active = false;
+						this.bot.emit(eventName, result);
+						this.active = false;
 					});
 				});
 			}
@@ -163,19 +162,17 @@ class Smelting {
 
 	placeNewFurnace(callback) {
 		const eventName = 'autobot.smelting.newFurnace';
-		const self = this;
 		this.bot.autobot.landscaping.placeNewStorageObject('furnace', (result) => {
 			if (callback) callback(result);
-			self.bot.emit(eventName, result);
+			this.bot.emit(eventName, result);
 		});
 	}
 
 	smeltOre(callback) {
-		const self = this;
 		this.active = true;
 		const furnaceIds = [
 			this.bot.mcData.blocksByName['furnace'].id,
-			this.bot.mcData.blocksByName['lit_furnace'].id
+			//this.bot.mcData.blocksByName['lit_furnace'].id
 		];
 		const furnaceBlock = this.bot.findBlock({
 			point: this.homePosition,
@@ -186,18 +183,18 @@ class Smelting {
 		if (furnaceBlock) {
 			const p = furnaceBlock.position;
 			const goal = new GoalNear(p.x, p.y, p.z, 3);
-			this.callback = () => { self.smeltingCallback(furnaceBlock, callback) };
+			this.callback = () => { this.smeltingCallback(furnaceBlock, callback); };
 			this.bot.pathfinder.setGoal(goal);
 		}
 		else {
 			this.placeNewFurnace((result) => {
 				if (result.error) {
 					if (callback) callback(result);
-					self.bot.emit('autobot.smelting.done', result);
+					this.bot.emit('autobot.smelting.done', result);
 					this.active = false;
 				}
 				else {
-					self.smeltOre(callback);
+					this.smeltOre(callback);
 				}
 			});
 		}

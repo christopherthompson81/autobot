@@ -130,15 +130,15 @@ class Stash {
 	}
 
 	canStash(chestWindow, item) {
-		const stacksize = this.bot.mcData.itemsByName[item.name].stacksize;
-		if (chestWindow.freeSlotCount >= Math.ceil(item.count / stacksize)) {
+		const itemData = this.bot.mcData.itemsByName[item.name];
+		if (chestWindow.freeSlotCount >= Math.ceil(item.count / itemData.stackSize)) {
 			return true;
 		}
-		let roomForItem = stacksize * chestWindow.freeSlotCount;
+		let roomForItem = itemData.stackSize * chestWindow.freeSlotCount;
 		for (const slot of chestWindow.slots) {
 			if (slot === null) continue;
 			if (slot.name !== item.name) continue;
-			roomForItem += slot.stacksize - slot.count;
+			roomForItem += slot.stackSize - slot.count;
 		}
 		if (roomForItem >= item.count) return true;
 		return false;
@@ -151,6 +151,7 @@ class Stash {
 		const remainder = stashList.slice(1, stashList.length);
 		if (current) {
 			if (this.canStash(chestWindow, current)) {
+				//console.log('Chest Not Full');
 				chest.deposit(current.type, null, current.count, (err) => {
 					this.saveChestWindow(chestWindow.position, chest.window);
 					if (err) {	
@@ -165,6 +166,7 @@ class Stash {
 			}
 			else {
 				// Find a different chest
+				//console.log('Chest Full');
 				chest.close();
 				this.stashNonEssentialInventory(callback);
 			}
@@ -308,7 +310,7 @@ class Stash {
 			// Smelt before stashing
 			if (!this.smeltingCheck && inventoryDict['iron_ore']) {
 				this.smeltingCheck = true;
-				this.bot.autobot.smelting.smeltOre(() => this.stashNonEsstentialInventory(callback));
+				this.bot.autobot.smelting.smeltOre(() => this.stashNonEssentialInventory(callback));
 				return;
 			}
 			// Do compressables before stashing
@@ -325,8 +327,8 @@ class Stash {
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				this.callback = () => {
 					this.chestArrival(chest, callback);
-				}
-				this.bot.pathfinder.setGoal(goal);
+				};
+				sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
 			}
 			else {
 				//console.log("No chest located.");
