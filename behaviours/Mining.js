@@ -267,6 +267,7 @@ class Mining {
 						description: "Finished mining and collecting drops."
 					}
 					if (callback) {
+						console.log(callback);
 						callback(result);
 					}
 					this.bot.emit('autobot.mining.done', result);

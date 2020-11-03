@@ -400,7 +400,8 @@ class Autocraft {
 		const below = new Vec3(0, -1, 0);
 		const botPosition = this.bot.entity.position.clone();
 		for (const side of sides) {
-			const point = botPosition.offset(side).clone();
+			const point = botPosition.clone();
+			point.add(side);
 			const block = this.bot.blockAt(point);
 			if (['cave_air', 'air'].includes(block.name)) {
 				//console.log(block, "is air");
@@ -425,10 +426,11 @@ class Autocraft {
 			placementVector.y || 0,
 			placementVector.z || 0,
 		));
+		console.log("callback: ", callback);
 		this.bot.equip(craftingTable, "hand", () => {
 			this.bot.placeBlock(referenceBlock, placementVector, (err) => {
 				if (err) {
-					//console.log(err);
+					console.log(err);
 					this.bot.autobot.navigator.backupBot(() => {
 						this.bot.placeBlock(referenceBlock, placementVector, (err) => {
 							result = {

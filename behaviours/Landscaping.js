@@ -168,7 +168,7 @@ class Landscaping {
 					return;
 				}
 				this.placeNext(dirtPlaceQueue, () => {
-					this.backupBot(() => {
+					this.bot.autobot.navigator.backupBot(() => {
 						result = {
 							error: false,
 							resultCode: "success",

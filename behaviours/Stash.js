@@ -107,25 +107,25 @@ class Stash {
 		const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
 		if (Object.keys(inventoryDict).some(id => id.match(/_log$/))) {
 			// Don't start mining without a full set of tools
-			const missingTools = this.missingTools();
+			const missingTools = this.bot.autobot.inventory.missingTools();
 			if (missingTools.length > 0) {
 				//console.log('Returning to cutting trees because of missing tools.', missingTools);
-				this.bot.autobot.inventory.craftTools(
-					() => this.bot.autobot.lumberjack.harvestNearestTree(32)
-				);
+				this.bot.autobot.inventory.craftTools((result) => {
+					this.bot.autobot.lumberjack.harvestNearestTree(32);
+				});
 			}
 			else {
 				//console.log('Returning to mining.');
-				this.bot.autobot.inventory.craftTools(
-					this.bot.autobot.mining.mineBestOreVein
-				);
+				this.bot.autobot.inventory.craftTools((result) => {
+					this.bot.autobot.mining.mineBestOreVein();
+				});
 			}
 		}
 		else {
 			//console.log('Returning to cutting trees.', inventoryDict);
-			this.bot.autobot.inventory.craftTools(
-				() => this.bot.autobot.lumberjack.harvestNearestTree(32)
-			);
+			this.bot.autobot.inventory.craftTools((result) => {
+				this.bot.autobot.lumberjack.harvestNearestTree(32);
+			});
 		}
 	}
 
@@ -206,7 +206,7 @@ class Stash {
 	}
 
 	getCompressList() {
-		const inventoryDict = this.getInventoryDictionary()
+		const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary()
 		// save some coal and iron ingots
 		if (inventoryDict['coal']) inventoryDict['coal'] -= 32;
 		if (inventoryDict['iron_ingot']) inventoryDict['iron_ingot'] -= 32;
@@ -252,7 +252,7 @@ class Stash {
 		}
 		let chestsToOpen = this.bot.findBlocks({
 			point: this.homePosition,
-			matching: this.listBlocksByRegEx(/^chest$/),
+			matching: this.bot.mcData.blocksByName['chest'].id,
 			maxDistance: 128,
 			count: 200
 		});
@@ -304,7 +304,7 @@ class Stash {
 	stashNonEssentialInventory(callback) {
 		this.active = true;
 		if (this.checkInventoryToStash()) {
-			const inventoryDict = this.getInventoryDictionary();
+			const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
 			// Smelt before stashing
 			if (!this.smeltingCheck && inventoryDict['iron_ore']) {
 				this.smeltingCheck = true;
@@ -324,7 +324,7 @@ class Stash {
 				const p = chest.position;
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				this.callback = () => {
-					this.chestArrival(chestToOpen, callback);
+					this.chestArrival(chest, callback);
 				}
 				this.bot.pathfinder.setGoal(goal);
 			}

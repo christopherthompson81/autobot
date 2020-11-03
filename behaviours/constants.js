@@ -361,6 +361,7 @@ exports.toolItems = toolItems;
 exports.armorItems = armorItems;
 exports.essentialItems = essentialItems;
 exports.compressableItems = compressableItems;
+exports.airBlocks = airBlocks;
 exports.utilityBlocks = utilityBlocks;
 exports.playerMadeBlocks = playerMadeBlocks;
 exports.naturalBlocks = naturalBlocks;
