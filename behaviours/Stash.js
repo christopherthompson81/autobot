@@ -179,7 +179,7 @@ class Stash {
 						// Find a different chest
 						const eventName = "autobot.stashing.behaviourSelect";
 						let result = {
-							error: false,
+							error: true,
 							resultCode: "stashingError",
 							description: `Error while stashing.`,
 							chestWindow: chestWindow,

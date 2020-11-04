@@ -123,7 +123,12 @@ bot.once('spawn', () => {
 		}
 		stash();
 	});
-	bot.on('autobot.stashing.behaviourSelect', logResult);
+	bot.on('autobot.stashing.behaviourSelect', (result) => {
+		logResult(result);
+		if (result.error) {
+			console.log(result);
+		}
+	});
 	bot.on('autobot.stashing.done', (result) => {
 		logResult(result);
 		if (result.error) {
