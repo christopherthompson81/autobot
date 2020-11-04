@@ -103,7 +103,14 @@ bot.once('spawn', () => {
 		}
 	});
 	bot.on('autobot.craftTools.done', logResult);
-	bot.on('autobot.mining.digging', logResult);
+	bot.on('autobot.mining.digging', (result) => {
+		if (result.resultCode === 'foundVein') {
+			console.log(`Ore vein of ${result.vein.length} ${result.vein[0].displayName}`)
+		}
+		else {
+			logResult(result);
+		}
+	});
 	bot.on('autobot.mining.done', (result) => {
 		logResult(result);
 		if (result.resultCode === 'noVeinFound') {
