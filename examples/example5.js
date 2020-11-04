@@ -17,14 +17,11 @@ AND
 - It will remember chests and their contents so as to optimize stashing
 
 Unmonitored Events:
-	* autobot.autocraft.done
 	* autobot.collectDrops.done
-	* autobot.compression.done
 	* autobot.landscaping.digQueue.done
 	* autobot.landscaping.flattenCube.done
 	* autobot.landscaping.newStorageObject
 	* autobot.landscaping.placeQueue.done
-	* autobot.smelting.done
 	* autobot.smelting.resupply
 	* autobot.smelting.restoke
 	* autobot.smelting.newFurnace
@@ -95,10 +92,26 @@ bot.once('spawn', () => {
 			console.log('Exiting');
 			return;
 		}
-		stash();
+		if (result.resultCode === 'skipping') {
+			bot.autobot.mining.mineBestOreVein();
+		}
+		else {
+			stash();
+		}
 	});
-	bot.on('autobot.craftTools.done', logResult);
-	bot.on('autobot.mining.digging', logResult);
+	bot.on('autobot.craftTools.done', (result) => {
+		if (result.resultCode !== 'skipping') {
+			logResult(result);
+		}
+	});
+	bot.on('autobot.mining.digging', (result) => {
+		if (result.resultCode === 'foundVein') {
+			console.log(`${result.vein[0].displayName} vein found (${result.vein.length} ores)`);
+		}
+		else {
+			logResult(result);
+		}
+	});
 	bot.on('autobot.mining.done', (result) => {
 		logResult(result);
 		if (result.resultCode === 'noVeinFound') {
@@ -106,6 +119,12 @@ bot.once('spawn', () => {
 			return;
 		}
 		stash();
+	});
+	bot.on('autobot.stashing.behaviourSelect', (result) => {
+		logResult(result);
+		if (result.error) {
+			console.log(result);
+		}
 	});
 	bot.on('autobot.stashing.done', (result) => {
 		logResult(result);
@@ -117,6 +136,10 @@ bot.once('spawn', () => {
 	bot.on('autobot.autocraft.done', logResult);
 	bot.on('autobot.compression.done', logResult);
 	bot.on('autobot.smelting.done', (result) => {
+		if (result.resultCode === 'placingFurnaceError') {
+			console.log(result);
+			return;
+		}
 		console.log(result.takeOutputResult.description);
 		console.log(result.restokeResult.description);
 		console.log(result.resupplyResult.description);

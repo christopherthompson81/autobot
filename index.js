@@ -17,14 +17,11 @@ AND
 - It will remember chests and their contents so as to optimize stashing
 
 Unmonitored Events:
-	* autobot.autocraft.done
 	* autobot.collectDrops.done
-	* autobot.compression.done
 	* autobot.landscaping.digQueue.done
 	* autobot.landscaping.flattenCube.done
 	* autobot.landscaping.newStorageObject
 	* autobot.landscaping.placeQueue.done
-	* autobot.smelting.done
 	* autobot.smelting.resupply
 	* autobot.smelting.restoke
 	* autobot.smelting.newFurnace
