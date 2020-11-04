@@ -141,7 +141,7 @@ class Smelting {
 							}
 							else {
 								result.takeOutputResult = {
-									error: Boolean(err),
+									error: false,
 									resultCode: "tookOutput",
 									description: `Took ${item.count} ${item.name} from the furnace`,
 									item: item
