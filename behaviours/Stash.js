@@ -286,9 +286,10 @@ class Stash {
 	}
 
 	findChest() {
+		const itemsToStash = this.listNonEssentialInventory();
 		for (const posHash in this.chestMap) {
 			const chest = this.chestMap[posHash];
-			if (chest.freeSlotCount > 0) return this.bot.blockAt(chest.position);
+			if (this.canStash(chest, itemsToStash[0])) return this.bot.blockAt(chest.position);
 		}
 		let chestsToOpen = this.bot.findBlocks({
 			point: this.homePosition,
@@ -386,7 +387,7 @@ class Stash {
 				//console.log("Chest found. Moving to: ", chest.position);
 				result = {
 					error: false,
-					resultCode: "compressing",
+					resultCode: "stash",
 					description: `Bot is going to stash items in a chest`,
 					chest: chest
 				};
