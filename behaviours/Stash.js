@@ -103,6 +103,8 @@ class Stash {
 	}
 
 	defaultPostStashBehaviour() {
+		const eventName = "autobot.stashing.behaviourSelect";
+		let result = {};
 		// If we have logs, mine, if we don't lumberjack
 		const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
 		if (Object.keys(inventoryDict).some(id => id.match(/_log$/))) {
@@ -110,12 +112,22 @@ class Stash {
 			const missingTools = this.bot.autobot.inventory.missingTools();
 			if (missingTools.length > 0) {
 				//console.log('Returning to cutting trees because of missing tools.', missingTools);
+				result = {
+					error: false,
+					resultCode: "missingTools",
+					description: `Returning to cutting trees because of missing tools. ${missingTools}`,
+				};
 				this.bot.autobot.inventory.craftTools((result) => {
 					this.bot.autobot.lumberjack.harvestNearestTree(32);
 				});
 			}
 			else {
 				//console.log('Returning to mining.');
+				result = {
+					error: false,
+					resultCode: "mining",
+					description: `Returning to mining.`,
+				};
 				this.bot.autobot.inventory.craftTools((result) => {
 					this.bot.autobot.mining.mineBestOreVein();
 				});
@@ -123,6 +135,11 @@ class Stash {
 		}
 		else {
 			//console.log('Returning to cutting trees.', inventoryDict);
+			result = {
+				error: false,
+				resultCode: "noLogs",
+				description: `Returning to cutting trees.`,
+			};
 			this.bot.autobot.inventory.craftTools((result) => {
 				this.bot.autobot.lumberjack.harvestNearestTree(32);
 			});

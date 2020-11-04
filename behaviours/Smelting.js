@@ -211,7 +211,12 @@ class Smelting {
 			this.placeNewFurnace((result) => {
 				if (result.error) {
 					if (callback) callback(result);
-					this.bot.emit('autobot.smelting.done', result);
+					this.bot.emit('autobot.smelting.done', {
+						error: true,
+						resultCode: 'placingFurnaceError',
+						description: 'There was an error while placing the new furnace',
+						parentResult: result
+					});
 					this.active = false;
 				}
 				else {

@@ -95,7 +95,12 @@ bot.once('spawn', () => {
 			console.log('Exiting');
 			return;
 		}
-		stash();
+		if (result.resultCode === 'skipping') {
+			bot.autobot.mining.mineBestOreVein();
+		}
+		else {
+			stash();
+		}
 	});
 	bot.on('autobot.craftTools.done', logResult);
 	bot.on('autobot.mining.digging', logResult);
@@ -117,6 +122,10 @@ bot.once('spawn', () => {
 	bot.on('autobot.autocraft.done', logResult);
 	bot.on('autobot.compression.done', logResult);
 	bot.on('autobot.smelting.done', (result) => {
+		if (result.resultCode === 'placingFurnaceError') {
+			console.log(result);
+			return;
+		}
 		console.log(result.takeOutputResult.description);
 		console.log(result.restokeResult.description);
 		console.log(result.resupplyResult.description);

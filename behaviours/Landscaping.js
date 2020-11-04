@@ -153,7 +153,7 @@ class Landscaping {
 				// TODO: add a collectBlocks routine
 				let dirtCount = this.bot.autobot.inventory.getInventoryDictionary().dirt || 0;
 				if (dirtCount < dirtPlaceQueue.length) {
-					this.backupBot(() => {
+					this.bot.autobot.navigator.backupBot(() => {
 						result = {
 							error: true,
 							resultCode: "insufficientMaterials",
