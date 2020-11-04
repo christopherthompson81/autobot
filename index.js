@@ -62,11 +62,8 @@ bot.once('spawn', () => {
 	});
 	bot.on('autobot.pathfinder.progress', () => { console.log("+"); });
 	bot.on('autobot.pathfinder.goalReached', (result) => {
-		logResult(result);
 		if (result.resultCode === 'reachedGoal') {
-			console.log("Goal position:", result.goalPosition);
-			console.log("Distance from goal:", result.distanceFromGoal);
-			console.log("Active Function:", result.activeFunction);
+			console.log(`Reached goal of ${result.goalPosition}. Bot is ${result.distanceFromGoal} blocks from the goal and '${result.activeFunction}' is the active function.`);
 		}
 	});
 	bot.on('bot_stuck', (goalProgress, path, stateGoal) => {

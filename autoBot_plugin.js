@@ -67,7 +67,7 @@ function inject (bot) {
 		const eventName = 'autobot.pathfinder.goalReached';
 		let result = {error: false, resultCode: "", description: ""};
 		let activeFunction = "";
-		console.log(goal);
+		//console.log(goal);
 		const goalVec3 = new Vec3(goal.x, goal.y, goal.z);
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(bot.entity.position));
 		if (distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3)) {
