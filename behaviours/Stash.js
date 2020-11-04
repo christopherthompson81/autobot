@@ -175,8 +175,8 @@ class Stash {
 				//console.log('Chest Not Full');
 				chest.deposit(current.type, null, current.count, (err) => {
 					this.saveChestWindow(chestWindow.position, chest.window);
-					if (err) {	
-						// Find a different chest
+					if (err) {
+						// Move on to the next item to stash.
 						const eventName = "autobot.stashing.behaviourSelect";
 						let result = {
 							error: true,
@@ -187,9 +187,9 @@ class Stash {
 							parentError: err
 						};
 						this.bot.emit(eventName, result);
-						chest.close();
-						this.stashNonEssentialInventory(callback);
-						return;
+						//chest.close();
+						//this.stashNonEssentialInventory(callback);
+						//return;
 					}
 					chestWindow = this.chestMap[getPosHash(chestWindow.position)];
 					this.stashNext(chest, remainder, chestWindow, callback);
