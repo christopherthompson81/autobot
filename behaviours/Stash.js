@@ -176,7 +176,17 @@ class Stash {
 				chest.deposit(current.type, null, current.count, (err) => {
 					this.saveChestWindow(chestWindow.position, chest.window);
 					if (err) {	
-						// Find a different chest					
+						// Find a different chest
+						const eventName = "autobot.stashing.behaviourSelect";
+						let result = {
+							error: false,
+							resultCode: "stashingError",
+							description: `Error while stashing.`,
+							chestWindow: chestWindow,
+							item: current,
+							parentError: err
+						};
+						this.bot.emit(eventName, result);
 						chest.close();
 						this.stashNonEssentialInventory(callback);
 						return;
