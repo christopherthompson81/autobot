@@ -102,10 +102,14 @@ bot.once('spawn', () => {
 			stash();
 		}
 	});
-	bot.on('autobot.craftTools.done', logResult);
+	bot.on('autobot.craftTools.done', (result) => {
+		if (result.resultCode !== 'skipping') {
+			logResult(result);
+		}
+	});
 	bot.on('autobot.mining.digging', (result) => {
 		if (result.resultCode === 'foundVein') {
-			console.log(`Ore vein of ${result.vein.length} ${result.vein[0].displayName}`)
+			console.log(`${result.vein[0].displayName} vein found (${result.vein.length} ores)`);
 		}
 		else {
 			logResult(result);
@@ -119,6 +123,7 @@ bot.once('spawn', () => {
 		}
 		stash();
 	});
+	bot.on('autobot.stashing.behaviourSelect', logResult);
 	bot.on('autobot.stashing.done', (result) => {
 		logResult(result);
 		if (result.error) {

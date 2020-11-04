@@ -178,8 +178,18 @@ class Inventory {
 
 	craftTools(callback) {
 		// Prefer iron, to stone, to wood by inventory
-		this.craftingTools = true;
 		const toolIds = this.missingTools();
+		if (toolIds.length === 0) {
+			let result = {
+				error: false,
+				resultCode: "skipping",
+				description: "No missing tools.",
+			};
+			if (callback) callback(result);
+			this.bot.emit('autobot.craftTools.done', result);
+			return;
+		}
+		this.craftingTools = true;
 		// Emit a skipping message if no missing tools
 		this.craftToolNext(toolIds, callback);
 	}

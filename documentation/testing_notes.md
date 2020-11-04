@@ -9,6 +9,7 @@ Crafting tables:
 
 * make furnaces the same way as chests
 * add a getDirt behaviour
+* Consider finding a chest for each item in the stashing list (to optimize chest space)
 
 52 111 1394
 

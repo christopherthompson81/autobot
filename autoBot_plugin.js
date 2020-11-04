@@ -142,7 +142,7 @@ function inject (bot) {
 			activeFunction = "smelting";
 		}
 		else if (bot.autobot.stash.active) {
-			sleep(350).then(bot.autobot.stash.callback);
+			sleep(350).then(bot.autobot.stash.chestArrival);
 			activeFunction = "stash";
 		}
 		result = {

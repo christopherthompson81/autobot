@@ -14,6 +14,7 @@ class Stash {
 		this.active = false;
 		this.smeltingCheck = false;
 		this.chestMap = {};
+		this.cbChest;
 	}
 
 	resetBehaviour() {
@@ -117,6 +118,7 @@ class Stash {
 					resultCode: "missingTools",
 					description: `Returning to cutting trees because of missing tools. ${missingTools}`,
 				};
+				this.bot.emit(eventName, result);
 				this.bot.autobot.inventory.craftTools((result) => {
 					this.bot.autobot.lumberjack.harvestNearestTree(32);
 				});
@@ -128,6 +130,7 @@ class Stash {
 					resultCode: "mining",
 					description: `Returning to mining.`,
 				};
+				this.bot.emit(eventName, result);
 				this.bot.autobot.inventory.craftTools((result) => {
 					this.bot.autobot.mining.mineBestOreVein();
 				});
@@ -140,6 +143,7 @@ class Stash {
 				resultCode: "noLogs",
 				description: `Returning to cutting trees.`,
 			};
+			this.bot.emit(eventName, result);
 			this.bot.autobot.inventory.craftTools((result) => {
 				this.bot.autobot.lumberjack.harvestNearestTree(32);
 			});
@@ -182,8 +186,15 @@ class Stash {
 				});
 			}
 			else {
-				// Find a different chest
-				//console.log('Chest Full');
+				const eventName = "autobot.stashing.behaviourSelect";
+				let result = {
+					error: false,
+					resultCode: "cantStash",
+					description: `Can't stash an item in this chest. Finding another chest.`,
+					chestWindow: chestWindow,
+					item: current
+				};
+				this.bot.emit(eventName, result);
 				chest.close();
 				this.stashNonEssentialInventory(callback);
 			}
@@ -295,14 +306,22 @@ class Stash {
 		});
 	}
 
-	chestArrival(chestToOpen, callback) {
+	chestArrival() {
+		const chestToOpen = this.cbChest;
+		const callback = this.callback;
 		const chest = this.bot.openChest(chestToOpen);
 		chest.on('open', () => {
 			//console.log('Chest opened.');
 			this.saveChestWindow(chestToOpen.position, chest.window);
 			const chestWindow = this.chestMap[getPosHash(chestToOpen.position)];
 			if (chestWindow.freeSlotCount === 0) {
-				//console.log('Chest is full. Trying to find another');
+				const eventName = "autobot.stashing.behaviourSelect";
+				let result = {
+					error: false,
+					resultCode: "chestFull",
+					description: `Chest is full. Trying to find another`
+				};
+				this.bot.emit(eventName, result);
 				chest.close();
 				this.stashNonEssentialInventory(callback);
 				return;
@@ -322,10 +341,18 @@ class Stash {
 	*/
 	stashNonEssentialInventory(callback) {
 		this.active = true;
+		const eventName = "autobot.stashing.behaviourSelect";
+		let result = {};
 		if (this.checkInventoryToStash()) {
 			const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
 			// Smelt before stashing
 			if (!this.smeltingCheck && inventoryDict['iron_ore']) {
+				result = {
+					error: false,
+					resultCode: "smelting",
+					description: `Bot is going to smelt ore`
+				};
+				this.bot.emit(eventName, result);
 				this.smeltingCheck = true;
 				this.bot.autobot.smelting.smeltOre(() => this.stashNonEssentialInventory(callback));
 				return;
@@ -333,6 +360,13 @@ class Stash {
 			// Do compressables before stashing
 			const compressList = this.getCompressList();
 			if (compressList.length > 0) {
+				result = {
+					error: false,
+					resultCode: "compressing",
+					description: `Bot is going to compress compressable items`,
+					compressList: compressList
+				};
+				this.bot.emit(eventName, result);
 				this.compressNext(compressList, () => this.stashNonEssentialInventory(callback));
 				return;
 			}
@@ -340,16 +374,31 @@ class Stash {
 			const chest = this.findChest();
 			if (chest) {
 				//console.log("Chest found. Moving to: ", chest.position);
+				result = {
+					error: false,
+					resultCode: "compressing",
+					description: `Bot is going to stash items in a chest`,
+					chest: chest
+				};
+				this.bot.emit(eventName, result);
 				const p = chest.position;
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
-				this.callback = () => {
-					this.chestArrival(chest, callback);
-				};
+				this.callback = callback;
+				this.cbChest = chest;
 				sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
 			}
 			else {
-				//console.log("No chest located.");
+				result = {
+					error: false,
+					resultCode: "placeNewChest",
+					description: `Bot is going to place a new chest`
+				};
+				this.bot.emit(eventName, result);
 				this.placeNewChest((result) => {
+					if (this.findChest()) {
+						this.stashNonEssentialInventory(callback);
+						return;
+					}
 					if (result.error) {
 						if (callback) callback(result);
 						this.bot.emit('autobot.stashing.done', result);
