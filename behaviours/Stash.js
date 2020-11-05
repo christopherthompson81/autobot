@@ -161,6 +161,9 @@ class Stash {
 			if (slot.name !== item.name) continue;
 			roomForItem += slot.stackSize - slot.count;
 		}
+		if (roomForItem > 0) {
+			console.log(`chestPos: ${chestWindow.position}; roomforItem: ${roomForItem}; item.name: ${item.name}; item.count: ${item.count}`);
+		}
 		if (roomForItem >= item.count) return true;
 		return false;
 	}
@@ -192,10 +195,12 @@ class Stash {
 						//return;
 					}
 					const newChest = this.findChest();
-					if (!newChest.position.equals(chestWindow.position)) {
-						chest.close();
-						this.sendToChest(newChest);
-						return;
+					if (newChest) {
+						if (!newChest.position.equals(chestWindow.position)) {
+							chest.close();
+							this.sendToChest(newChest);
+							return;
+						}
 					}
 					chestWindow = this.chestMap[getPosHash(chestWindow.position)];
 					this.stashNext(chest, remainder, chestWindow, callback);
