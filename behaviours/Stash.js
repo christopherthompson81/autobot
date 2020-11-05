@@ -293,8 +293,11 @@ class Stash {
 
 	findChest() {
 		const itemsToStash = this.listNonEssentialInventory();
-		for (const posHash in this.chestMap) {
-			const chest = this.chestMap[posHash];
+		// Check known chests by most full first
+		const chestList = Object.values(this.chestMap).sort((a, b) => {
+			return b.freeSlotCount - a.freeSlotCount;
+		})
+		for (const chest of chestList) {
 			if (this.canStash(chest, itemsToStash[0])) {
 				return this.bot.blockAt(chest.position);
 			}

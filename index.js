@@ -32,6 +32,7 @@ Unmonitored Events:
 const mineflayer = require('mineflayer');
 const autoBot = require("./autoBot_plugin.js").autoBot;
 const fs = require('fs');
+const process = require('process');
 let config = JSON.parse(fs.readFileSync('autobot_config.json'));
 
 let botId = process.argv[2]
@@ -60,12 +61,12 @@ bot.once('spawn', () => {
 		logResult(result);
 		stash();
 	});
-	bot.on('autobot.pathfinder.progress', () => { console.log("+"); });
+	bot.on('autobot.pathfinder.progress', () => { process.stdout.write("+"); });
 	bot.on('autobot.pathfinder.goalReached', (result) => {
 		if (result.resultCode === 'reachedGoal') {
 			let message = `Reached goal of ${result.goalPosition}.`;
-			message += `Bot is ${result.distanceFromGoal} blocks from the goal`;
-			message += `and '${result.activeFunction}' is the active function.`;
+			message += ` Bot is ${result.distanceFromGoal} blocks from the goal`;
+			message += ` and '${result.activeFunction}' is the active function.`;
 			console.log(message);
 		}
 	});
@@ -109,6 +110,9 @@ bot.once('spawn', () => {
 			console.log(`${result.vein[0].displayName} vein found (${result.vein.length} ores).`);
 			const travelDistance = Math.floor(bot.entity.position.distanceTo(result.vein[0].position));
 			console.log(`Travel Distance: ${travelDistance}`);
+		}
+		else if (result.resultCode === 'digError') {
+			process.stdout.write("*");
 		}
 		else {
 			logResult(result);

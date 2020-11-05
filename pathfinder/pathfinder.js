@@ -281,7 +281,7 @@ function inject (bot) {
 						lastNodeTime = performance.now()
 						if (err) {
 							// TODO: Convert to event
-							console.log("Digging error");
+							process.stdout.write("*");
 							//resetPath();
 						}
 						else {
