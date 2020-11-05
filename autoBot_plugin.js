@@ -138,7 +138,7 @@ function inject (bot) {
 			activeFunction = "mining";
 		}
 		else if (bot.autobot.smelting.active) {
-			sleep(350).then(bot.autobot.smelting.callback);
+			sleep(350).then(bot.autobot.smelting.smeltingCallback);
 			activeFunction = "smelting";
 		}
 		else if (bot.autobot.stash.active) {

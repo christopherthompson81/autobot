@@ -191,6 +191,12 @@ class Stash {
 						//this.stashNonEssentialInventory(callback);
 						//return;
 					}
+					const newChest = this.findChest();
+					if (!newChest.position.equals(chestWindow.position)) {
+						chest.close();
+						this.sendToChest(newChest);
+						return;
+					}
 					chestWindow = this.chestMap[getPosHash(chestWindow.position)];
 					this.stashNext(chest, remainder, chestWindow, callback);
 				});
@@ -289,7 +295,9 @@ class Stash {
 		const itemsToStash = this.listNonEssentialInventory();
 		for (const posHash in this.chestMap) {
 			const chest = this.chestMap[posHash];
-			if (this.canStash(chest, itemsToStash[0])) return this.bot.blockAt(chest.position);
+			if (this.canStash(chest, itemsToStash[0])) {
+				return this.bot.blockAt(chest.position);
+			}
 		}
 		let chestsToOpen = this.bot.findBlocks({
 			point: this.homePosition,
@@ -325,6 +333,7 @@ class Stash {
 			//console.log('Chest opened.');
 			this.saveChestWindow(chestToOpen.position, chest.window);
 			const chestWindow = this.chestMap[getPosHash(chestToOpen.position)];
+			/*
 			if (chestWindow.freeSlotCount === 0) {
 				const eventName = "autobot.stashing.behaviourSelect";
 				let result = {
@@ -337,6 +346,7 @@ class Stash {
 				this.stashNonEssentialInventory(callback);
 				return;
 			}
+			*/
 			const itemsToStash = this.listNonEssentialInventory();
 			// TODO: write a function to check the stashing queue against the chest
 			// ...probably in the findChest function to return an appropriate chest
@@ -345,6 +355,21 @@ class Stash {
 		chest.on('close', () => {
 			//console.log('Chest closed');
 		});
+	}
+
+	sendToChest(chest) {
+		const eventName = "autobot.stashing.behaviourSelect";
+		let result = {
+			error: false,
+			resultCode: "stash",
+			description: `Bot is going to stash items in a chest`,
+			chest: chest
+		};
+		this.bot.emit(eventName, result);
+		const p = chest.position;
+		const goal = new GoalNear(p.x, p.y, p.z, 3);
+		this.cbChest = chest;
+		sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
 	}
 
 	/*
@@ -384,19 +409,8 @@ class Stash {
 			//console.log("Stashing non-essential inventory");
 			const chest = this.findChest();
 			if (chest) {
-				//console.log("Chest found. Moving to: ", chest.position);
-				result = {
-					error: false,
-					resultCode: "stash",
-					description: `Bot is going to stash items in a chest`,
-					chest: chest
-				};
-				this.bot.emit(eventName, result);
-				const p = chest.position;
-				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				this.callback = callback;
-				this.cbChest = chest;
-				sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
+				this.sendToChest(chest);
 			}
 			else {
 				result = {
@@ -421,7 +435,7 @@ class Stash {
 			}
 		}
 		else {
-			let result = {
+			result = {
 				error: false,
 				resultCode: "skipping",
 				description: "No non-essential inventory to stash."

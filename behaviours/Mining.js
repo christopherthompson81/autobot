@@ -222,7 +222,7 @@ class Mining {
 					this.bot.emit(eventName, cbResult);
 					return;
 				}
-				if (this.bot.entity.position.distanceTo(current.position) > 3) {
+				if (Math.floor(this.bot.entity.position.distanceTo(current.position)) > 3) {
 					//this.currentTask = 'mineVein';
 					const p = current.position;
 					const goal = new GoalGetToBlock(p.x, p.y, p.z);

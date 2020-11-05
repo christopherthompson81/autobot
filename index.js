@@ -63,7 +63,10 @@ bot.once('spawn', () => {
 	bot.on('autobot.pathfinder.progress', () => { console.log("+"); });
 	bot.on('autobot.pathfinder.goalReached', (result) => {
 		if (result.resultCode === 'reachedGoal') {
-			console.log(`Reached goal of ${result.goalPosition}. Bot is ${result.distanceFromGoal} blocks from the goal and '${result.activeFunction}' is the active function.`);
+			let message = `Reached goal of ${result.goalPosition}.`;
+			message += `Bot is ${result.distanceFromGoal} blocks from the goal`;
+			message += `and '${result.activeFunction}' is the active function.`;
+			console.log(message);
 		}
 	});
 	bot.on('bot_stuck', (goalProgress, path, stateGoal) => {
@@ -103,7 +106,9 @@ bot.once('spawn', () => {
 	});
 	bot.on('autobot.mining.digging', (result) => {
 		if (result.resultCode === 'foundVein') {
-			console.log(`${result.vein[0].displayName} vein found (${result.vein.length} ores)`);
+			console.log(`${result.vein[0].displayName} vein found (${result.vein.length} ores).`);
+			const travelDistance = Math.floor(bot.entity.position.distanceTo(result.vein[0].position));
+			console.log(`Travel Distance: ${travelDistance}`);
 		}
 		else {
 			logResult(result);

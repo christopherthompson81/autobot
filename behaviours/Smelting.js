@@ -6,6 +6,7 @@ class Smelting {
 	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
+		this.cbFurnace = null;
 		this.callback = () => {};
 		this.active = false;
 	}
@@ -70,7 +71,7 @@ class Smelting {
 		const eventName = 'autobot.smelting.resupply';
 		const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
 		if (inventoryDict["iron_ore"]) {
-			let inputAmount = inventoryDict["iron_ore"];
+			let inputAmount = inventoryDict["iron_ore"] || 0;
 			const currentInput = furnace.inputItem();
 			let inputCount = currentInput ? currentInput.count : 0;
 			if (inputCount + inputAmount >= 64) {
@@ -119,7 +120,9 @@ class Smelting {
 		}		
 	}
 
-	smeltingCallback(furnaceBlock, callback) {
+	smeltingCallback() {
+		let furnaceBlock = this.cbFurnace;
+		let callback = this.callback;
 		let result = {error: false};
 		const eventName = 'autobot.smelting.done';
 		const furnace = this.bot.openFurnace(furnaceBlock);
@@ -204,7 +207,9 @@ class Smelting {
 		if (furnaceBlock) {
 			const p = furnaceBlock.position;
 			const goal = new GoalNear(p.x, p.y, p.z, 3);
-			this.callback = () => { this.smeltingCallback(furnaceBlock, callback); };
+			//this.callback = () => { this.smeltingCallback(furnaceBlock, callback); };
+			this.cbFurnace = furnaceBlock;
+			this.callback = callback;
 			this.bot.pathfinder.setGoal(goal);
 		}
 		else {
