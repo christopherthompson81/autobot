@@ -194,13 +194,9 @@ class Smelting {
 
 	smeltOre(callback) {
 		this.active = true;
-		const furnaceIds = [
-			this.bot.mcData.blocksByName['furnace'].id,
-			//this.bot.mcData.blocksByName['lit_furnace'].id
-		];
 		const furnaceBlock = this.bot.findBlock({
 			point: this.homePosition,
-			matching: furnaceIds,
+			matching: this.bot.autobot.inventory.listBlocksByRegEx(/^(furnace|lit_furnace)$/),
 			maxDistance: 128
 		});
 		// Only stash to surface / near surface chests

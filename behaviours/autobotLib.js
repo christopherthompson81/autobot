@@ -5,6 +5,10 @@ function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function getToolDamage(tool) {
+	return (tool && tool.nbt) ? tool.nbt.value.Damage.value : 0;
+}
+
 function bestHarvestTool(bot, block) {
 	const availableTools = bot.inventory.items();
 	const effects = bot.entity.effects;
@@ -13,14 +17,19 @@ function bestHarvestTool(bot, block) {
 	let bestTool = null;
 	for (const tool of availableTools) {
 		const enchants = (tool && tool.nbt) ? nbt.simplify(tool.nbt).Enchantments : [];
+		const damage = getToolDamage(tool);
 		const digTime = block.digTime(tool ? tool.type : null, false, false, false, enchants, effects);
-		if (digTime < fastest) {
+		// if tools are the same and picked, switch if the new tool is more damaged (use most damaged tool first).
+		// 	This will prevent wear-evening, which would cause the time between tools breaking to be close together.
+		//	We want to maximize the time gap between tools breaking.
+		if (
+			(digTime < fastest) ||
+			(bestTool && bestTool.type === tool.type && damage > getToolDamage(bestTool))
+		) {
 			fastest = digTime;
 			bestTool = tool;
 		}
-		// TODO: if tools are the same and picked, switch if the new tool is more damaged (use most damaged tool first).
-		// 	This will prevent wear-evening, which would cause the time between tools breaking to be close together.
-		//	We want to maximize the time gap between tools breaking.
+		
 	}
 	return bestTool;
 }

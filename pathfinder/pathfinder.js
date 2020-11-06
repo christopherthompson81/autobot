@@ -13,6 +13,10 @@ const Vec3 = require('vec3').Vec3
 const { PlayerState } = require('prismarine-physics')
 const nbt = require('prismarine-nbt')
 
+function getToolDamage(tool) {
+	return (tool && tool.nbt) ? tool.nbt.value.Damage.value : 0;
+}
+
 function inject (bot) {
 	bot.pathfinder = {}
 
@@ -26,8 +30,15 @@ function inject (bot) {
 		let bestTool = null;
 		for (const tool of availableTools) {
 			const enchants = (tool && tool.nbt) ? nbt.simplify(tool.nbt).Enchantments : [];
+			const damage = getToolDamage(tool);
 			const digTime = block.digTime(tool ? tool.type : null, false, false, false, enchants, effects);
-			if (digTime < fastest) {
+			// if tools are the same and picked, switch if the new tool is more damaged (use most damaged tool first).
+			// 	This will prevent wear-evening, which would cause the time between tools breaking to be close together.
+			//	We want to maximize the time gap between tools breaking.
+			if (
+				(digTime < fastest) ||
+				(bestTool && bestTool.type === tool.type && damage > getToolDamage(bestTool))
+			) {
 				fastest = digTime;
 				bestTool = tool;
 			}

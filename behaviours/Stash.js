@@ -353,7 +353,7 @@ class Stash {
 
 	chestArrival() {
 		if (!this.validateChest(this.cbChest.position)) {
-			delete this.chestMap[posHash(this.cbChest.position)];
+			delete this.chestMap[getPosHash(this.cbChest.position)];
 			sleep(100).then(() => { this.stashNonEssentialInventory(this.callback); });
 			return;
 		}

@@ -167,10 +167,28 @@ function inject (bot) {
 	}
 
 	bot.autobot.onBotStuck = function (goalProgress, path, goal) {
-		//console.log("Pathfinder indicates bot is stuck. Goal Progress: ", goalProgress);
-		//console.log("Path: ", path);
-		//console.log("Goal: ", goal);
-		bot.autobot.mining.badTargets.push(new Vec3(goal.x, goal.y, goal.z));
+		const posHash = goal.x + ',' + goal.y + ',' + goal.z;
+		if (currentTarget.posHash === posHash) {
+			currentTarget.errorCount++;
+			if (currentTarget.errorCount <= 5) {
+				bot.autobot.resetAllBehaviours(() => {
+					bot.autobot.landscaping.flattenCube(
+						bot.entity.position,
+						'cobblestone',
+						['stone', 'cobblestone', 'diorite', 'andesite', 'granite', 'sand', 'dirt', 'grass_block'],
+						bot.autobot.navigator.returnHome
+					);
+				});
+				return;
+			}
+			else {
+				console.log('Very stuck.');
+			}
+		}
+		else {
+			currentTarget.posHash = posHash;
+			currentTarget.errorCount = 1;
+		}
 		bot.autobot.resetAllBehaviours(bot.autobot.navigator.returnHome);
 	}
 

@@ -111,6 +111,9 @@ bot.once('spawn', () => {
 			const travelDistance = Math.floor(bot.entity.position.distanceTo(result.vein[0].position));
 			console.log(`Travel Distance: ${travelDistance}`);
 		}
+		else if (result.resultCode === 'notSafe') {
+			console.log(`${result.description} ${result.block.position}`);
+		}
 		else if (result.resultCode === 'digError') {
 			process.stdout.write("*");
 		}
