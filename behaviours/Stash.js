@@ -150,17 +150,20 @@ class Stash {
 		}
 	}
 
-	canStash(chestWindow, item) {
+	getRoomForItem(chestWindow, item) {
 		const itemData = this.bot.mcData.itemsByName[item.name];
-		if (chestWindow.freeSlotCount >= Math.ceil(item.count / itemData.stackSize)) {
-			return true;
-		}
 		let roomForItem = itemData.stackSize * chestWindow.freeSlotCount;
 		for (const slot of chestWindow.slots) {
 			if (slot === null) continue;
 			if (slot.name !== item.name) continue;
 			roomForItem += slot.stackSize - slot.count;
 		}
+		return roomForItem;
+	}
+
+	canStash(chestWindow, item) {
+		const itemData = this.bot.mcData.itemsByName[item.name];
+		let roomForItem = this.getRoomForItem(chestWindow, item);
 		if (roomForItem > 0) {
 			console.log(`chestPos: ${chestWindow.position}; roomforItem: ${roomForItem}; item.name: ${item.name}; item.count: ${item.count}`);
 		}
@@ -174,6 +177,11 @@ class Stash {
 		const current = stashList[0];
 		const remainder = stashList.slice(1, stashList.length);
 		if (current) {
+			let roomForItem = this.getRoomForItem(chestWindow, current);
+			if (roomForItem < current.count && roomForItem > 0) {
+				remainder.push({type: current.type, count: current.count - roomForItem});
+				current.count = roomForItem;
+			}
 			if (this.canStash(chestWindow, current)) {
 				//console.log('Chest Not Full');
 				chest.deposit(current.type, null, current.count, (err) => {
@@ -333,7 +341,16 @@ class Stash {
 		});
 	}
 
+	validateChest(position) {
+		return this.bot.blockAt(position).type === this.bot.mcData.blocksByName['chest'].id;
+	}
+
 	chestArrival() {
+		if (!this.validateChest(this.cbChest.position)) {
+			delete this.chestMap[posHash(this.cbChest.position)];
+			this.stashNonEssentialInventory();
+			return;
+		}
 		const chestToOpen = this.cbChest;
 		const callback = this.callback;
 		const chest = this.bot.openChest(chestToOpen);
