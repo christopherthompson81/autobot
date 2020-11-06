@@ -202,9 +202,10 @@ class Stash {
 						//this.stashNonEssentialInventory(callback);
 						//return;
 					}
-					const newChest = this.findChest();
+					let newChest = remainder.length > 0 ? this.findChest(remainder[0]) : false;
 					if (newChest) {
 						if (!newChest.position.equals(chestWindow.position)) {
+							console.log('Chest Efficiency - Stashing to a different chest');
 							chest.close();
 							this.sendToChest(newChest);
 							return;
@@ -304,21 +305,26 @@ class Stash {
 		}
 	}
 
-	findChest() {
+	findChest(item) {
 		const itemsToStash = this.listNonEssentialInventory();
 		// Check known chests by most full first
-		const chestList = Object.values(this.chestMap).sort((a, b) => {
-			return b.freeSlotCount - a.freeSlotCount;
-		})
+		const chestList = Object.values(this.chestMap).sort((a, b) => b.freeSlotCount - a.freeSlotCount);
+		if (item) {
+			for (const chest of chestList) {
+				if (this.getRoomForItem(chest, item) > 0) {
+					return this.bot.blockAt(chest.position);
+				}
+			}	
+		}
 		for (const chest of chestList) {
-			if (this.canStash(chest, itemsToStash[0])) {
+			if (this.getRoomForItem(chest, itemsToStash[0]) > 0) {
 				return this.bot.blockAt(chest.position);
 			}
 		}
 		let chestsToOpen = this.bot.findBlocks({
 			point: this.homePosition,
 			matching: this.bot.mcData.blocksByName['chest'].id,
-			maxDistance: 128,
+			maxDistance: 16,
 			count: 200
 		});
 		// Only stash to surface / near surface chests
@@ -348,7 +354,7 @@ class Stash {
 	chestArrival() {
 		if (!this.validateChest(this.cbChest.position)) {
 			delete this.chestMap[posHash(this.cbChest.position)];
-			this.stashNonEssentialInventory();
+			sleep(100).then(() => { this.stashNonEssentialInventory(this.callback); });
 			return;
 		}
 		const chestToOpen = this.cbChest;

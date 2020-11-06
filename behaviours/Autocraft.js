@@ -298,6 +298,7 @@ class Autocraft {
 				};
 				if (callback) callback(result);
 				this.bot.emit(eventName, result);
+				this.active = false;
 				return;
 			}
 			// Fix for minecraft-data bug #231
