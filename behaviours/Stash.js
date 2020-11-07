@@ -175,6 +175,7 @@ class Stash {
 	}
 
 	getRoomForItem(chestWindow, item) {
+		if (!item) return 0;
 		const itemData = this.bot.mcData.itemsByName[item.name];
 		let roomForItem = itemData.stackSize * chestWindow.freeSlotCount;
 		for (const slot of chestWindow.slots) {
