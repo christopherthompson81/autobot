@@ -238,7 +238,7 @@ class Landscaping {
 				if (b.type !== this.bot.mcData.blocksByName['dirt'].id) return false;
 				return true;
 			},
-			maxDistance: 20,
+			maxDistance: 35,
 			count: 5000,
 		});
 		// Only dirt above home

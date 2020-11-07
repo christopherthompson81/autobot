@@ -145,6 +145,10 @@ function inject (bot) {
 			sleep(350).then(bot.autobot.smelting.smeltingCallback);
 			activeFunction = "smelting";
 		}
+		else if (bot.autobot.stash.cachingChests) {
+			sleep(350).then(bot.autobot.stash.cacheChest);
+			activeFunction = "cachingChests";
+		}
 		else if (bot.autobot.stash.active) {
 			sleep(350).then(bot.autobot.stash.chestArrival);
 			activeFunction = "stash";

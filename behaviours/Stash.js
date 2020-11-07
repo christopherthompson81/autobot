@@ -10,17 +10,22 @@ class Stash {
 	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
+		this.chestMap = {};
 		this.callback = () => {};
 		this.active = false;
 		this.smeltingCheck = false;
-		this.chestMap = {};
-		this.cbChest;
+		this.cbChest = null;
+		this.cachingChests = false;
+		this.chestsToCache = [];
 	}
 
 	resetBehaviour() {
 		this.callback = () => {};
 		this.active = false;
 		this.smeltingCheck = false;
+		this.cbChest = null;
+		this.cachingChests = false;
+		this.chestsToCache = [];
 	}
 
 	/**************************************************************************
@@ -132,7 +137,14 @@ class Stash {
 				};
 				this.bot.emit(eventName, result);
 				this.bot.autobot.landscaping.getDirt(32 - dirtCount, (result) => {
-					this.bot.autobot.lumberjack.harvestNearestTree(32);
+					// There is the case of a flattening error for chest placement causing this.
+					// If we have chest in inventory, stash. otherwise harvest tree
+					if (inventoryDict['chest']) {
+						this.stashNonEssentialInventory();
+					}
+					else {
+						this.bot.autobot.lumberjack.harvestNearestTree(32);
+					}
 				});
 			}
 			else {
@@ -199,6 +211,12 @@ class Stash {
 				chest.deposit(current.type, null, current.count, (err) => {
 					this.saveChestWindow(chestWindow.position, chest.window);
 					if (err) {
+						if (err.message.startsWith('missing source item')) {
+							// just move on.
+							chestWindow = this.chestMap[getPosHash(chestWindow.position)];
+							this.stashNext(chest, remainder, chestWindow, callback);
+							return;
+						}
 						// Move on to the next item to stash.
 						const eventName = "autobot.stashing.behaviourSelect";
 						let result = {
@@ -317,10 +335,28 @@ class Stash {
 		}
 	}
 
+	listUnknownStorageGridChests() {
+		let chestsToOpen = this.bot.findBlocks({
+			point: this.bot.autobot.homePosition,
+			matching: this.bot.mcData.blocksByName['chest'].id,
+			maxDistance: 16,
+			count: 200
+		});
+		// Only stash to surface / near surface chests
+		chestsToOpen = chestsToOpen.filter((r) => {
+			if (r.y !== this.bot.autobot.homePosition.y) return false;
+			for (const posHash in this.chestMap) {
+				if (r.equals(this.chestMap[posHash].position)) return false;
+			}
+			return true;
+		});
+		return chestsToOpen;
+	}
+
 	findChest(item) {
 		const itemsToStash = this.listNonEssentialInventory();
 		// Check known chests by most full first
-		const chestList = Object.values(this.chestMap).sort((a, b) => b.freeSlotCount - a.freeSlotCount);
+		const chestList = Object.values(this.chestMap).sort((a, b) => a.freeSlotCount - b.freeSlotCount);
 		if (item) {
 			for (const chest of chestList) {
 				if (this.getRoomForItem(chest, item) > 0) {
@@ -333,20 +369,7 @@ class Stash {
 				return this.bot.blockAt(chest.position);
 			}
 		}
-		let chestsToOpen = this.bot.findBlocks({
-			point: this.homePosition,
-			matching: this.bot.mcData.blocksByName['chest'].id,
-			maxDistance: 16,
-			count: 200
-		});
-		// Only stash to surface / near surface chests
-		chestsToOpen = chestsToOpen.filter((r) => {
-			if (r.y < 60) return false;
-			for (const posHash in this.chestMap) {
-				if (r.equals(this.chestMap[posHash].position)) return false;
-			}
-			return true;
-		});
+		let chestsToOpen = this.listUnknownStorageGridChests();
 		if (chestsToOpen.length > 0) return this.bot.blockAt(chestsToOpen[0]);
 		else return false;
 	}
@@ -364,6 +387,10 @@ class Stash {
 	}
 
 	chestArrival() {
+		if (!this.cbChest) {
+			sleep(100).then(() => { this.bot.autobot.lumberjack.harvestNearestTree(32); });
+			return;
+		}
 		if (!this.validateChest(this.cbChest.position)) {
 			delete this.chestMap[getPosHash(this.cbChest.position)];
 			sleep(100).then(() => { this.stashNonEssentialInventory(this.callback); });
@@ -373,23 +400,8 @@ class Stash {
 		const callback = this.callback;
 		const chest = this.bot.openChest(chestToOpen);
 		chest.on('open', () => {
-			//console.log('Chest opened.');
 			this.saveChestWindow(chestToOpen.position, chest.window);
 			const chestWindow = this.chestMap[getPosHash(chestToOpen.position)];
-			/*
-			if (chestWindow.freeSlotCount === 0) {
-				const eventName = "autobot.stashing.behaviourSelect";
-				let result = {
-					error: false,
-					resultCode: "chestFull",
-					description: `Chest is full. Trying to find another`
-				};
-				this.bot.emit(eventName, result);
-				chest.close();
-				this.stashNonEssentialInventory(callback);
-				return;
-			}
-			*/
 			const itemsToStash = this.listNonEssentialInventory();
 			// TODO: write a function to check the stashing queue against the chest
 			// ...probably in the findChest function to return an appropriate chest
@@ -413,6 +425,51 @@ class Stash {
 		const goal = new GoalNear(p.x, p.y, p.z, 3);
 		this.cbChest = chest;
 		sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
+	}
+
+	cacheChest() {
+		const chestToOpen = this.bot.blockAt(this.chestsToCache[0]);
+		this.chestsToCache = this.chestsToCache.slice(1, this.chestsToCache.length);
+		const chest = this.bot.openChest(chestToOpen);
+		chest.on('open', () => {
+			this.saveChestWindow(chestToOpen.position, chest.window);
+			chest.close();
+			this.sendToPeekInChest();
+		});
+	}
+
+	sendToPeekInChest() {
+		if (this.chestsToCache.length > 0) {
+			const p = this.chestsToCache[0];
+			const goal = new GoalNear(p.x, p.y, p.z, 3);
+			sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
+			return;
+		}
+		this.cachingChests = false;
+		const eventName = "autobot.stashing.cachingChests.done";
+		let result = {
+			error: false,
+			resultCode: "cachedAllChests",
+			description: `All the chests on the storage grid have been examined.`
+		};
+		this.bot.emit(eventName, result);
+		if (this.callback) this.callback(result);
+	}
+
+	fillChestMap(callback) {
+		this.chestsToCache = this.listUnknownStorageGridChests();
+		if (this.chestsToCache.length > 0) {
+			this.cachingChests = true;
+			this.callback = callback;
+			const eventName = "autobot.stashing.behaviourSelect";
+			let result = {
+				error: false,
+				resultCode: "cacheChests",
+				description: `The bot is going to cache the contents of all storage grid chests.`
+			};
+			this.bot.emit(eventName, result);
+			this.sendToPeekInChest();
+		}
 	}
 
 	/*
@@ -447,6 +504,10 @@ class Stash {
 				};
 				this.bot.emit(eventName, result);
 				this.compressNext(compressList, () => this.stashNonEssentialInventory(callback));
+				return;
+			}
+			if (this.listUnknownStorageGridChests().length > 0) {
+				this.fillChestMap(() => this.stashNonEssentialInventory(callback));
 				return;
 			}
 			//console.log("Stashing non-essential inventory");

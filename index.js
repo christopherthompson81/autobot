@@ -135,6 +135,7 @@ bot.once('spawn', () => {
 			console.log(result);
 		}
 	});
+	bot.on('autobot.stashing.cachingChests.done', logResult);
 	bot.on('autobot.stashing.done', (result) => {
 		logResult(result);
 		if (result.error) {

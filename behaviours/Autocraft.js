@@ -417,7 +417,7 @@ class Autocraft {
 		return false;
 	}
 
-	placeCraftingTable(callBack) {
+	placeCraftingTable(callback) {
 		let result = {};
 		const craftingTableId = this.bot.mcData.itemsByName['crafting_table'].id;
 		const craftingTable = this.bot.autobot.inventory.getInventoryItemById(craftingTableId);
@@ -427,7 +427,7 @@ class Autocraft {
 			placementVector.y || 0,
 			placementVector.z || 0,
 		));
-		console.log("callback: ", callback);
+		//console.log("callback: ", callback);
 		this.bot.equip(craftingTable, "hand", () => {
 			this.bot.placeBlock(referenceBlock, placementVector, (err) => {
 				if (err) {
@@ -448,7 +448,7 @@ class Autocraft {
 					error: false,
 					resultCode: 'success'
 				};
-				callBack(result);
+				callback(result);
 			});
 		});
 	}

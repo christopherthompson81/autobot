@@ -75,7 +75,7 @@ class Smelting {
 			const currentInput = furnace.inputItem();
 			let inputCount = currentInput ? currentInput.count : 0;
 			if (inputCount + inputAmount >= 64) {
-				inputAmount = 64 - currentInput.count;
+				inputAmount = 64 - inputCount;
 			}
 			furnace.putInput(
 				this.bot.autobot.inventory.listItemsByRegEx(/^iron_ore$/)[0],
