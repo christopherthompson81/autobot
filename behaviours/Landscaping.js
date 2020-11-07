@@ -243,7 +243,7 @@ class Landscaping {
 		});
 		// Only dirt above home
 		console.log(`Dirt Count: ${dirtBlocks.length}`);
-		dirtBlocks = dirtBlocks.filter((b) => { return b.y > this.bot.autobot.homePosition.y });
+		dirtBlocks = dirtBlocks.filter((b) => { return b.y >= this.bot.autobot.homePosition.y });
 		console.log(`Dirt Count above home Y: ${dirtBlocks.length}`);
 		dirtBlocks = sortByDistanceFromBot(this.bot, dirtBlocks);
 		// If no dirt was found, return false
