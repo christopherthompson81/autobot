@@ -1,7 +1,9 @@
 const autoBind = require('auto-bind');
+const { exit } = require('process');
 const Vec3 = require('vec3').Vec3;
 const { GoalBlock } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
+const sortByDistanceFromBot = require('./autoBotLib').sortByDistanceFromBot;
 const airBlocks = require('./constants').airBlocks;
 const clearPattern = require('./constants').clearPattern;
 const dirtPattern = require('./constants').dirtPattern;
@@ -11,16 +13,20 @@ class Landscaping {
 		autoBind(this);
 		this.bot = bot;
 		this.callback = () => {};
+		this.dirtQueue = [];
 		this.digging = false;
 		this.placing = false;
 		this.flatteningCube = false;
+		this.gettingDirt = false;
 	}
 
 	resetBehaviour() {
 		this.callback = () => {};
+		this.dirtQueue = [];
 		this.digging = false;
 		this.placing = false;
 		this.flatteningCube = false;
+		this.gettingDirt = false;
 	}
 
 	placeNext(placeQueue, callback) {
@@ -202,12 +208,12 @@ class Landscaping {
 						//console.log(`Adjacent block ${x} ${y} ${z} is also ore.`);
 						let knownBlock = false;
 						for (const known of queue) {
-							if (known.position.equals(scanBlock.position)) {
+							if (known.equals(scanBlock.position)) {
 								knownBlock = true;
 								break;
 							}
 						}
-						if (!knownBlock) queue.push(scanBlock);
+						if (!knownBlock) queue.push(scanBlock.position);
 					}
 				}
 			}
@@ -218,7 +224,7 @@ class Landscaping {
 		if (queue.length > oldQueue.length) {
 			const newLength = queue.length;
 			for (let i = oldQueue.length; i < newLength; i++) {
-				queue = this.blockToQueue(queue[i].position, queue);
+				queue = this.blockToQueue(queue[i], queue, blockTypes, limit);
 				if (queue.length >= limit) break;
 			}
 		}
@@ -227,13 +233,18 @@ class Landscaping {
 
 	findDirtQueue(limit) {
 		let dirtBlocks = this.bot.findBlocks({
-			point: this.homePosition,
-			matching: (b) => { b.name === 'dirt' },
-			maxDistance: 128,
-			count: 1000,
+			point: this.bot.autobot.homePosition,
+			matching: (b) => {
+				if (b.type !== this.bot.mcData.blocksByName['dirt'].id) return false;
+				return true;
+			},
+			maxDistance: 20,
+			count: 5000,
 		});
 		// Only dirt above home
-		dirtBlocks = dirtBlocks.filter((b) => {b.y > this.bot.autobot.homePosition.y});
+		console.log(`Dirt Count: ${dirtBlocks.length}`);
+		dirtBlocks = dirtBlocks.filter((b) => { return b.y > this.bot.autobot.homePosition.y });
+		console.log(`Dirt Count above home Y: ${dirtBlocks.length}`);
 		dirtBlocks = sortByDistanceFromBot(this.bot, dirtBlocks);
 		// If no dirt was found, return false
 		if (dirtBlocks.length === 0) {
@@ -241,15 +252,35 @@ class Landscaping {
 		}
 		return this.blockToQueue(
 			dirtBlocks[0],
-			[this.bot.blockAt(dirtBlocks[0])],
-			[this.mcData.blocksByName['dirt'].id],
+			[dirtBlocks[0]],
+			[this.bot.mcData.blocksByName['dirt'].id],
 			limit
 		);
 	}
 
+	dirtArrival() {
+		this.digNext(this.dirtQueue, () => {
+			this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
+				this.gettingDirt = false;
+				this.callback();
+			});
+		});
+	}
+
 	getDirt(limit, callback) {
-		dirtQueue = this.findDirtQueue(limit);
-		this.digNext(dirtQueue, callback);
+		const dirtQueue = this.findDirtQueue(limit);
+		if (dirtQueue) {
+			this.gettingDirt = true;
+			this.dirtQueue = dirtQueue;
+			this.callback = callback;
+			const p = dirtQueue[0];
+			const goal = new GoalBlock(p.x, p.y, p.z);
+			this.bot.pathfinder.setGoal(goal);
+		}
+		else {
+			console.log('No dirt');
+			callback();
+		}
 	}
 
 	getNextStorageGridSpot() {

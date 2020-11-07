@@ -120,6 +120,10 @@ function inject (bot) {
 			sleep(350).then(bot.autobot.landscaping.callback);
 			activeFunction = "landscaping.placing";
 		}
+		else if (bot.autobot.landscaping.gettingDirt) {
+			sleep(350).then(bot.autobot.landscaping.dirtArrival);
+			activeFunction = "landscaping.gettingDirt";
+		}
 		// then the rest
 		else if (bot.autobot.autocraft.active) {
 			sleep(350).then(bot.autobot.autocraft.callback);
