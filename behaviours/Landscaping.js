@@ -184,6 +184,74 @@ class Landscaping {
 		this.bot.pathfinder.setGoal(goal);
 	}
 
+	// Return an array of blocks forming a contiguous queue (of specified types)
+	blockToQueue(p, oldQueue, blockTypes, limit) {
+		// Scan the cube 9-8-9, all new positve cubes recursively scan. 
+		let point = p.clone();
+		let queue = [...oldQueue];
+		//console.log(oreBlocks);
+		for (let y = -1; y <= 1; y++) {
+			for (let x = -1; x <= 1; x++) {
+				for (let z = -1; z <= 1; z++) {
+					if (x == 0 && y == 0 && z == 0) {
+						continue;
+					}
+					const scanBlock = this.bot.blockAt(point.offset(x, y, z));
+					//console.log(`scanblock: `, scanBlock);
+					if (blockTypes.includes(scanBlock.type)) {
+						//console.log(`Adjacent block ${x} ${y} ${z} is also ore.`);
+						let knownBlock = false;
+						for (const known of queue) {
+							if (known.position.equals(scanBlock.position)) {
+								knownBlock = true;
+								break;
+							}
+						}
+						if (!knownBlock) queue.push(scanBlock);
+					}
+				}
+			}
+		}
+		if (queue.length >= limit) {
+			return queue.slice(0, limit);
+		}
+		if (queue.length > oldQueue.length) {
+			const newLength = queue.length;
+			for (let i = oldQueue.length; i < newLength; i++) {
+				queue = this.blockToQueue(queue[i].position, queue);
+				if (queue.length >= limit) break;
+			}
+		}
+		return queue;
+	}
+
+	findDirtQueue(limit) {
+		let dirtBlocks = this.bot.findBlocks({
+			point: this.homePosition,
+			matching: (b) => { b.name === 'dirt' },
+			maxDistance: 128,
+			count: 1000,
+		});
+		// Only dirt above home
+		dirtBlocks = dirtBlocks.filter((b) => {b.y > this.bot.autobot.homePosition.y});
+		dirtBlocks = sortByDistanceFromBot(this.bot, dirtBlocks);
+		// If no dirt was found, return false
+		if (dirtBlocks.length === 0) {
+			return false;
+		}
+		return this.blockToQueue(
+			dirtBlocks[0],
+			[this.bot.blockAt(dirtBlocks[0])],
+			[this.mcData.blocksByName['dirt'].id],
+			limit
+		);
+	}
+
+	getDirt(limit, callback) {
+		dirtQueue = this.findDirtQueue(limit);
+		this.digNext(dirtQueue, callback);
+	}
+
 	getNextStorageGridSpot() {
 		let ringSize = 1;
 		let buildPos = null;

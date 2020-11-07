@@ -108,6 +108,7 @@ class Stash {
 		let result = {};
 		// If we have logs, mine, if we don't lumberjack
 		const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
+		const dirtCount = inventoryDict['dirt'] || 0;
 		if (Object.keys(inventoryDict).some(id => id.match(/_log$/))) {
 			// Don't start mining without a full set of tools
 			const missingTools = this.bot.autobot.inventory.missingTools();
@@ -120,6 +121,17 @@ class Stash {
 				};
 				this.bot.emit(eventName, result);
 				this.bot.autobot.inventory.craftTools((result) => {
+					this.bot.autobot.lumberjack.harvestNearestTree(32);
+				});
+			}
+			else if (dirtCount < 32) {
+				result = {
+					error: false,
+					resultCode: "gettingDirt",
+					description: `Getting dirt (${32 - dirtCount})`,
+				};
+				this.bot.emit(eventName, result);
+				this.bot.autobot.landscaping.getDirt(32 - dirtCount, (result) => {
 					this.bot.autobot.lumberjack.harvestNearestTree(32);
 				});
 			}
