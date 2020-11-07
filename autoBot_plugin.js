@@ -170,7 +170,7 @@ function inject (bot) {
 		const posHash = goal.x + ',' + goal.y + ',' + goal.z;
 		if (currentTarget.posHash === posHash) {
 			currentTarget.errorCount++;
-			if (currentTarget.errorCount <= 5) {
+			if (currentTarget.errorCount > 3) {
 				bot.autobot.resetAllBehaviours(() => {
 					bot.autobot.landscaping.flattenCube(
 						bot.entity.position,
@@ -180,9 +180,6 @@ function inject (bot) {
 					);
 				});
 				return;
-			}
-			else {
-				console.log('Very stuck.');
 			}
 		}
 		else {
