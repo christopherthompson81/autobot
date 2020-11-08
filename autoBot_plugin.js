@@ -15,7 +15,6 @@ const minecraftData = require('minecraft-data');
 const Vec3 = require('vec3').Vec3;
 
 const sleep = require('./behaviours/autobotLib').sleep;
-const getPosHash = require('./behaviours/autoBotLib').getPosHash;
 
 const Autocraft = require('./behaviours/Autocraft');
 const CollectDrops = require('./behaviours/CollectDrops');

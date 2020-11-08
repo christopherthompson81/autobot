@@ -1,6 +1,7 @@
 const autoBind = require('auto-bind');
 const Vec3 = require('vec3').Vec3;
 //const { GoalNear } = require('../pathfinder/pathfinder').goals;
+const getPosHash = require('./autoBotLib').getPosHash;
 
 class GetUnstuck {
 	constructor(bot) {
