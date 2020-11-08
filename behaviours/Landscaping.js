@@ -1,7 +1,7 @@
 const autoBind = require('auto-bind');
 const { exit } = require('process');
 const Vec3 = require('vec3').Vec3;
-const { GoalBlock } = require('../pathfinder/pathfinder').goals;
+const { GoalBlock, GoalGetToBlock } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
 const sortByDistanceFromBot = require('./autoBotLib').sortByDistanceFromBot;
 const airBlocks = require('./constants').airBlocks;
@@ -66,7 +66,7 @@ class Landscaping {
 					return;
 				}
 			}
-			if (!this.defaultMove.safeToBreak(block)) {
+			if (!this.bot.defaultMove.safeToBreak(block)) {
 				this.sendNotSafe(block);
 				this.bot.autobot.mining.badTargets.push(block.position.clone());
 				this.digNext(remainder, callback);
@@ -82,8 +82,8 @@ class Landscaping {
 				this.bot.pathfinder.setGoal(goal);
 				return;
 			}
-			this.bot.equip(tool, 'hand', function () {
-				this.bot.dig(current, true, (err) => {
+			this.bot.equip(tool, 'hand', () => {
+				this.bot.dig(block, true, (err) => {
 					this.digNext(remainder, callback);
 				});
 			});

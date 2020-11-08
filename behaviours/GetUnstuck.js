@@ -38,11 +38,21 @@ class GetUnstuck {
 
 	checkGoalProgress(goal, stuck) {
 		const goalPosition = new Vec3(goal.x, goal.y, goal.z);
-		const distanceFromGoal = Math.floor(goalPosition.distanceTo(this.bot.entity.position));
+		const goalPosHash = getPosHash(goalPosition);
 		const errorPosition = this.bot.entity.position.clone();
+		const distanceFromGoal = Math.floor(goalPosition.distanceTo(errorPosition));
+		if (this.goalPosHash === '' || this.goalPosHash !== goalPosHash) {
+			this.goalPosition = goalPosition;
+			this.goalPosHash = goalPosHash;
+			this.errorPosition = errorPosition;
+			this.distanceFromGoal = distanceFromGoal;
+			this.errorCount = 0;
+		}
 		const distanceFromLastError = Math.floor(this.errorPosition.distanceTo(errorPosition));
 		if (!stuck && distanceFromLastError > 3) {
-			this.resetCurrentTarget();
+			this.errorPosition = errorPosition;
+			this.distanceFromGoal = distanceFromGoal;
+			this.errorCount = 0;
 			return true;
 		}
 		if (
@@ -50,20 +60,10 @@ class GetUnstuck {
 			stuck ||
 			this.errorCount > 0
 		) {
-			const goalPosHash = getPosHash(goalPosition);
-			if (this.goalPosHash === goalPosHash) {
-				// If we're still within 3 of the last stuck position then it's the same thing that's getting us stuck.
-				if (distanceFromLastError <= 3) {
-					this.errorCount++;
-				}
-				else {
-					this.goalPosHash = goalPosHash;
-					this.errorPosition = errorPosition;
-					this.errorCount = 1;	
-				}
+			if (distanceFromLastError <= 3) {
+				this.errorCount++;
 			}
 			else {
-				this.goalPosHash = goalPosHash;
 				this.errorPosition = errorPosition;
 				this.errorCount = 1;
 			}
