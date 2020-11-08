@@ -60,6 +60,11 @@ class Landscaping {
 			}
 			const tool = this.bot.pathfinder.bestHarvestTool(block)
 			if (block.harvestTools) {
+				if (!Array.isArray(block.harvestTools)) {
+					console.log("debugging landscaping.digNext");
+					console.log(block);
+					console.log("As JSON: ", JSON.stringify(block));
+				}
 				if (!block.harvestTools.includes(tool)) {
 					this.sendNoSuitableTool(block, tool);
 					this.digNext(remainder, callback);
@@ -223,7 +228,7 @@ class Landscaping {
 		this.digNext(this.dirtQueue, () => {
 			this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
 				this.gettingDirt = false;
-				this.callback();
+				sleep(100).then(this.callback);
 			});
 		});
 	}

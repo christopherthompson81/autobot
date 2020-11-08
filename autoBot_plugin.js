@@ -69,7 +69,7 @@ function inject (bot) {
 		const goalVec3 = new Vec3(goal.x, goal.y, goal.z);
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(bot.entity.position));
 		if (!bot.autobot.getUnstuck.checkGoalProgress(goal, false)) {
-			//console.log('Selecting getUnstuck behaviour');
+			console.log('Selecting getUnstuck behaviour');
 			bot.autobot.getUnstuck.selectOnStuckBehaviour(goal);
 			return;
 		}
