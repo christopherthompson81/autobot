@@ -80,7 +80,9 @@ function inject (bot) {
 		}
 		// landscaping next
 		else if (bot.autobot.landscaping.flatteningCube) {
-			sleep(350).then(bot.autobot.landscaping.flattenCallback);
+			sleep(350).then(() => {
+				bot.autobot.landscaping.flattenCallback(goalVec3);
+			});
 			activeFunction = "landscaping.flatteningCube";
 		}
 		else if (bot.autobot.landscaping.digging) {

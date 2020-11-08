@@ -13,22 +13,24 @@ class Landscaping {
 		autoBind(this);
 		this.bot = bot;
 		this.callback = () => {};
-		this.flattenCallback = () => {};
 		this.dirtQueue = [];
 		this.digging = false;
 		this.placing = false;
 		this.flatteningCube = false;
 		this.gettingDirt = false;
+		this.targetSubstrate = '';
+		this.substrateList = [];
 	}
 
 	resetBehaviour() {
 		this.callback = () => {};
-		this.flattenCallback = () => {};
 		this.dirtQueue = [];
 		this.digging = false;
 		this.placing = false;
 		this.flatteningCube = false;
 		this.gettingDirt = false;
+		this.targetSubstrate = '';
+		this.substrateList = [];
 	}
 
 	placeNext(placeQueue, callback) {
@@ -93,60 +95,80 @@ class Landscaping {
 		}
 	}
 
-	flattenCube(position, targetSubstrate, substrateList, callback) {
-		if (!this.flatteningCube) this.flatteningCube = true;
-		if (!targetSubstrate) targetSubstrate = 'dirt';
-		if (!substrateList) substrateList = ['dirt', 'grass_block'];
-		const p = position;
-		// Set a goal of exactly standing inside the block at foot level.
-		const goal = new GoalBlock(p.x, p.y, p.z);
-		//this.bot.autobot.currentTask = 'flattenCube';
-		this.flattenCallback = () => {
-			const digQueue = [];
-			for (const offset of clearPattern) {
-				const block = this.bot.blockAt(position.offset(...offset));
-				if (!airBlocks.includes(block.name)) digQueue.push(position.offset(...offset).clone());
+	flattenCallback(position) {
+		const targetSubstrate = this.targetSubstrate;
+		const substrateList = this.substrateList;
+		const callback = this.callback;
+		const digQueue = [];
+		for (const offset of clearPattern) {
+			const block = this.bot.blockAt(position.offset(...offset));
+			if (!airBlocks.includes(block.name)) digQueue.push(position.offset(...offset).clone());
+		}
+		const dirtPlaceQueue = []
+		for (const offset of dirtPattern) {
+			const block = this.bot.blockAt(position.offset(...offset));
+			if (airBlocks.includes(block.name)) {
+				dirtPlaceQueue.push({
+					position: position.offset(...offset).clone(),
+					name: targetSubstrate,
+				});
 			}
-			const dirtPlaceQueue = []
-			for (const offset of dirtPattern) {
-				const block = this.bot.blockAt(position.offset(...offset));
-				if (airBlocks.includes(block.name)) {
+			else if (!substrateList.includes(block.name)) {
+				// Don't dig out the block we're standing on.
+				if (JSON.stringify(offset) !== JSON.stringify([0, -1, 0])) {
+					//console.log(`Digging out ${block.name}`);
+					digQueue.push(position.offset(...offset).clone());
 					dirtPlaceQueue.push({
 						position: position.offset(...offset).clone(),
 						name: targetSubstrate,
 					});
 				}
-				else if (!substrateList.includes(block.name)) {
-					// Don't dig out the block we're standing on.
-					if (JSON.stringify(offset) !== JSON.stringify([0, -1, 0])) {
-						//console.log(`Digging out ${block.name}`);
-						digQueue.push(position.offset(...offset).clone());
-						dirtPlaceQueue.push({
-							position: position.offset(...offset).clone(),
-							name: targetSubstrate,
-						});
-					}
-				}
 			}
-			this.digNext(digQueue, (result) => {
-				// We need sufficient materials, otherwise fail. (9 dirt)
-				// Add target space dirt to inventory dirt
-				// TODO: add a collectBlocks routine
-				let dirtCount = this.bot.autobot.inventory.getInventoryDictionary().dirt || 0;
-				if (dirtCount < dirtPlaceQueue.length) {
-					this.bot.autobot.navigator.backupBot(() => {
-						this.sendInsufficientMaterials(dirtCount, dirtPlaceQueue, callback)
-					});
-					return;
-				}
-				this.placeNext(dirtPlaceQueue, () => {
-					this.bot.autobot.navigator.backupBot(() => {
-						this.sendFlatteningSuccess(callback);
-					});
+		}
+		this.digNext(digQueue, (result) => {
+			// We need sufficient materials, otherwise fail. (9 dirt)
+			// Add target space dirt to inventory dirt
+			// TODO: add a collectBlocks routine
+			let dirtCount = this.bot.autobot.inventory.getInventoryDictionary().dirt || 0;
+			if (dirtCount < dirtPlaceQueue.length) {
+				this.bot.autobot.navigator.backupBot(() => {
+					this.sendInsufficientMaterials(dirtCount, dirtPlaceQueue, callback)
+				});
+				return;
+			}
+			this.placeNext(dirtPlaceQueue, () => {
+				this.bot.autobot.navigator.backupBot(() => {
+					this.sendFlatteningSuccess(callback);
 				});
 			});
+		});
+	}
+
+	flattenCube(position, targetSubstrate, substrateList, callback) {
+		if (!this.flatteningCube) this.flatteningCube = true;
+		this.callback = callback;
+		if (!targetSubstrate) {
+			this.targetSubstrate = 'dirt';
 		}
-		this.bot.pathfinder.setGoal(goal);
+		else {
+			this.targetSubstrate = targetSubstrate;
+		}
+		if (!substrateList) {
+			this.substrateList = ['dirt', 'grass_block'];
+		}
+		else {
+			this.substrateList = substrateList;
+		}
+		const p = position;
+		if (this.bot.entity.position.floored().equals(p)) {
+			this.flattenCallback(position);
+		}
+		else {
+			// Set a goal of exactly standing inside the block at foot level.
+			const goal = new GoalBlock(p.x, p.y, p.z);
+			//this.bot.autobot.currentTask = 'flattenCube';
+			this.bot.pathfinder.setGoal(goal);
+		}
 	}
 
 	// Return an array of blocks forming a contiguous queue (of specified types)
