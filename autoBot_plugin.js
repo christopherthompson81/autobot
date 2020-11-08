@@ -82,7 +82,11 @@ function inject (bot) {
 	function checkGoalProgress(goal, stuck) {
 		const goalPosition = new Vec3(goal.x, goal.y, goal.z);
 		const distanceFromGoal = Math.floor(goalPosition.distanceTo(bot.entity.position));
-		if (distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3) || stuck) {
+		if (
+			distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3) ||
+			stuck ||
+			bot.autobot.landscaping.flatteningCube
+		) {
 			const goalPosHash = getPosHash(goalPosition);
 			const errorPosition = bot.entity.position.clone();
 			if (currentTarget.goalPosHash === goalPosHash) {
@@ -277,12 +281,15 @@ function inject (bot) {
 		};
 		bot.pathfinder.setGoal(null);
 		bot.clearControlStates();
-		bot.autobot.landscaping.flattenCube(
-			bot.entity.position,
-			'cobblestone',
-			['stone', 'cobblestone', 'diorite', 'andesite', 'granite', 'sand', 'dirt', 'grass_block'],
-			() => bot.pathfinder.setGoal(goal)
-		);
+		const stuckPosition = bot.entity.position.floored();
+		bot.autobot.navigator.backupBot(() => {
+			bot.autobot.landscaping.flattenCube(
+				stuckPosition,
+				'cobblestone',
+				['stone', 'cobblestone', 'diorite', 'andesite', 'granite', 'sand', 'dirt', 'grass_block'],
+				() => bot.pathfinder.setGoal(goal)
+			);
+		});
 		bot.emit(eventName, result);
 	}
 

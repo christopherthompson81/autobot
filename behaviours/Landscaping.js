@@ -74,6 +74,82 @@ class Landscaping {
 		}
 	}
 
+	digBlockQueueNext(blockList, callback) {
+		const eventName = 'autobot.landscaping.digBlockQueue.done';
+		let result = {};
+		const current = blockList[0];
+		const remainder = blockList.slice(1, blockList.length);
+		if (current) {
+			const block = this.bot.blockAt(current, false)
+			if (!block.diggable || ['air', 'cave_air', 'void_air'].includes(block.name)) {
+				this.digBlockQueueNext(remainder, callback);
+				return;
+			}
+			const tool = this.bot.pathfinder.bestHarvestTool(block)
+			if (block.harvestTools) {
+				if (!block.harvestTools.includes(tool)) {
+					result = {
+						error: true,
+						resultCode: "noSuitableTool",
+						description: "The bot lacks a suitable tool to break a block in the queue",
+						block: block,
+						bestTool: tool
+					}
+					this.bot.emit('autobot.landscaping.digBlockQueue.digging', result);
+					this.digBlockQueueNext(remainder, callback);
+					return;
+				}
+			}
+			if (!this.defaultMove.safeToBreak(block)) {
+				result = {
+					error: false,
+					resultCode: "notSafe",
+					description: `Target ${current.displayName} block is not safe to break. Skipping.`,
+					block: current
+				}
+				this.bot.emit('autobot.landscaping.digBlockQueue.digging', result);
+				this.bot.autobot.mining.badTargets.push(block.position.clone());
+				this.digBlockQueueNext(remainder, callback);
+				return;
+			}
+			if (Math.floor(this.bot.entity.position.distanceTo(current)) > 3) {
+				result = {
+					error: false,
+					resultCode: "tooFar",
+					description: `The bot is too far from the object block to mine.`,
+					block: current
+				}
+				this.bot.emit('autobot.landscaping.digBlockQueue.digging', result);
+				const p = block.position;
+				const goal = new GoalGetToBlock(p.x, p.y, p.z);
+				this.callback = () => {
+					this.digBlockQueueNext(blockList, callback);
+				};
+				this.bot.pathfinder.setGoal(goal);
+				return;
+			}
+			this.bot.equip(tool, 'hand', function () {
+				this.bot.dig(current, true, (err) => {
+					this.digBlockQueueNext(remainder, callback);
+				});
+			});
+		}
+		else {
+			sleep(1500).then(() => {
+				this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
+					result = {
+						error: false,
+						resultCode: "success",
+						errorDecription: "Finished digging blocks"
+					};
+					if (callback) callback(result);
+					this.bot.emit(eventName, result);
+					this.digging = false;
+				});
+			});
+		}
+	}
+
 	digNext(digQueue, callback) {
 		const eventName = 'autobot.landscaping.digQueue.done';
 		let result = {};
@@ -155,7 +231,7 @@ class Landscaping {
 					}
 				}
 			}
-			this.digNext(digQueue, (success) => {
+			this.digBlockQueueNext(digQueue, (success) => {
 				// We need sufficient materials, otherwise fail. (9 dirt)
 				// Add target space dirt to inventory dirt
 				// TODO: add a collectBlocks routine

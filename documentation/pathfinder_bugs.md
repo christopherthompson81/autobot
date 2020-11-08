@@ -31,3 +31,8 @@ I think I'm going to have to fork mineflayer-pathfinder (hopefully resulting in 
 
 * difficulty with gravel (*fixed by implementing gravity cavitation check)
 * dry out both water and lava lakes
+
+* Implement a total travel time check
+	* If more than double the straight-path tool-stone-break-time per block elapses, the bot got stuck.
+	* Measure from when the goal is set.
+	* this solves the problem of the bot getting caught in a path loop that isn't detected as being stuck because next-block-arrivals are still occurring.
