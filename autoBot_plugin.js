@@ -113,42 +113,13 @@ function inject (bot) {
 
 	function onGoalReached (goal) {
 		const eventName = 'autobot.pathfinder.goalReached';
-		let result = {error: false, resultCode: "", description: ""};
+		let result = {};
 		let activeFunction = "";
-		//console.log(goal);
 		const goalVec3 = new Vec3(goal.x, goal.y, goal.z);
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(bot.entity.position));
-		if (distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3)) {
-			const goalPos = new Vec3(goal.x, goal.y, goal.z);
-			const posHash = getPosHash(goalPos);
-			if (currentTarget.goalPosHash === posHash) {
-				currentTarget.errorCount++;
-				if (currentTarget.errorCount > 5) {
-					if (bot.autobot.mining.active) {
-						bot.autobot.mining.badTargets.push(goalPos.clone());
-					}
-					bot.autobot.resetAllBehaviours(bot.autobot.navigator.returnHome);
-					result = {
-						error: true,
-						resultCode: "badTarget",
-						description: "Many successive pathfinding errors at this position (>5). Target is possibly unreachable. Marking as a bad target and returning home"
-					};
-					bot.emit(eventName, result);
-					return;
-				}
-			}
-			else {
-				currentTarget.goalPosHash = posHash;
-				currentTarget.errorPosHash = getPosHash(bot.entity.position);
-				currentTarget.errorCount = 1;
-			}
-			bot.autobot.navigator.backupBot(() => bot.pathfinder.setGoal(goal));
-			result = {
-				error: true,
-				resultCode: "tooFar",
-				description: `An error happened in attempting to reach the goal. Distance: ${distanceFromGoal}`
-			};
-			bot.emit(eventName, result);
+		if (!checkGoalProgress(goal, false)) {
+			//console.log('Selecting getUnstuck behaviour');
+			selectOnStuckBehaviour(goal);
 			return;
 		}
 		// navigating first
@@ -218,6 +189,7 @@ function inject (bot) {
 		if (bot.autobot.mining.active) {
 			bot.pathfinder.setGoal(null);
 			bot.autobot.mining.active = false;
+			// TODO: Add an event for this
 			//console.log('Excess break time forcing tool crafting. Mining Abandoned.');
 			bot.autobot.inventory.craftTools();
 		}
@@ -225,12 +197,9 @@ function inject (bot) {
 
 	bot.autobot.onBotStuck = function (goalProgress, path, goal) {
 		if (!checkGoalProgress(goal, true)) {
-			console.log('Selecting getUnstuck behaviour');
 			selectOnStuckBehaviour(goal);
 		}
 		else {
-			//console.log("currentTarget:", currentTarget);
-			console.log('Current Target blank. Just backing up and continuing.');
 			backupAndContinue(goal);
 		}
 	}
@@ -272,19 +241,15 @@ function inject (bot) {
 	// 5). All behaviours after 4 are the same as 4.
 	function selectOnStuckBehaviour(goal) {
 		if (currentTarget.errorCount > 0 && currentTarget.errorCount <= 1) {
-			console.log('backupAndContinue');
 			backupAndContinue(goal);
 		}
 		else if (currentTarget.errorCount > 1 && currentTarget.errorCount <= 3) {
-			console.log('flattenAndContinue');
 			flattenAndContinue(goal);
 		}
 		else if (currentTarget.errorCount > 3 && currentTarget.errorCount <= 4) {
-			console.log('markBadAndGoHome');
 			markBadAndGoHome();
 		}
 		else if (currentTarget.errorCount > 4) {
-			console.log('flattenAndGoHome');
 			flattenAndGoHome();
 		}
 		else {
