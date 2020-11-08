@@ -32,8 +32,6 @@ class Landscaping {
 	}
 
 	placeNext(placeQueue, callback) {
-		const eventName = 'autobot.landscaping.placeQueue.done';
-		let result = {};
 		if (!this.placing) this.placing = true;
 		const current = placeQueue[0];
 		const remainder = placeQueue.slice(1, placeQueue.length);
@@ -43,40 +41,15 @@ class Landscaping {
 			const placementVector = new Vec3(1, 0, 0);
 			this.bot.equip(item, 'hand', () => {
 				this.bot.placeBlock(referenceBlock, placementVector, (err) => {
-					if (err) {
-						result = {
-							error: true,
-							resultCode: "placingError",
-							description: "Could not place block.",
-							parentError: err,
-							currentTarget: current,
-							queueRemainder: remainder
-						};
-						if (callback) callback(result);
-						this.bot.emit(eventName, result);
-						this.placing = false;
-					}
-					else {
-						sleep(100).then(() => this.placeNext(remainder, callback));
-					}
+					if (err) his.sendPlacingError(err, current, remainder, callback);
+					else sleep(100).then(() => this.placeNext(remainder, callback));
 				});
 			});
 		}
-		else {
-			result = {
-				error: false,
-				resultCode: "success",
-				errorDecription: "Finished placing blocks"
-			};
-			if (callback) callback(result);
-			this.bot.emit(eventName, result);
-			this.placing = false;
-		}
+		else this.sendPlacingSuccess();
 	}
 
 	digBlockQueueNext(blockList, callback) {
-		const eventName = 'autobot.landscaping.digBlockQueue.done';
-		let result = {};
 		const current = blockList[0];
 		const remainder = blockList.slice(1, blockList.length);
 		if (current) {
@@ -88,38 +61,19 @@ class Landscaping {
 			const tool = this.bot.pathfinder.bestHarvestTool(block)
 			if (block.harvestTools) {
 				if (!block.harvestTools.includes(tool)) {
-					result = {
-						error: true,
-						resultCode: "noSuitableTool",
-						description: "The bot lacks a suitable tool to break a block in the queue",
-						block: block,
-						bestTool: tool
-					}
-					this.bot.emit('autobot.landscaping.digBlockQueue.digging', result);
+					this.sendNoSuitableTool(block, tool);
 					this.digBlockQueueNext(remainder, callback);
 					return;
 				}
 			}
 			if (!this.defaultMove.safeToBreak(block)) {
-				result = {
-					error: false,
-					resultCode: "notSafe",
-					description: `Target ${current.displayName} block is not safe to break. Skipping.`,
-					block: current
-				}
-				this.bot.emit('autobot.landscaping.digBlockQueue.digging', result);
+				this.sendNotSafe(block);
 				this.bot.autobot.mining.badTargets.push(block.position.clone());
 				this.digBlockQueueNext(remainder, callback);
 				return;
 			}
 			if (Math.floor(this.bot.entity.position.distanceTo(current)) > 3) {
-				result = {
-					error: false,
-					resultCode: "tooFar",
-					description: `The bot is too far from the object block to mine.`,
-					block: current
-				}
-				this.bot.emit('autobot.landscaping.digBlockQueue.digging', result);
+				this.sendTooFar(block);
 				const p = block.position;
 				const goal = new GoalGetToBlock(p.x, p.y, p.z);
 				this.callback = () => {
@@ -136,16 +90,7 @@ class Landscaping {
 		}
 		else {
 			sleep(1500).then(() => {
-				this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
-					result = {
-						error: false,
-						resultCode: "success",
-						errorDecription: "Finished digging blocks"
-					};
-					if (callback) callback(result);
-					this.bot.emit(eventName, result);
-					this.digging = false;
-				});
+				this.sendDiggingSuccess(callback);
 			});
 		}
 	}
@@ -455,6 +400,79 @@ class Landscaping {
 			if (callback) callback(result);
 			this.bot.emit(eventName, result);
 		}
+	}
+
+	sendPlacingError(parentError, currentTarget, queueRemainder, callback) {
+		const eventName = 'autobot.landscaping.placeQueue.done';
+		let result = {
+			error: true,
+			resultCode: "placingError",
+			description: "Could not place block.",
+			parentError: parentError,
+			currentTarget: currentTarget,
+			queueRemainder: queueRemainder
+		};
+		this.bot.emit(eventName, result);
+		this.placing = false;
+		if (callback) callback(result);
+	}
+
+	sendPlacingSuccess(callback) {
+		const eventName = 'autobot.landscaping.placeQueue.done';
+		let result = {
+			error: false,
+			resultCode: "success",
+			errorDecription: "Finished placing blocks"
+		};
+		this.bot.emit(eventName, result);
+		this.placing = false;
+		if (callback) callback(result);
+	}
+
+	sendNoSuitableTool(block, bestTool) {
+		const eventName = 'autobot.landscaping.digBlockQueue.digging';
+		let result = {
+			error: true,
+			resultCode: "noSuitableTool",
+			description: "The bot lacks a suitable tool to break a block in the queue",
+			block: block,
+			bestTool: bestTool
+		}
+		this.bot.emit(eventName, result);
+	}
+	
+	sendNotSafe(block) {
+		const eventName = 'autobot.landscaping.digBlockQueue.digging';
+		let result = {
+			error: false,
+			resultCode: "notSafe",
+			description: `Target ${block.displayName} block is not safe to break. Skipping.`,
+			block: block
+		}
+		this.bot.emit(eventName, result);
+	}
+
+	sendTooFar(block) {
+		const eventName = 'autobot.landscaping.digBlockQueue.digging';
+		let result = {
+			error: false,
+			resultCode: "tooFar",
+			description: `The bot is too far from the object block to mine.`,
+			block: block
+		}
+		this.bot.emit(eventName, result);
+	}
+
+	sendDiggingSuccess(callback) {
+		const eventName = 'autobot.landscaping.digBlockQueue.done';
+		let result = {
+			error: false,
+			resultCode: "success",
+			errorDecription: "Finished digging blocks"
+		};
+		this.bot.emit(eventName, result);
+		this.placing = false;
+		if (callback) callback(result);
 	}
 }
 

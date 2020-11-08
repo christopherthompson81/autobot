@@ -285,12 +285,10 @@ class Autocraft {
 				this.haveIngredient(current.id, targetCount) &&
 				remainder.length > 0
 			) {
-				//console.log(`Already have ${targetCount} ${this.bot.mcData.items[current.id].displayName}(s)`);
 				this.autoCraftNext(remainder, callback);
 				return;
 			}
 			if (!recipe) {
-				//console.log(`Can't craft ${this.bot.mcData.items[current.id].displayName} because there is no usable recipe`);
 				result = {
 					error: true,
 					resultCode: 'noRecipe',
@@ -327,7 +325,6 @@ class Autocraft {
 				//console.log("Found one:", craftingTable.position);
 				const p = craftingTable.position;
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
-				//this.bot.autobot.currentTask = "crafting";
 				this.callback = () => {
 					const targetCount = Math.floor(current.count / recipe.result.count);
 					this.bot.craft(recipe, targetCount, craftingTable, (err) => {
