@@ -49,27 +49,27 @@ class Landscaping {
 		else this.sendPlacingSuccess();
 	}
 
-	digBlockQueueNext(blockList, callback) {
-		const current = blockList[0];
-		const remainder = blockList.slice(1, blockList.length);
+	digNext(digQueue, callback) {
+		const current = digQueue[0];
+		const remainder = digQueue.slice(1, digQueue.length);
 		if (current) {
 			const block = this.bot.blockAt(current, false)
 			if (!block.diggable || ['air', 'cave_air', 'void_air'].includes(block.name)) {
-				this.digBlockQueueNext(remainder, callback);
+				this.digNext(remainder, callback);
 				return;
 			}
 			const tool = this.bot.pathfinder.bestHarvestTool(block)
 			if (block.harvestTools) {
 				if (!block.harvestTools.includes(tool)) {
 					this.sendNoSuitableTool(block, tool);
-					this.digBlockQueueNext(remainder, callback);
+					this.digNext(remainder, callback);
 					return;
 				}
 			}
 			if (!this.defaultMove.safeToBreak(block)) {
 				this.sendNotSafe(block);
 				this.bot.autobot.mining.badTargets.push(block.position.clone());
-				this.digBlockQueueNext(remainder, callback);
+				this.digNext(remainder, callback);
 				return;
 			}
 			if (Math.floor(this.bot.entity.position.distanceTo(current)) > 3) {
@@ -77,14 +77,14 @@ class Landscaping {
 				const p = block.position;
 				const goal = new GoalGetToBlock(p.x, p.y, p.z);
 				this.callback = () => {
-					this.digBlockQueueNext(blockList, callback);
+					this.digNext(digQueue, callback);
 				};
 				this.bot.pathfinder.setGoal(goal);
 				return;
 			}
 			this.bot.equip(tool, 'hand', function () {
 				this.bot.dig(current, true, (err) => {
-					this.digBlockQueueNext(remainder, callback);
+					this.digNext(remainder, callback);
 				});
 			});
 		}
@@ -95,53 +95,7 @@ class Landscaping {
 		}
 	}
 
-	digNext(digQueue, callback) {
-		const eventName = 'autobot.landscaping.digQueue.done';
-		let result = {};
-		if (!this.digging) this.digging = true;
-		const current = digQueue[0];
-		const remainder = digQueue.slice(1, digQueue.length);
-		if (current) {
-			const block = this.bot.blockAt(current);
-			if (!block.diggable || ['air', 'cave_air', 'void_air'].includes(block.name)) {
-				this.digNext(remainder, callback);
-				return;
-			}
-			const tool = this.bot.pathfinder.bestHarvestTool(block);
-			this.bot.equip(tool, 'hand', () => {
-				this.bot.dig(block, (err) => {
-					if (err) {
-						result = {
-							error: true,
-							resultCode: "diggingError",
-							description: "Could not dig block.",
-							parentError: err,
-							currentTarget: current,
-							queueRemainder: remainder
-						};
-						if (callback) callback(result);
-						this.bot.emit(eventName, result);
-						this.digging = false;
-					}
-					this.digNext(remainder, callback)
-				});
-			});
-		}
-		else {
-			result = {
-				error: false,
-				resultCode: "success",
-				errorDecription: "Finished digging blocks"
-			};
-			if (callback) callback(result);
-			this.bot.emit(eventName, result);
-			this.digging = false;
-		}
-	}
-
 	flattenCube(position, targetSubstrate, substrateList, callback) {
-		const eventName = 'autobot.landscaping.flattenCube.done';
-		let result = {};
 		if (!this.flatteningCube) this.flatteningCube = true;
 		if (!targetSubstrate) targetSubstrate = 'dirt';
 		if (!substrateList) substrateList = ['dirt', 'grass_block'];
@@ -176,36 +130,20 @@ class Landscaping {
 					}
 				}
 			}
-			this.digBlockQueueNext(digQueue, (success) => {
+			this.digNext(digQueue, (result) => {
 				// We need sufficient materials, otherwise fail. (9 dirt)
 				// Add target space dirt to inventory dirt
 				// TODO: add a collectBlocks routine
 				let dirtCount = this.bot.autobot.inventory.getInventoryDictionary().dirt || 0;
 				if (dirtCount < dirtPlaceQueue.length) {
 					this.bot.autobot.navigator.backupBot(() => {
-						result = {
-							error: true,
-							resultCode: "insufficientMaterials",
-							description: "Insufficient materials to flatten with.",
-							dirtCount: dirtCount,
-							dirtPlaceQueue: dirtPlaceQueue
-						};
-						if (callback) callback(result);
-						this.bot.emit(eventName, result);
-						this.flatteningCube = false;
+						this.sendInsufficientMaterials(dirtCount, dirtPlaceQueue, callback)
 					});
 					return;
 				}
 				this.placeNext(dirtPlaceQueue, () => {
 					this.bot.autobot.navigator.backupBot(() => {
-						result = {
-							error: false,
-							resultCode: "success",
-							description: "Successfully flattened cube.",
-						};
-						if (callback) callback(result);
-						this.bot.emit(eventName, result);
-						this.flatteningCube = false;
+						this.sendFlatteningSuccess(callback);
 					});
 				});
 			});
@@ -265,9 +203,9 @@ class Landscaping {
 			count: 5000,
 		});
 		// Only dirt above home
-		console.log(`Dirt Count: ${dirtBlocks.length}`);
+		//console.log(`Dirt Count: ${dirtBlocks.length}`);
 		dirtBlocks = dirtBlocks.filter((b) => { return b.y >= this.bot.autobot.homePosition.y });
-		console.log(`Dirt Count above home Y: ${dirtBlocks.length}`);
+		//console.log(`Dirt Count above home Y: ${dirtBlocks.length}`);
 		dirtBlocks = sortByDistanceFromBot(this.bot, dirtBlocks);
 		// If no dirt was found, return false
 		if (dirtBlocks.length === 0) {
@@ -326,23 +264,13 @@ class Landscaping {
 	}
 
 	placeNewStorageObject(storageObjectName, callback) {
-		const eventName = 'autobot.landscaping.newStorageObject';
-		let result = {};
 		const storageObjectType = this.bot.mcData.itemsByName[storageObjectName];
 		let storageObject = this.bot.autobot.inventory.getInventoryItemById(storageObjectType.id);
 		if (!storageObject) {
 			//console.log('Autocrafting storageObject.');
 			this.bot.autobot.autocraft.autoCraft(storageObjectType.id, 1, (cbResult) => {
 				if (cbResult.error) {
-					result = {
-						error: true,
-						resultCode: "storageObjectCraftingFailed",
-						description: `Failed to make a new ${storageObjectType.displayName}.`,
-						storageObjectType: storageObjectType,
-						parentError: cbResult
-					};
-					if (callback) callback(result);
-					this.bot.emit(eventName, result);
+					this.sendStorageObjectCraftingFailed(storageObjectType, cbResult, callback);
 				}
 				else {
 					// Wait timing might need to be adjusted up
@@ -357,49 +285,24 @@ class Landscaping {
 		if (buildPos) {
 			this.flattenCube(buildPos, null, null, (cbResult) => {
 				if (cbResult.error) {
+					const eventName = 'autobot.landscaping.newStorageObject';
 					if (callback) callback(cbResult);
 					this.bot.emit(eventName, cbResult);
 					return;
 				}
 				storageObject = this.bot.autobot.inventory.getInventoryItemById(storageObjectType.id);
 				this.bot.equip(storageObject, 'hand', (err) => {
-					if (err) {
-						//console.log('Error equipping chest');
-					}
 					const referenceBlock = this.bot.blockAt(buildPos);
 					sleep(350).then(() => {
 						this.bot.placeBlock(referenceBlock, new Vec3(1, 0, 0), (err) => {
-							if (err) {
-								result = {
-									error: true,
-									resultCode: "storageObjectPlacingFailed",
-									description: `Failed to place a new ${storageObjectType.displayName}.`,
-									parentError: err
-								};
-							}
-							else {
-								result = {
-									error: false,
-									resultCode: "success",
-									description: `Placed a new ${storageObjectType.displayName}.`
-								};
-							}
-							if (callback) callback(result);
-							this.bot.emit(eventName, result);
+							if (err) this.sendStorageObjectPlacingFailed(storageObjectType, err, callback);
+							else this.sendNewStorageObjectSuccess(storageObjectType, callback);
 						});
 					});
 				});
 			});
 		}
-		else {
-			result = {
-				error: true,
-				resultCode: "noSpot",
-				description: `Could not find a spot for a new ${storageObjectType.displayName}.`
-			};
-			if (callback) callback(result);
-			this.bot.emit(eventName, result);
-		}
+		else this.sendNoSpot(storageObjectType, callback);
 	}
 
 	sendPlacingError(parentError, currentTarget, queueRemainder, callback) {
@@ -430,7 +333,7 @@ class Landscaping {
 	}
 
 	sendNoSuitableTool(block, bestTool) {
-		const eventName = 'autobot.landscaping.digBlockQueue.digging';
+		const eventName = 'autobot.landscaping.digQueue.digging';
 		let result = {
 			error: true,
 			resultCode: "noSuitableTool",
@@ -442,7 +345,7 @@ class Landscaping {
 	}
 	
 	sendNotSafe(block) {
-		const eventName = 'autobot.landscaping.digBlockQueue.digging';
+		const eventName = 'autobot.landscaping.digQueue.digging';
 		let result = {
 			error: false,
 			resultCode: "notSafe",
@@ -453,7 +356,7 @@ class Landscaping {
 	}
 
 	sendTooFar(block) {
-		const eventName = 'autobot.landscaping.digBlockQueue.digging';
+		const eventName = 'autobot.landscaping.digQueue.digging';
 		let result = {
 			error: false,
 			resultCode: "tooFar",
@@ -464,7 +367,7 @@ class Landscaping {
 	}
 
 	sendDiggingSuccess(callback) {
-		const eventName = 'autobot.landscaping.digBlockQueue.done';
+		const eventName = 'autobot.landscaping.digQueue.done';
 		let result = {
 			error: false,
 			resultCode: "success",
@@ -472,6 +375,80 @@ class Landscaping {
 		};
 		this.bot.emit(eventName, result);
 		this.placing = false;
+		if (callback) callback(result);
+	}
+
+	sendInsufficientMaterials(dirtCount, dirtPlaceQueue, callback) {
+		const eventName = 'autobot.landscaping.flattenCube.done';
+		let result = {
+			error: true,
+			resultCode: "insufficientMaterials",
+			description: "Insufficient materials to flatten with.",
+			dirtCount: dirtCount,
+			dirtPlaceQueue: dirtPlaceQueue
+		};
+		this.bot.emit(eventName, result);
+		this.flatteningCube = false;
+		if (callback) callback(result);
+	}
+
+	sendFlatteningSuccess(callback) {
+		const eventName = 'autobot.landscaping.flattenCube.done';
+		let result = {
+			error: false,
+			resultCode: "success",
+			description: "Successfully flattened cube.",
+		};
+		this.bot.emit(eventName, result);
+		this.flatteningCube = false;
+		if (callback) callback(result);
+	}
+	
+	sendStorageObjectCraftingFailed(storageObjectType, parentError, callback) {
+		const eventName = 'autobot.landscaping.newStorageObject';
+		let result = {
+			error: true,
+			resultCode: "storageObjectCraftingFailed",
+			description: `Failed to make a new ${storageObjectType.displayName}.`,
+			storageObjectType: storageObjectType,
+			parentError: parentError
+		};
+		this.bot.emit(eventName, result);
+		if (callback) callback(result);
+	}
+
+	sendStorageObjectPlacingFailed(storageObjectType, parentError, callback) {
+		const eventName = 'autobot.landscaping.newStorageObject';
+		let result = {
+			error: true,
+			resultCode: "storageObjectPlacingFailed",
+			description: `Failed to place a new ${storageObjectType.displayName}.`,
+			parentError: parentError
+		};
+		this.bot.emit(eventName, result);
+		if (callback) callback(result);
+	}
+
+	sendNewStorageObjectSuccess(storageObjectType, callback) {
+		const eventName = 'autobot.landscaping.newStorageObject';
+		let result = {
+			error: false,
+			resultCode: "success",
+			description: `Placed a new ${storageObjectType.displayName}.`
+		};
+		this.bot.emit(eventName, result);
+		if (callback) callback(result);
+	}
+
+	// nope
+	sendNoSpot(storageObjectType, callback) {
+		const eventName = 'autobot.landscaping.newStorageObject';
+		let result = {
+			error: true,
+			resultCode: "noSpot",
+			description: `Could not find a spot for a new ${storageObjectType.displayName}.`
+		};
+		this.bot.emit(eventName, result);
 		if (callback) callback(result);
 	}
 }
