@@ -72,7 +72,7 @@ bot.once('spawn', () => {
 	});
 	bot.on('bot_stuck', (goalProgress, path, stateGoal) => {
 		console.log("Bot Stuck.");
-		bot.autobot.onBotStuck(goalProgress, path, stateGoal);
+		bot.autobot.getUnstuck.onBotStuck(goalProgress, path, stateGoal);
 	});
 	bot.on('excessive_break_time', (block, breakTime) => {
 		console.log(`Excessive break time (${breakTime}) trying to break ${block.displayName} at ${block.position}`);
