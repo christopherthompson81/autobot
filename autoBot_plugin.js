@@ -15,6 +15,7 @@ const minecraftData = require('minecraft-data');
 const Vec3 = require('vec3').Vec3;
 
 const sleep = require('./behaviours/autobotLib').sleep;
+const getPosHash = require('./behaviours/autoBotLib').getPosHash;
 
 const Autocraft = require('./behaviours/Autocraft');
 const CollectDrops = require('./behaviours/CollectDrops');
@@ -25,6 +26,8 @@ const Mining = require('./behaviours/Mining');
 const Navigator = require('./behaviours/Navigator');
 const Smelting = require('./behaviours/Smelting');
 const Stash = require('./behaviours/Stash');
+
+/*****************************************************************************/
 
 function inject (bot) {
 	bot.mcData = null;
@@ -41,7 +44,10 @@ function inject (bot) {
 	bot.loadPlugin(pathfinder);
 	//let currentTask = null;
 	let currentTarget = {
-		posHash: '',
+		goalPosition: new Vec3(1, 0, 0),
+		goalPosHash: '',
+		errorPosition: new Vec3(1, 0, 0),
+		distanceFromGoal: 0,
 		errorCount: 0
 	};
 	
@@ -63,6 +69,48 @@ function inject (bot) {
 		});
 	}
 
+	function resetCurrentTarget() {
+		currentTarget = {
+			goalPosition: new Vec3(1, 0, 0),
+			goalPosHash: '',
+			errorPosition: new Vec3(1, 0, 0),
+			distanceFromGoal: 0,
+			errorCount: 0
+		};
+	}
+
+	function checkGoalProgress(goal, stuck) {
+		const goalPosition = new Vec3(goal.x, goal.y, goal.z);
+		const distanceFromGoal = Math.floor(goalPosition.distanceTo(bot.entity.position));
+		if (distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3) || stuck) {
+			const goalPosHash = getPosHash(goalPosition);
+			const errorPosition = bot.entity.position.clone();
+			if (currentTarget.goalPosHash === goalPosHash) {
+				// If we're still within 3 of the last stuck position then it's the same thing that's getting us stuck.
+				const distanceFromLastError = Math.floor(currentTarget.errorPosition.distanceTo(errorPosition));
+				if (distanceFromLastError <= 3) {
+					currentTarget.errorCount++;
+				}
+				else {
+					currentTarget.goalPosHash = goalPosHash;
+					currentTarget.errorPosition = errorPosition;
+					currentTarget.errorCount = 1;	
+				}
+			}
+			else {
+				currentTarget.goalPosHash = goalPosHash;
+				currentTarget.errorPosition = errorPosition;
+				currentTarget.errorCount = 1;
+			}
+			currentTarget.distanceFromGoal = distanceFromGoal;
+			return false;
+		}
+		else {
+			resetCurrentTarget();
+			return true;
+		}
+	}
+
 	function onGoalReached (goal) {
 		const eventName = 'autobot.pathfinder.goalReached';
 		let result = {error: false, resultCode: "", description: ""};
@@ -72,8 +120,8 @@ function inject (bot) {
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(bot.entity.position));
 		if (distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3)) {
 			const goalPos = new Vec3(goal.x, goal.y, goal.z);
-			const posHash = goal.x + ',' + goal.y + ',' + goal.z;
-			if (currentTarget.posHash === posHash) {
+			const posHash = getPosHash(goalPos);
+			if (currentTarget.goalPosHash === posHash) {
 				currentTarget.errorCount++;
 				if (currentTarget.errorCount > 5) {
 					if (bot.autobot.mining.active) {
@@ -90,7 +138,8 @@ function inject (bot) {
 				}
 			}
 			else {
-				currentTarget.posHash = posHash;
+				currentTarget.goalPosHash = posHash;
+				currentTarget.errorPosHash = getPosHash(bot.entity.position);
 				currentTarget.errorCount = 1;
 			}
 			bot.autobot.navigator.backupBot(() => bot.pathfinder.setGoal(goal));
@@ -109,7 +158,7 @@ function inject (bot) {
 		}
 		// landscaping next
 		else if (bot.autobot.landscaping.flatteningCube) {
-			sleep(350).then(bot.autobot.landscaping.callback);
+			sleep(350).then(bot.autobot.landscaping.flattenCallback);
 			activeFunction = "landscaping.flatteningCube";
 		}
 		else if (bot.autobot.landscaping.digging) {
@@ -175,26 +224,15 @@ function inject (bot) {
 	}
 
 	bot.autobot.onBotStuck = function (goalProgress, path, goal) {
-		const posHash = goal.x + ',' + goal.y + ',' + goal.z;
-		if (currentTarget.posHash === posHash) {
-			currentTarget.errorCount++;
-			if (currentTarget.errorCount > 3) {
-				bot.autobot.resetAllBehaviours(() => {
-					bot.autobot.landscaping.flattenCube(
-						bot.entity.position,
-						'cobblestone',
-						['stone', 'cobblestone', 'diorite', 'andesite', 'granite', 'sand', 'dirt', 'grass_block'],
-						bot.autobot.navigator.returnHome
-					);
-				});
-				return;
-			}
+		if (!checkGoalProgress(goal, true)) {
+			console.log('Selecting getUnstuck behaviour');
+			selectOnStuckBehaviour(goal);
 		}
 		else {
-			currentTarget.posHash = posHash;
-			currentTarget.errorCount = 1;
+			//console.log("currentTarget:", currentTarget);
+			console.log('Current Target blank. Just backing up and continuing.');
+			backupAndContinue(goal);
 		}
-		bot.autobot.resetAllBehaviours(bot.autobot.navigator.returnHome);
 	}
 
 	bot.autobot.onStashingDone = function (result) {
@@ -224,6 +262,98 @@ function inject (bot) {
 		bot.autobot.smelting.resetBehaviour();
 		bot.autobot.stash.resetBehaviour();
 		callback();
+	}
+
+	// Strategies to try, in order:
+	// 1). Move backwards one block and then continue
+	// 2). Flatten surroundings and then continue
+	// 3). Mark the goal position as a bad target and go home
+	// 4). Mark the goal position as a bad target, try to flatten surroundings, and go home
+	// 5). All behaviours after 4 are the same as 4.
+	function selectOnStuckBehaviour(goal) {
+		if (currentTarget.errorCount > 0 && currentTarget.errorCount <= 1) {
+			console.log('backupAndContinue');
+			backupAndContinue(goal);
+		}
+		else if (currentTarget.errorCount > 1 && currentTarget.errorCount <= 3) {
+			console.log('flattenAndContinue');
+			flattenAndContinue(goal);
+		}
+		else if (currentTarget.errorCount > 3 && currentTarget.errorCount <= 4) {
+			console.log('markBadAndGoHome');
+			markBadAndGoHome();
+		}
+		else if (currentTarget.errorCount > 4) {
+			console.log('flattenAndGoHome');
+			flattenAndGoHome();
+		}
+		else {
+			console.log('did not select a getUnstuck behaviour. currentTarget:', currentTarget);
+		}
+	}
+
+	function backupAndContinue(goal) {
+		const eventName = 'autobot.getUnstuck';
+		let result = {
+			error: true,
+			resultCode: "tooFar",
+			description: `An error happened in attempting to reach the goal. Distance: ${currentTarget.distanceFromGoal}`
+		};
+		bot.autobot.navigator.backupBot(() => bot.pathfinder.setGoal(goal));
+		bot.emit(eventName, result);
+	}
+	
+	function flattenAndContinue(goal) {
+		const eventName = 'autobot.getUnstuck';
+		let result = {
+			error: true,
+			resultCode: "tooFar",
+			description: `Another error happened in attempting to reach the goal. Flattening Surroundings. Distance: ${currentTarget.distanceFromGoal}`
+		};
+		bot.pathfinder.setGoal(null);
+		bot.clearControlStates();
+		bot.autobot.landscaping.flattenCube(
+			bot.entity.position,
+			'cobblestone',
+			['stone', 'cobblestone', 'diorite', 'andesite', 'granite', 'sand', 'dirt', 'grass_block'],
+			() => bot.pathfinder.setGoal(goal)
+		);
+		bot.emit(eventName, result);
+	}
+
+	function markBadAndGoHome() {
+		const eventName = 'autobot.getUnstuck';
+		let result = {
+			error: true,
+			resultCode: "badTarget",
+			description: "Many successive pathfinding errors at this position. Target is possibly unreachable. Marking as a bad target and returning home"
+		};
+		if (bot.autobot.mining.active) {
+			bot.autobot.mining.badTargets.push(currentTarget.goalPosition.clone());
+		}
+		bot.autobot.resetAllBehaviours(bot.autobot.navigator.returnHome);
+		bot.emit(eventName, result);
+	}
+
+	function flattenAndGoHome() {
+		const eventName = 'autobot.getUnstuck';
+		let result = {
+			error: true,
+			resultCode: "badTarget",
+			description: "Very stuck. Target is possibly unreachable and the bot can't move. Marking as a bad target, flattening surroundings, and returning home"
+		};
+		if (bot.autobot.mining.active) {
+			bot.autobot.mining.badTargets.push(currentTarget.goalPosition.clone());
+		}
+		bot.autobot.resetAllBehaviours(() => {
+			bot.autobot.landscaping.flattenCube(
+				bot.entity.position,
+				'cobblestone',
+				['stone', 'cobblestone', 'diorite', 'andesite', 'granite', 'sand', 'dirt', 'grass_block'],
+				bot.autobot.navigator.returnHome
+			);
+		});
+		bot.emit(eventName, result);
 	}
 }
 

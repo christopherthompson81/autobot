@@ -71,7 +71,7 @@ bot.once('spawn', () => {
 		}
 	});
 	bot.on('bot_stuck', (goalProgress, path, stateGoal) => {
-		console.log("Bot Stuck. Returning to home position.");
+		console.log("Bot Stuck.");
 		bot.autobot.onBotStuck(goalProgress, path, stateGoal);
 	});
 	bot.on('excessive_break_time', (block, breakTime) => {
@@ -154,4 +154,6 @@ bot.once('spawn', () => {
 		console.log(result.restokeResult.description);
 		console.log(result.resupplyResult.description);
 	});
+	bot.on('autobot.getUnstuck', logResult);
+	bot.on('autobot.stashing.itemDeposit', logResult);
 });

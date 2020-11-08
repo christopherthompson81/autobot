@@ -177,6 +177,7 @@ class Stash {
 	getRoomForItem(chestWindow, item) {
 		if (!item) return 0;
 		const itemData = this.bot.mcData.itemsByName[item.name];
+		if (!itemData) return 0;
 		let roomForItem = itemData.stackSize * chestWindow.freeSlotCount;
 		for (const slot of chestWindow.slots) {
 			if (slot === null) continue;
@@ -189,8 +190,19 @@ class Stash {
 	canStash(chestWindow, item) {
 		const itemData = this.bot.mcData.itemsByName[item.name];
 		let roomForItem = this.getRoomForItem(chestWindow, item);
+		// Convert to an event: autobot.stashing.itemDeposit
 		if (roomForItem > 0) {
-			console.log(`chestPos: ${chestWindow.position}; roomforItem: ${roomForItem}; item.name: ${item.name}; item.count: ${item.count}`);
+			const eventName = 'autobot.stashing.itemDeposit';
+			let result = {
+				error: false,
+				resultCode: "",
+				description: `Depositing ${item.count} ${item.name}(s) in chest at ${chestWindow.position}. Capacity for item: ${roomForItem}`,
+				item: item,
+				chestPosition: chestWindow.position,
+				roomForItem: roomForItem
+			}
+			//console.log(`chestPos: ${chestWindow.position}; roomforItem: ${roomForItem}; item.name: ${item.name}; item.count: ${item.count}`);
+			this.bot.emit(eventName, result);
 		}
 		if (roomForItem >= item.count) return true;
 		return false;
@@ -466,7 +478,7 @@ class Stash {
 			let result = {
 				error: false,
 				resultCode: "cacheChests",
-				description: `The bot is going to cache the contents of all storage grid chests.`
+				description: `The bot is going to cache the contents of any unknown storage grid chests.`
 			};
 			this.bot.emit(eventName, result);
 			this.sendToPeekInChest();

@@ -13,6 +13,7 @@ class Landscaping {
 		autoBind(this);
 		this.bot = bot;
 		this.callback = () => {};
+		this.flattenCallback = () => {};
 		this.dirtQueue = [];
 		this.digging = false;
 		this.placing = false;
@@ -22,6 +23,7 @@ class Landscaping {
 
 	resetBehaviour() {
 		this.callback = () => {};
+		this.flattenCallback = () => {};
 		this.dirtQueue = [];
 		this.digging = false;
 		this.placing = false;
@@ -126,7 +128,7 @@ class Landscaping {
 		// Set a goal of exactly standing inside the block at foot level.
 		const goal = new GoalBlock(p.x, p.y, p.z);
 		//this.bot.autobot.currentTask = 'flattenCube';
-		this.callback = () => {
+		this.flattenCallback = () => {
 			const digQueue = [];
 			for (const offset of clearPattern) {
 				const block = this.bot.blockAt(position.offset(...offset));
