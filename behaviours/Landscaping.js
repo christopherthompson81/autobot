@@ -41,7 +41,7 @@ class Landscaping {
 			const placementVector = new Vec3(1, 0, 0);
 			this.bot.equip(item, 'hand', () => {
 				this.bot.placeBlock(referenceBlock, placementVector, (err) => {
-					if (err) his.sendPlacingError(err, current, remainder, callback);
+					if (err) this.sendPlacingError(err, current, remainder, callback);
 					else sleep(100).then(() => this.placeNext(remainder, callback));
 				});
 			});
@@ -60,12 +60,8 @@ class Landscaping {
 			}
 			const tool = this.bot.pathfinder.bestHarvestTool(block)
 			if (block.harvestTools) {
-				if (!Array.isArray(block.harvestTools)) {
-					console.log("debugging landscaping.digNext");
-					console.log(block);
-					console.log("As JSON: ", JSON.stringify(block));
-				}
-				if (!block.harvestTools.includes(tool)) {
+				const harvestTools = Object.keys(block.harvestTools);
+				if (!harvestTools.includes(tool)) {
 					this.sendNoSuitableTool(block, tool);
 					this.digNext(remainder, callback);
 					return;
@@ -81,9 +77,6 @@ class Landscaping {
 				this.sendTooFar(block);
 				const p = block.position;
 				const goal = new GoalGetToBlock(p.x, p.y, p.z);
-				this.callback = () => {
-					this.digNext(digQueue, callback);
-				};
 				this.bot.pathfinder.setGoal(goal);
 				return;
 			}
