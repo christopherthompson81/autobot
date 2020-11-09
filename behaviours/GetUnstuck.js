@@ -7,19 +7,13 @@ class GetUnstuck {
 	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
-		this.goalPosition = new Vec3(1, 0, 0);
-		this.goalPosHash = '';
-		this.errorPosition = new Vec3(1, 0, 0);
-		this.distanceFromGoal = 0;
-		this.errorCount = 0;
+		this.goalProgress = this.blankProgress();
+		this.stuckProgress = this.blankProgress();
 	}
 
 	resetBehaviour() {
-		this.goalPosition = new Vec3(1, 0, 0);
-		this.goalPosHash = '';
-		this.errorPosition = new Vec3(1, 0, 0);
-		this.distanceFromGoal = 0;
-		this.errorCount = 0;
+		this.goalProgress = this.blankProgress();
+		this.stuckProgress = this.blankProgress();
 	}
 
 	/**************************************************************************
@@ -28,52 +22,74 @@ class GetUnstuck {
 	 * 
 	 **************************************************************************/
 
-	resetCurrentTarget() {
-		this.goalPosition = new Vec3(1, 0, 0);
-		this.goalPosHash = '';
-		this.errorPosition = new Vec3(1, 0, 0);
-		this.distanceFromGoal = 0;
-		this.errorCount = 0;
+	blankProgress() {
+		let progress = {
+			goalPosition: new Vec3(1, 0, 0),
+			goalPosHash: '',
+			errorPosition: new Vec3(1, 0, 0),
+			distanceFromGoal: 0,
+			errorCount: 0,
+		};
+		return progress;
 	}
 
-	checkGoalProgress(goal, stuck) {
+	checkGoalProgress(goal) {
 		const goalPosition = new Vec3(goal.x, goal.y, goal.z);
 		const goalPosHash = getPosHash(goalPosition);
 		const errorPosition = this.bot.entity.position.clone();
 		const distanceFromGoal = Math.floor(goalPosition.distanceTo(errorPosition));
-		if (this.goalPosHash === '' || this.goalPosHash !== goalPosHash) {
-			this.goalPosition = goalPosition;
-			this.goalPosHash = goalPosHash;
-			this.errorPosition = errorPosition;
-			this.distanceFromGoal = distanceFromGoal;
-			this.errorCount = 0;
+		if (this.goalProgress.goalPosHash === '' || this.goalProgress.goalPosHash !== goalPosHash) {
+			this.goalProgress.goalPosition = goalPosition;
+			this.goalProgress.goalPosHash = goalPosHash;
+			this.goalProgress.errorPosition = errorPosition;
+			this.goalProgress.distanceFromGoal = distanceFromGoal;
+			this.goalProgress.errorCount = 0;
 		}
-		const distanceFromLastError = Math.floor(this.errorPosition.distanceTo(errorPosition));
-		if (!stuck && distanceFromLastError > 3) {
-			this.errorPosition = errorPosition;
-			this.distanceFromGoal = distanceFromGoal;
-			this.errorCount = 0;
+		const distanceFromLastError = Math.floor(this.goalProgress.errorPosition.distanceTo(errorPosition));
+		if (distanceFromLastError > 3) {
+			this.goalProgress.errorPosition = errorPosition;
+			this.goalProgress.distanceFromGoal = distanceFromGoal;
+			this.goalProgress.errorCount = 0;
 			return true;
 		}
-		if (
-			distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3) ||
-			stuck ||
-			this.errorCount > 0
-		) {
+		if (distanceFromGoal > (Math.sqrt(goal.rangeSq) || 3)) {
 			if (distanceFromLastError <= 3) {
-				this.errorCount++;
+				this.goalProgress.errorCount++;
 			}
 			else {
-				this.errorPosition = errorPosition;
-				this.errorCount = 1;
+				this.goalProgress.errorPosition = errorPosition;
+				this.goalProgress.errorCount = 1;
 			}
-			this.distanceFromGoal = distanceFromGoal;
+			this.goalProgress.distanceFromGoal = distanceFromGoal;
 			return false;
 		}
 		else {
-			this.resetCurrentTarget();
+			this.goalProgress = this.blankProgress();
 			return true;
 		}
+	}
+
+	checkStuckProgress(goal) {
+		const goalPosition = new Vec3(goal.x, goal.y, goal.z);
+		const goalPosHash = getPosHash(goalPosition);
+		const errorPosition = this.bot.entity.position.clone();
+		const distanceFromGoal = Math.floor(goalPosition.distanceTo(errorPosition));
+		if (this.stuckProgress.goalPosHash === '') {
+			this.stuckProgress.goalPosition = goalPosition;
+			this.stuckProgress.goalPosHash = goalPosHash;
+			this.stuckProgress.errorPosition = errorPosition;
+			this.stuckProgress.distanceFromGoal = distanceFromGoal;
+			this.stuckProgress.errorCount = 0;
+		}
+		const distanceFromLastError = Math.floor(this.stuckProgress.errorPosition.distanceTo(errorPosition));
+		if (distanceFromLastError <= 3) {
+			this.stuckProgress.errorCount++;
+		}
+		else {
+			this.stuckProgress.errorPosition = errorPosition;
+			this.stuckProgress.errorCount = 1;
+		}
+		this.stuckProgress.distanceFromGoal = distanceFromGoal;
 	}
 
 	onExcessiveBreakTime(block, breakTime) {
@@ -88,12 +104,8 @@ class GetUnstuck {
 	}
 
 	onBotStuck(goalProgress, path, goal) {
-		if (!this.checkGoalProgress(goal, true)) {
-			this.selectOnStuckBehaviour(goal);
-		}
-		else {
-			this.backupAndContinue(goal);
-		}
+		this.checkStuckProgress(goal);
+		this.selectOnStuckBehaviour(this.stuckProgress, goal);
 	}
 
 	// Strategies to try, in order:
@@ -102,17 +114,17 @@ class GetUnstuck {
 	// 3). Mark the goal position as a bad target and go home
 	// 4). Mark the goal position as a bad target, try to flatten surroundings, and go home
 	// 5). All behaviours after 4 are the same as 4.
-	selectOnStuckBehaviour(goal) {
-		if (this.errorCount > 0 && this.errorCount <= 1) {
+	selectOnStuckBehaviour(progress, goal) {
+		if (progress.errorCount > 0 && progress.errorCount <= 1) {
 			this.backupAndContinue(goal);
 		}
-		else if (this.errorCount > 1 && this.errorCount <= 3) {
+		else if (progress.errorCount > 1 && progress.errorCount <= 3) {
 			this.flattenAndContinue(goal);
 		}
-		else if (this.errorCount > 3 && this.errorCount <= 4) {
+		else if (progress.errorCount > 3 && progress.errorCount <= 4) {
 			this.markBadAndGoHome();
 		}
-		else if (this.errorCount > 4) {
+		else if (progress.errorCount > 4) {
 			this.flattenAndGoHome();
 		}
 		else {

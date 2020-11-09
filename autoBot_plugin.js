@@ -68,9 +68,9 @@ function inject (bot) {
 		let activeFunction = "";
 		const goalVec3 = new Vec3(goal.x, goal.y, goal.z);
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(bot.entity.position));
-		if (!bot.autobot.getUnstuck.checkGoalProgress(goal, false)) {
+		if (!bot.autobot.getUnstuck.checkGoalProgress(goal)) {
 			console.log('Selecting getUnstuck behaviour');
-			bot.autobot.getUnstuck.selectOnStuckBehaviour(goal);
+			bot.autobot.getUnstuck.selectOnStuckBehaviour(bot.autobot.getUnstuck.goalProgress, goal);
 			return;
 		}
 		// navigating first
