@@ -116,28 +116,28 @@ class GetUnstuck {
 	// 5). All behaviours after 4 are the same as 4.
 	selectOnStuckBehaviour(progress, goal) {
 		if (progress.errorCount > 0 && progress.errorCount <= 1) {
-			this.backupAndContinue(goal);
+			this.backupAndContinue(goal, progress);
 		}
 		else if (progress.errorCount > 1 && progress.errorCount <= 3) {
-			this.flattenAndContinue(goal);
+			this.flattenAndContinue(goal, progress);
 		}
 		else if (progress.errorCount > 3 && progress.errorCount <= 4) {
-			this.markBadAndGoHome();
+			this.markBadAndGoHome(progress);
 		}
 		else if (progress.errorCount > 4) {
-			this.flattenAndGoHome();
+			this.flattenAndGoHome(progress);
 		}
 		else {
 			console.log('did not select a getUnstuck behaviour.');
 		}
 	}
 
-	backupAndContinue(goal) {
+	backupAndContinue(goal, progress) {
 		const eventName = 'autobot.getUnstuck';
 		let result = {
 			error: true,
 			resultCode: "tooFar",
-			description: `An error happened in attempting to reach the goal. Distance: ${this.distanceFromGoal}`
+			description: `An error happened in attempting to reach the goal. Distance: ${progress.distanceFromGoal}`
 		};
 		this.bot.autobot.navigator.backupBot(() => this.bot.pathfinder.setGoal(goal));
 		this.bot.emit(eventName, result);
@@ -148,7 +148,7 @@ class GetUnstuck {
 		let result = {
 			error: true,
 			resultCode: "tooFar",
-			description: `Another error happened in attempting to reach the goal. Flattening Surroundings. Distance: ${this.distanceFromGoal}`
+			description: `Another error happened in attempting to reach the goal. Flattening Surroundings. Distance: ${progress.distanceFromGoal}`
 		};
 		this.bot.pathfinder.setGoal(null);
 		this.bot.clearControlStates();
@@ -164,7 +164,7 @@ class GetUnstuck {
 		this.bot.emit(eventName, result);
 	}
 
-	markBadAndGoHome() {
+	markBadAndGoHome(progress) {
 		const eventName = 'autobot.getUnstuck';
 		let result = {
 			error: true,
@@ -172,13 +172,13 @@ class GetUnstuck {
 			description: "Many successive pathfinding errors at this position. Target is possibly unreachable. Marking as a bad target and returning home"
 		};
 		if (this.bot.autobot.mining.active) {
-			this.bot.autobot.mining.badTargets.push(this.goalPosition.clone());
+			this.bot.autobot.mining.badTargets.push(progress.goalPosition.clone());
 		}
 		this.bot.autobot.resetAllBehaviours(this.bot.autobot.navigator.returnHome);
 		this.bot.emit(eventName, result);
 	}
 
-	flattenAndGoHome() {
+	flattenAndGoHome(progress) {
 		const eventName = 'autobot.getUnstuck';
 		let result = {
 			error: true,
@@ -186,11 +186,12 @@ class GetUnstuck {
 			description: "Very stuck. Target is possibly unreachable and the bot can't move. Marking as a bad target, flattening surroundings, and returning home"
 		};
 		if (this.bot.autobot.mining.active) {
-			this.bot.autobot.mining.badTargets.push(this.goalPosition.clone());
+			this.bot.autobot.mining.badTargets.push(progress.goalPosition.clone());
 		}
+		const stuckPosition = this.bot.entity.position.floored();
 		this.bot.autobot.resetAllBehaviours(() => {
 			this.bot.autobot.landscaping.flattenCube(
-				this.bot.entity.position,
+				stuckPosition,
 				'cobblestone',
 				['stone', 'cobblestone', 'diorite', 'andesite', 'granite', 'sand', 'dirt', 'grass_block'],
 				this.bot.autobot.navigator.returnHome

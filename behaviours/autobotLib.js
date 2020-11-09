@@ -43,11 +43,21 @@ function sortByDistanceFromBot(bot, vec3Array) {
 	});
 }
 
+function sortByDistanceFromHome(bot, vec3Array) {
+	// resort array by distance from bot ascending
+	return vec3Array.sort((a, b) => {
+		const distA = bot.autobot.homePosition.distanceTo(new Vec3(a.x, a.y, a.z));
+		const distB = bot.autobot.homePosition.distanceTo(new Vec3(b.x, b.y, b.z));
+		return distA - distB;
+	});
+}
+
 function getPosHash(p) {
 	return p.x + ',' + p.y + ',' + p.z;
 }
 
 exports.sleep = sleep;
 exports.sortByDistanceFromBot = sortByDistanceFromBot;
+exports.sortByDistanceFromHome = sortByDistanceFromHome;
 exports.bestHarvestTool = bestHarvestTool;
 exports.getPosHash = getPosHash;

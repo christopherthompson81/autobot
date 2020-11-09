@@ -3,7 +3,8 @@ const { exit } = require('process');
 const Vec3 = require('vec3').Vec3;
 const { GoalBlock, GoalGetToBlock } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
-const sortByDistanceFromBot = require('./autoBotLib').sortByDistanceFromBot;
+//const sortByDistanceFromBot = require('./autoBotLib').sortByDistanceFromBot;
+const sortByDistanceFromHome = require('./autoBotLib').sortByDistanceFromHome;
 const airBlocks = require('./constants').airBlocks;
 const clearPattern = require('./constants').clearPattern;
 const dirtPattern = require('./constants').dirtPattern;
@@ -226,7 +227,7 @@ class Landscaping {
 		//console.log(`Dirt Count: ${dirtBlocks.length}`);
 		dirtBlocks = dirtBlocks.filter((b) => { return b.y >= this.bot.autobot.homePosition.y });
 		//console.log(`Dirt Count above home Y: ${dirtBlocks.length}`);
-		dirtBlocks = sortByDistanceFromBot(this.bot, dirtBlocks);
+		dirtBlocks = sortByDistanceFromHome(this.bot, dirtBlocks);
 		// If no dirt was found, return false
 		if (dirtBlocks.length === 0) {
 			return false;
