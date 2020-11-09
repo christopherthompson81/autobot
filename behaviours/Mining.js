@@ -1,8 +1,10 @@
 const autoBind = require('auto-bind');
+const Vec3 = require('vec3').Vec3;
 const sortByDistanceFromBot = require('./autoBotLib').sortByDistanceFromBot;
 const bestHarvestTool = require('./autoBotLib').bestHarvestTool;
 const sleep = require('./autoBotLib').sleep;
 const { GoalGetToBlock } = require('../pathfinder/pathfinder').goals;
+const storage = require('node-persist');
 
 class Mining {
 	constructor(bot) {
@@ -11,8 +13,9 @@ class Mining {
 		this.nearbyThreshold = 6;
 		this.callback = () => {};
 		this.active = false;
-		this.badTargets = [];
 		this.havePickaxe = bot.autobot.inventory.havePickaxe;
+		storage.init();
+		sleep(100).then(async () => { this.badTargets = await this.getBadTargets(); });
 	}
 
 	resetBehaviour() {
@@ -205,7 +208,7 @@ class Mining {
 		}
 		if (current) {
 			if (!this.bot.defaultMove.safeToBreak(current)) {
-				this.badTargets.push(current.position.clone());
+				this.pushBadTarget(current.position.clone());
 				this.mineVeinNext(remainder, callback);
 				result = {
 					error: false,
@@ -332,6 +335,20 @@ class Mining {
 			}
 			this.bot.emit('autobot.mining.done', result);
 		}
+	}
+
+	async getBadTargets() {
+		let pBadTargets = await storage.getItem('badTargets');
+		if (!pBadTargets) pBadTargets = [];
+		const badTargets = pBadTargets.map(t => new Vec3(t.x, t.y, t.z));
+		return badTargets;
+	}
+
+	async pushBadTarget(position) {
+		this.badTargets.push(position);
+		const badTargets = await this.getBadTargets();
+		badTargets.push(position);
+		await storage.setItem('badTargets', badTargets);
 	}
 }
 

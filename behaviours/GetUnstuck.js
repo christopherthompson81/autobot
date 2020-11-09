@@ -172,7 +172,7 @@ class GetUnstuck {
 			description: "Many successive pathfinding errors at this position. Target is possibly unreachable. Marking as a bad target and returning home"
 		};
 		if (this.bot.autobot.mining.active) {
-			this.bot.autobot.mining.badTargets.push(progress.goalPosition.clone());
+			this.bot.autobot.mining.pushBadTarget(progress.goalPosition.clone());
 		}
 		this.bot.autobot.resetAllBehaviours(this.bot.autobot.navigator.returnHome);
 		this.bot.emit(eventName, result);
@@ -186,7 +186,7 @@ class GetUnstuck {
 			description: "Very stuck. Target is possibly unreachable and the bot can't move. Marking as a bad target, flattening surroundings, and returning home"
 		};
 		if (this.bot.autobot.mining.active) {
-			this.bot.autobot.mining.badTargets.push(progress.goalPosition.clone());
+			this.bot.autobot.mining.pushBadTarget(progress.goalPosition.clone());
 		}
 		const stuckPosition = this.bot.entity.position.floored();
 		this.bot.autobot.resetAllBehaviours(() => {

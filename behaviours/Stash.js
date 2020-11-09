@@ -133,10 +133,10 @@ class Stash {
 				result = {
 					error: false,
 					resultCode: "gettingDirt",
-					description: `Getting dirt (${32 - dirtCount})`,
+					description: `Getting dirt (${64 - dirtCount})`,
 				};
 				this.bot.emit(eventName, result);
-				this.bot.autobot.landscaping.getDirt(32 - dirtCount, (result) => {
+				this.bot.autobot.landscaping.getDirt(64 - dirtCount, (result) => {
 					// There is the case of a flattening error for chest placement causing this.
 					// If we have chest in inventory, stash. otherwise harvest tree
 					if (inventoryDict['chest']) {

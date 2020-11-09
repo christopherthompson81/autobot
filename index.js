@@ -64,6 +64,10 @@ bot.once('spawn', () => {
 	bot.on('autobot.pathfinder.progress', () => { process.stdout.write("+"); });
 	bot.on('autobot.pathfinder.goalReached', (result) => {
 		if (result.resultCode === 'reachedGoal') {
+			if (result.activeFunction === '') {
+				stash();
+				return;
+			}
 			let message = `Reached goal of ${result.goalPosition}.`;
 			message += ` Bot is ${result.distanceFromGoal} blocks from the goal`;
 			message += ` and '${result.activeFunction}' is the active function.`;

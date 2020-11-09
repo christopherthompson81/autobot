@@ -72,7 +72,7 @@ class Landscaping {
 			}
 			if (!this.bot.defaultMove.safeToBreak(block)) {
 				this.sendNotSafe(block);
-				this.bot.autobot.mining.badTargets.push(block.position.clone());
+				this.bot.autobot.mining.pushBadTarget(block.position.clone());
 				this.digNext(remainder, callback);
 				return;
 			}
