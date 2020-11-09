@@ -143,7 +143,7 @@ class GetUnstuck {
 		this.bot.emit(eventName, result);
 	}
 	
-	flattenAndContinue(goal) {
+	flattenAndContinue(goal, progress) {
 		const eventName = 'autobot.getUnstuck';
 		let result = {
 			error: true,

@@ -49,7 +49,7 @@ class Landscaping {
 				});
 			});
 		}
-		else this.sendPlacingSuccess();
+		else this.sendPlacingSuccess(callback);
 	}
 
 	digNext(digQueue, callback) {
@@ -414,6 +414,7 @@ class Landscaping {
 	}
 
 	sendFlatteningSuccess(callback) {
+		console.log('flattenCallback - flatten success');
 		const eventName = 'autobot.landscaping.flattenCube.done';
 		let result = {
 			error: false,
