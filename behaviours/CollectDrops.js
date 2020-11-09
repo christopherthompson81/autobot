@@ -52,7 +52,7 @@ class CollectDrops {
 		let i;
 		for (i = 0; i < this.remainder.length; i++) {
 			const nextBlock = this.remainder[i];
-			if (nextBlock.position.distanceTo(this.bot.entity.position) >= 2) {
+			if (nextBlock.position.distanceTo(this.bot.entity.position) >= 1) {
 				current = nextBlock;
 				break;
 			}

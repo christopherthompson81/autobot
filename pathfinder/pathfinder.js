@@ -67,6 +67,9 @@ function inject (bot) {
 		position: new Vec3(0, 0, 0),
 		threshold: 10,
 		notified: false,
+		startTimestamp: Date.now(),
+		totalDistance: 0,
+		movementLoopNotified: false,
 	};
 
 	function setGoalProgress() {
@@ -91,9 +94,14 @@ function inject (bot) {
 
 	bot.pathfinder.setGoal = function (goal, dynamic = false) {
 		setGoalProgress();
+		goalProgress.startTimestamp = Date.now();
+		let goalPosition = goal ? new Vec3(goal.x, goal.y, goal.z) : null;
+		goalProgress.distance = goalPosition ? bot.entity.position.distanceTo(goalPosition) : 0;
+		goalProgress.movementLoopNotified = false;
 		stateGoal = goal
 		dynamicGoal = dynamic
 		resetPath()
+		console.log('Goal Set');
 	}
 
 	bot.pathfinder.setMovements = function (movements) {
@@ -262,6 +270,24 @@ function inject (bot) {
 			bot.emit('bot_stuck', goalProgress, path, stateGoal)
 			goalProgress.notified = true;
 			//return
+		}
+
+		// Test if caught in a movement loop
+		// Experiment: 3 * distance * (2*averageDigTime + moveOneBlockTime) === travelTimeLimit
+		// Maybe it's a good limit, maybe not.
+		// We're assuming an unmodified stone pickaxe as the tool and a stone block as the target (600 ms)
+		if (stateGoal && goalProgress.distance > 0) {
+			const stoneBlockDigTime = 600;
+			const moveOneBlockTime = 500;
+			const travelTimeLimit = 3 *	goalProgress.distance *	(2*stoneBlockDigTime + moveOneBlockTime);
+			if (
+				goalProgress.startTimestamp + travelTimeLimit < Date.now() &&
+				!goalProgress.movementLoopNotified
+			) {
+				//console.log(goalProgress);
+				bot.emit('autobot.pathfinder.exceededTravelTimeLimit', goalProgress, path, stateGoal)
+				goalProgress.movementLoopNotified = true;
+			}
 		}
 
 		let nextPoint = path[0]

@@ -214,30 +214,39 @@ class Landscaping {
 	}
 
 	findDirtQueue(limit) {
-		let dirtBlocks = this.bot.findBlocks({
-			point: this.bot.autobot.homePosition,
-			matching: (b) => {
-				if (b.type !== this.bot.mcData.blocksByName['dirt'].id) return false;
-				return true;
-			},
-			maxDistance: 35,
-			count: 5000,
-		});
-		// Only dirt above home
-		//console.log(`Dirt Count: ${dirtBlocks.length}`);
-		dirtBlocks = dirtBlocks.filter((b) => { return b.y >= this.bot.autobot.homePosition.y });
-		//console.log(`Dirt Count above home Y: ${dirtBlocks.length}`);
-		dirtBlocks = sortByDistanceFromHome(this.bot, dirtBlocks);
-		// If no dirt was found, return false
-		if (dirtBlocks.length === 0) {
-			return false;
+		let dirtQueue = [];
+		const dirtTypes = [
+			this.bot.mcData.blocksByName.dirt.id,
+			this.bot.mcData.blocksByName.grass_block.id,
+		];
+		while (dirtQueue.length < limit) {
+			let dirtBlocks = this.bot.findBlocks({
+				point: this.bot.autobot.homePosition,
+				matching: (b) => {
+					if (dirtTypes.includes(b.type)) return true;
+					return false;
+				},
+				maxDistance: 35,
+				count: 5000,
+			});
+			// Only dirt above home
+			//console.log(`Dirt Count: ${dirtBlocks.length}`);
+			dirtBlocks = dirtBlocks.filter((b) => { return b.y >= this.bot.autobot.homePosition.y });
+			//console.log(`Dirt Count above home Y: ${dirtBlocks.length}`);
+			dirtBlocks = sortByDistanceFromHome(this.bot, dirtBlocks);
+			// If no dirt was found, return false
+			if (dirtBlocks.length === 0) {
+				return false;
+			}
+			const newQueue = this.blockToQueue(
+				dirtBlocks[0],
+				[dirtBlocks[0]],
+				dirtTypes,
+				limit
+			);
+			dirtQueue = [...dirtQueue, ...newQueue];
 		}
-		return this.blockToQueue(
-			dirtBlocks[0],
-			[dirtBlocks[0]],
-			[this.bot.mcData.blocksByName['dirt'].id],
-			limit
-		);
+		return dirtQueue;
 	}
 
 	dirtArrival() {

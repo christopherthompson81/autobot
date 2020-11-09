@@ -34,6 +34,9 @@ class GetUnstuck {
 	}
 
 	checkGoalProgress(goal) {
+		if (this.bot.autobot.landscaping.flatteningCube) {
+			return true;
+		}
 		const goalPosition = new Vec3(goal.x, goal.y, goal.z);
 		const goalPosHash = getPosHash(goalPosition);
 		const errorPosition = this.bot.entity.position.clone();

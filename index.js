@@ -33,6 +33,7 @@ const mineflayer = require('mineflayer');
 const autoBot = require("./autoBot_plugin.js").autoBot;
 const fs = require('fs');
 const process = require('process');
+const Vec3 = require('vec3').Vec3;
 let config = JSON.parse(fs.readFileSync('autobot_config.json'));
 
 let botId = process.argv[2]
@@ -77,6 +78,10 @@ bot.once('spawn', () => {
 	bot.on('bot_stuck', (goalProgress, path, stateGoal) => {
 		console.log("Bot Stuck.");
 		bot.autobot.getUnstuck.onBotStuck(goalProgress, path, stateGoal);
+	});
+	bot.on('autobot.pathfinder.exceededTravelTimeLimit', (goalProgress, path, stateGoal) => {
+		console.log("Exceeded pathfinder travel time limit.");
+		bot.autobot.getUnstuck.flattenAndGoHome({goalPosition: new Vec3(stateGoal.x, stateGoal.y, stateGoal.z)});
 	});
 	bot.on('excessive_break_time', (block, breakTime) => {
 		console.log(`Excessive break time (${breakTime}) trying to break ${block.displayName} at ${block.position}`);

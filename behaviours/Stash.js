@@ -409,6 +409,11 @@ class Stash {
 			sleep(100).then(() => { this.stashNonEssentialInventory(this.callback); });
 			return;
 		}
+		if (Math.floor(this.bot.entity.position.distanceTo(this.cbChest.position)) > 3) {
+			// Didn't actually arrive. Start over.
+			sleep(100).then(() => { this.stashNonEssentialInventory(this.callback); });
+			return;
+		}
 		const chestToOpen = this.cbChest;
 		const callback = this.callback;
 		const chest = this.bot.openChest(chestToOpen);
