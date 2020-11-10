@@ -48,6 +48,7 @@ class CollectDrops {
 	pickUpNext() {
 		const eventName = 'autobot.collectDrops.done';
 		let result = {};
+		/*
 		let current = null;
 		let i;
 		for (i = 0; i < this.remainder.length; i++) {
@@ -58,6 +59,9 @@ class CollectDrops {
 			}
 		}
 		this.remainder = this.remainder.slice(i + 1, this.remainder.length);
+		*/
+		let current = this.remainder[0];
+		this.remainder = this.remainder.slice(1, this.remainder.length);
 		if (current) {
 			const itemId = current.metadata[7].itemId;
 			if (itemId) {
