@@ -108,13 +108,14 @@ class Movements {
       if (this.getBlock(block.position, 0, 1, 0).gravity) return false
     }
     // Directly under bot
-    if (block.position.equals(this.bot.entity.position.offset(0, -1, 0))) {
-      // Don't create a falling situation
-      if (!this.getBlock(block.position, 0, -1, 0).physical) return false
-      // Don't fall into liquids
-      if (this.getBlock(block.position, 0, -1, 0).liquid) return false
-    }
-    
+    if (block.position) {
+      if (block.position.equals(this.bot.entity.position.offset(0, -1, 0))) {
+        // Don't create a falling situation
+        if (!this.getBlock(block.position, 0, -1, 0).physical) return false
+        // Don't fall into liquids
+        if (this.getBlock(block.position, 0, -1, 0).liquid) return false
+      }
+    }    
     return block.type && !this.blocksCantBreak.has(block.type)
     // TODO: break exclusion areas
   }
