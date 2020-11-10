@@ -186,15 +186,17 @@ class GetUnstuck {
 		let result = {
 			error: true,
 			resultCode: "badTarget",
-			description: "Very stuck. Target is possibly unreachable and the bot can't move. Marking as a bad target, flattening surroundings, and returning home"
+			description: "Very stuck. Target is possibly unreachable and the bot can't move. Marking as a bad target, flattening surroundings (y+1), and returning home"
 		};
 		if (this.bot.autobot.mining.active) {
 			this.bot.autobot.mining.pushBadTarget(progress.goalPosition.clone());
 		}
 		const stuckPosition = this.bot.entity.position.floored();
+		// Flatten one up to try to force a column reload.
+		// There's a good chance the bot doesn't have a good picture of what the world looks like right now.
 		this.bot.autobot.resetAllBehaviours(() => {
 			this.bot.autobot.landscaping.flattenCube(
-				stuckPosition,
+				stuckPosition.offset(0, 1, 0),
 				'cobblestone',
 				['stone', 'cobblestone', 'diorite', 'andesite', 'granite', 'sand', 'dirt', 'grass_block'],
 				this.bot.autobot.navigator.returnHome

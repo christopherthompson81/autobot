@@ -279,7 +279,7 @@ function inject (bot) {
 		if (stateGoal && goalProgress.distance > 0) {
 			const stoneBlockDigTime = 600;
 			const moveOneBlockTime = 500;
-			const travelTimeLimit = 3 *	goalProgress.distance *	(2*stoneBlockDigTime + moveOneBlockTime);
+			const travelTimeLimit = 4 *	goalProgress.distance *	(2*stoneBlockDigTime + moveOneBlockTime) + 10000;
 			if (
 				goalProgress.startTimestamp + travelTimeLimit < Date.now() &&
 				!goalProgress.movementLoopNotified

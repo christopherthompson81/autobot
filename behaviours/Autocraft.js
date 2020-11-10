@@ -428,7 +428,7 @@ class Autocraft {
 		this.bot.equip(craftingTable, "hand", () => {
 			this.bot.placeBlock(referenceBlock, placementVector, (err) => {
 				if (err) {
-					console.log(err);
+					//console.log(err);
 					this.bot.autobot.navigator.backupBot(() => {
 						this.bot.placeBlock(referenceBlock, placementVector, (err) => {
 							result = {
