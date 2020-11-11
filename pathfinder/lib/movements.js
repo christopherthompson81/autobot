@@ -52,6 +52,11 @@ class Movements {
     this.scafoldingBlocks.push(mcData.blocksByName.cobblestone.id)
     this.scafoldingBlocks.push(mcData.blocksByName.dirt.id)
 
+    this.airBlocks = new Set()
+    this.airBlocks.add(mcData.blocksByName.air.id);
+    this.airBlocks.add(mcData.blocksByName.cave_air.id);
+    this.airBlocks.add(mcData.blocksByName.void_air.id);
+
     this.maxDropDown = 4
   }
 
@@ -153,6 +158,7 @@ class Movements {
     const toPlace = []
 
     if (!blockC.physical) {
+    //if (!this.airBlocks.has(blockC.type)) {
       if (node.remainingBlocks === 0) return // not enough blocks to place
 
       // TODO: avoid entities as part of placing blocks

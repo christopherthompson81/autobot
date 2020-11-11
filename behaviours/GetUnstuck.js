@@ -1,4 +1,5 @@
 const autoBind = require('auto-bind');
+const Location = require('mineflayer').Location;
 const Vec3 = require('vec3').Vec3;
 //const { GoalNear } = require('../pathfinder/pathfinder').goals;
 const getPosHash = require('./autoBotLib').getPosHash;
@@ -121,8 +122,11 @@ class GetUnstuck {
 		if (progress.errorCount > 0 && progress.errorCount <= 1) {
 			this.backupAndContinue(goal, progress);
 		}
-		else if (progress.errorCount > 1 && progress.errorCount <= 3) {
+		else if (progress.errorCount > 1 && progress.errorCount <= 2) {
 			this.flattenAndContinue(goal, progress);
+		}
+		else if (progress.errorCount > 2 && progress.errorCount <= 3) {
+			this.reloadColumn(goal, progress);
 		}
 		else if (progress.errorCount > 3 && progress.errorCount <= 4) {
 			this.markBadAndGoHome(progress);
@@ -164,6 +168,23 @@ class GetUnstuck {
 				() => this.bot.pathfinder.setGoal(goal)
 			);
 		});
+		this.bot.emit(eventName, result);
+	}
+
+	reloadColumn(goal, progress) {
+		const eventName = 'autobot.getUnstuck';
+		let result = {
+			error: true,
+			resultCode: "reloadColumn",
+			description: `Attempting to refresh the local world column. Distance: ${progress.distanceFromGoal}`
+		};
+		this.bot.pathfinder.setGoal(null);
+		this.bot.clearControlStates();
+		const botLocation = new Location(this.bot.entity.position);
+		const chunkX = botLocation.blockPoint.x;
+		const chunkZ = botLocation.blockPoint.z;
+		this.bot.world.unloadColumn(chunkX, chunkZ);
+		this.bot.pathfinder.setGoal(goal);
 		this.bot.emit(eventName, result);
 	}
 
