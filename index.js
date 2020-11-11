@@ -46,10 +46,6 @@ const bot = mineflayer.createBot({
 	password: config.password
 });
 
-function logResult(result) {
-	console.log(result.description);
-}
-
 bot.loadPlugin(autoBot);
 
 function logResult(result) {
