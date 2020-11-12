@@ -158,19 +158,21 @@ class Movements {
     const toPlace = []
 
     if (!blockC.physical) {
-    //if (!this.airBlocks.has(blockC.type)) {
       if (node.remainingBlocks === 0) return // not enough blocks to place
 
       // TODO: avoid entities as part of placing blocks
       const blockD = this.getBlock(node, dir.x, -1, dir.z)
       if (!blockD.physical) {
         if (node.remainingBlocks === 1) return // not enough blocks to place
+        if (['wall_torch', 'torch'].includes(blockD.name)) return // can't place into a torch
         toPlace.push({ x: node.x, y: node.y - 1, z: node.z, dx: dir.x, dy: 0, dz: dir.z })
         cost += 1 // additional cost for placing a block
       }
 
       toPlace.push({ x: node.x + dir.x, y: node.y - 1, z: node.z + dir.z, dx: 0, dy: 1, dz: 0 })
       cost += 1 // additional cost for placing a block
+
+      if (blockH.name === 'cobweb') toBreak.push(blockH.position);
     }
 
     cost += this.safeOrBreak(blockA, toBreak)

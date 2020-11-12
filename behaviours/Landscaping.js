@@ -78,6 +78,7 @@ class Landscaping {
 			}
 			if (Math.floor(this.bot.entity.position.distanceTo(current)) > 3) {
 				this.sendTooFar(block);
+				if (this.gettingDirt) this.dirtQueue = digQueue;
 				const p = block.position;
 				const goal = new GoalGetToBlock(p.x, p.y, p.z);
 				this.bot.pathfinder.setGoal(goal);
