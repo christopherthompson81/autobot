@@ -362,6 +362,7 @@ exports.armorItems = armorItems;
 exports.essentialItems = essentialItems;
 exports.compressableItems = compressableItems;
 exports.airBlocks = airBlocks;
+exports.oreBlocks = oreBlocks;
 exports.utilityBlocks = utilityBlocks;
 exports.playerMadeBlocks = playerMadeBlocks;
 exports.naturalBlocks = naturalBlocks;

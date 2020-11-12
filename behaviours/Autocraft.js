@@ -310,9 +310,8 @@ class Autocraft {
 				//console.log("Needs crafting table", this.bot.autobot.homePosition);
 				craftingTable = this.bot.findBlock({
 					point: this.bot.autobot.homePosition,
-					matching: this.bot.mcData.blocksByName['crafting_table'].id,
-					maxDistance: 20,
-					count: 10
+					matching: this.bot.mcData.blocksByName.crafting_table.id,
+					maxDistance: 20
 				});
 				if (!craftingTable) {
 					// make one and put it on any block one move away that has the same Y value
@@ -384,6 +383,7 @@ class Autocraft {
 		return false;
 	}
 
+	/*
 	// Find an orientation / vector from the bot in which a block can be placed.
 	// self.y == target.y
 	// block.type == 'air' for target
@@ -413,20 +413,17 @@ class Autocraft {
 		//console.log("Could not find an adjacent space suitable for placement");
 		return false;
 	}
+	*/
 
 	placeCraftingTable(callback) {
 		let result = {};
-		const craftingTableId = this.bot.mcData.itemsByName['crafting_table'].id;
+		const craftingTableId = this.bot.mcData.itemsByName.crafting_table.id;
 		const craftingTable = this.bot.autobot.inventory.getInventoryItemById(craftingTableId);
-		const placementVector = this.findPlacementVector();
-		const referenceBlock = this.bot.blockAt(this.bot.entity.position.offset(
-			placementVector.x || 1,
-			placementVector.y || 0,
-			placementVector.z || 0,
-		));
+		const placementVector = new Vec3(1, 0, 0);
+		const referenceBlock = this.bot.autobot.homePosition;
 		//console.log("callback: ", callback);
 		this.bot.equip(craftingTable, "hand", () => {
-			this.bot.placeBlock(referenceBlock, placementVector, (err) => {
+			this.bot.placeBlock(referenceBlock, placementVector, (err) => {``
 				if (err) {
 					//console.log(err);
 					this.bot.autobot.navigator.backupBot(() => {

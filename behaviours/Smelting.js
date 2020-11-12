@@ -1,4 +1,6 @@
 const autoBind = require('auto-bind');
+const oreBlocks = require('./constants').oreBlocks;
+const getPosHash = require('./autoBotLib').getPosHash;
 const { GoalNear } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
 
@@ -6,6 +8,7 @@ class Smelting {
 	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
+		this.furnaceMap = {};
 		this.cbFurnace = null;
 		this.callback = () => {};
 		this.active = false;
@@ -15,6 +18,78 @@ class Smelting {
 		this.callback = () => {};
 		this.active = false;
 	}
+
+	/**************************************************************************
+	 * 
+	 * Smelt Ore
+	 * 
+	 * * Find furnaces
+	 * * Craft & place furnaces
+	 * * Fill input, fuel; Take output
+	 * 
+	 **************************************************************************/
+
+
+	listSmeltableOres() {
+		// Return a list of items in inventory that can be smelted
+		let inventory = this.bot.inventory.items();
+		inventory = inventory.filter(i => oreBlocks.includes(i.name));
+		return inventory;
+	}
+
+	saveFurnaceWindow(position, forOre, furnaceWindow) {
+		const p = position;
+		const posHash = getPosHash(position);
+		this.chestMap[posHash] = {
+			id: furnaceWindow.id,
+			forOre: forOre,
+			position: position,
+			type: furnaceWindow.type,
+			title: furnaceWindow.title,
+			input: furnaceWindow.slots[0],
+			output: furnaceWindow.slots[1],
+			fuel: furnaceWindow.slots[2]
+		}
+	}
+
+	listUnknownStorageGridFurnaces() {
+		let furnacesToOpen = this.bot.findBlocks({
+			point: this.bot.autobot.homePosition,
+			matching: this.bot.mcData.blocksByName.furnace.id,
+			maxDistance: 16,
+			count: 20
+		});
+		// Only stash to surface / near surface chests
+		furnacesToOpen = furnacesToOpen.filter((r) => {
+			if (r.y !== this.bot.autobot.homePosition.y) return false;
+			for (const posHash in this.furnaceMap) {
+				if (r.equals(this.furnaceMap[posHash].position)) return false;
+			}
+			return true;
+		});
+		return furnacesToOpen;
+	}
+
+	findFurnace(item) {
+		const furnaceList = Object.values(this.furnaceMap);
+		if (item) {
+			for (const furnace of furnaceList) {
+				if (furnace.forOre === item.name) {
+					return this.bot.blockAt(furnace.position);
+				}
+			}	
+		}
+		const oresToSmelt = this.listSmeltableOres();
+		for (const furnace of furnaceList) {
+			for (const ore of oresToSmelt) {
+				if (ore.name === furnace.forOre) return this.bot.blockAt(furnace.position);
+			}
+		}
+		let furnacesToOpen = this.listUnknownStorageGridFurnaces();
+		if (furnacesToOpen.length > 0) return this.bot.blockAt(furnacesToOpen[0]);
+		else return false;
+	}
+
 
 	restoke(furnace, callback) {
 		let result = {};
@@ -192,13 +267,59 @@ class Smelting {
 		});
 	}
 
+	validateFurnace(position) {
+		return this.bot.blockAt(position).type === this.bot.mcData.blocksByName.furnace.id;
+	}
+
+	furnaceArrival() {
+		if (!this.cbFurnace) {
+			sleep(100).then(() => { this.bot.autobot.lumberjack.harvestNearestTree(32); });
+			return;
+		}
+		if (!this.validateFurnace(this.cbFurnace.position)) {
+			delete this.furnaceMap[getPosHash(this.cbFurnace.position)];
+			sleep(100).then(() => { this.smeltOre(this.callback); });
+			return;
+		}
+		if (Math.floor(this.bot.entity.position.distanceTo(this.cbFurnace.position)) > 3) {
+			// Didn't actually arrive. Start over.
+			sleep(100).then(() => { this.smeltOre(this.callback); });
+			return;
+		}
+		const furnaceToOpen = this.cbFurnace;
+		const callback = this.callback;
+		const furnace = this.bot.openFurnace(furnaceToOpen);
+		furnace.on('open', () => {
+			this.saveFurnaceWindow(furnaceToOpen.position, furnace.window);
+			const furnaceWindow = this.furnaceMap[getPosHash(furnaceToOpen.position)];
+			const oresToSmelt = this.listSmeltableOres();
+			// TODO: write a function to check the stashing queue against the chest
+			// ...probably in the findChest function to return an appropriate chest
+			this.smeltNext(furnace, oresToSmelt, furnaceWindow, callback);
+		});
+		furnace.on('close', () => {
+			//console.log('Chest closed');
+		});
+	}
+
+	sendToFurnace(furnace) {
+		const eventName = "autobot.smelting.behaviourSelect";
+		let result = {
+			error: false,
+			resultCode: "smelt",
+			description: `Bot is going to smelt items in a furnace`,
+			furnace: furnace
+		};
+		this.bot.emit(eventName, result);
+		const p = furnace.position;
+		const goal = new GoalNear(p.x, p.y, p.z, 3);
+		this.cbFurnace = furnace;
+		sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
+	}
+
 	smeltOre(callback) {
 		this.active = true;
-		const furnaceBlock = this.bot.findBlock({
-			point: this.homePosition,
-			matching: this.bot.autobot.inventory.listBlocksByRegEx(/^(furnace|lit_furnace)$/),
-			maxDistance: 128
-		});
+		const furnaceBlock = this.findFurnace();
 		// Only stash to surface / near surface chests
 		if (furnaceBlock) {
 			const p = furnaceBlock.position;

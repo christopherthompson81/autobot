@@ -178,13 +178,11 @@ class GetUnstuck {
 			resultCode: "reloadColumn",
 			description: `Attempting to refresh the local world column. Distance: ${progress.distanceFromGoal}`
 		};
-		this.bot.pathfinder.setGoal(null);
-		this.bot.clearControlStates();
 		const botLocation = new Location(this.bot.entity.position);
 		const chunkX = botLocation.blockPoint.x;
 		const chunkZ = botLocation.blockPoint.z;
 		this.bot.world.unloadColumn(chunkX, chunkZ);
-		this.bot.pathfinder.setGoal(goal);
+		this.bot.autobot.navigator.backupBot(() => this.bot.pathfinder.setGoal(goal));
 		this.bot.emit(eventName, result);
 	}
 

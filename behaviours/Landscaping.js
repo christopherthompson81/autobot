@@ -231,7 +231,13 @@ class Landscaping {
 			});
 			// Only dirt above home
 			//console.log(`Dirt Count: ${dirtBlocks.length}`);
-			dirtBlocks = dirtBlocks.filter((b) => { return b.y >= this.bot.autobot.homePosition.y });
+			dirtBlocks = dirtBlocks.filter((b) => {
+				if (b.y < this.bot.autobot.homePosition.y) return false;
+				for (const q in dirtQueue) {
+					if (b.equals(q)) return false;
+				}
+				return true;
+			});
 			//console.log(`Dirt Count above home Y: ${dirtBlocks.length}`);
 			dirtBlocks = sortByDistanceFromHome(this.bot, dirtBlocks);
 			// If no dirt was found, return false
@@ -245,6 +251,7 @@ class Landscaping {
 				limit
 			);
 			dirtQueue = [...dirtQueue, ...newQueue];
+			//dirtQueue = dirtBlocks.slice(0, limit);
 		}
 		return dirtQueue;
 	}
