@@ -233,8 +233,11 @@ class Landscaping {
 			//console.log(`Dirt Count: ${dirtBlocks.length}`);
 			dirtBlocks = dirtBlocks.filter((b) => {
 				if (b.y < this.bot.autobot.homePosition.y) return false;
-				for (const q in dirtQueue) {
-					if (b.equals(q)) return false;
+				for (const q of dirtQueue) {
+					if (b.equals(q)) {
+						//console.log(`removing duplicate: ${b} / ${q}`);
+						return false;
+					}
 				}
 				return true;
 			});
@@ -244,13 +247,14 @@ class Landscaping {
 			if (dirtBlocks.length === 0) {
 				return false;
 			}
-			const newQueue = this.blockToQueue(
+			dirtQueue.push(dirtBlocks[0]);
+			let newQueue = this.blockToQueue(
 				dirtBlocks[0],
-				[dirtBlocks[0]],
+				dirtQueue,
 				dirtTypes,
 				limit
 			);
-			dirtQueue = [...dirtQueue, ...newQueue];
+			dirtQueue = newQueue;
 			//dirtQueue = dirtBlocks.slice(0, limit);
 		}
 		return dirtQueue;

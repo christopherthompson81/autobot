@@ -14,8 +14,8 @@ class Mining {
 		this.callback = () => {};
 		this.active = false;
 		this.havePickaxe = bot.autobot.inventory.havePickaxe;
-		storage.init();
-		sleep(100).then(async () => { this.badTargets = await this.getBadTargets(); });
+		this.badTargets = [];
+		storage.init().then(() => this.getBadTargets(badTargets => this.badTargets = badTargets));
 	}
 
 	resetBehaviour() {
@@ -337,18 +337,20 @@ class Mining {
 		}
 	}
 
-	async getBadTargets() {
-		let pBadTargets = await storage.getItem('badTargets');
-		if (!pBadTargets) pBadTargets = [];
-		const badTargets = pBadTargets.map(t => new Vec3(t.x, t.y, t.z));
-		return badTargets;
+	getBadTargets(callback) {
+		storage.getItem('badTargets').then((pBadTargets) => {
+			if (!pBadTargets) {
+				pBadTargets = this.badTargets ? this.badTargets : [];
+				storage.setItem('badTargets', pBadTargets);
+			}
+			const badTargets = pBadTargets.map(t => new Vec3(t.x, t.y, t.z));
+			callback(badTargets);
+		});
 	}
 
-	async pushBadTarget(position) {
+	pushBadTarget(position) {
 		this.badTargets.push(position);
-		const badTargets = await this.getBadTargets();
-		badTargets.push(position);
-		await storage.setItem('badTargets', badTargets);
+		storage.setItem('badTargets', this.badTargets);
 	}
 }
 

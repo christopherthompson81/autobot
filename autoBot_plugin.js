@@ -78,6 +78,11 @@ function inject (bot) {
 			sleep(350).then(bot.autobot.navigator.arrivedHome);
 			activeFunction = "navigator";
 		}
+		// collect drops next
+		else if (bot.autobot.collectDrops.active) {
+			sleep(350).then(bot.autobot.collectDrops.pickUpNext);
+			activeFunction = "collectDrops";
+		}
 		// landscaping next
 		else if (bot.autobot.landscaping.flatteningCube) {
 			sleep(350).then(() => {
@@ -101,10 +106,6 @@ function inject (bot) {
 		else if (bot.autobot.autocraft.active) {
 			sleep(350).then(bot.autobot.autocraft.callback);
 			activeFunction = "autocraft";
-		}
-		else if (bot.autobot.collectDrops.active) {
-			sleep(350).then(bot.autobot.collectDrops.pickUpNext);
-			activeFunction = "collectDrops";
 		}
 		else if (bot.autobot.lumberjack.active) { 
 			bot.autobot.lumberjack.cutTreeNext();

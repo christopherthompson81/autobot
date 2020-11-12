@@ -101,7 +101,6 @@ function inject (bot) {
 		stateGoal = goal
 		dynamicGoal = dynamic
 		resetPath()
-		console.log('Goal Set');
 	}
 
 	bot.pathfinder.setMovements = function (movements) {
