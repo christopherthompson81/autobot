@@ -100,7 +100,7 @@ class Stash {
 		const nonEssentialInventory = this.listNonEssentialInventory();
 		//console.log(nonEssentialInventory);
 		if (nonEssentialInventory.length > 0) {
-			if (this.bot.entity.position.distanceTo(this.bot.autobot.homePosition) < 5) return true;
+			if (this.bot.entity.position.distanceTo(this.bot.autobot.homePosition) < 16) return true;
 			for (const item of nonEssentialInventory) {
 				if (item.count === item.stackSize) return true;
 			}
