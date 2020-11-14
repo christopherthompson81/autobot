@@ -420,7 +420,7 @@ class Autocraft {
 		const craftingTableId = this.bot.mcData.itemsByName.crafting_table.id;
 		const craftingTable = this.bot.autobot.inventory.getInventoryItemById(craftingTableId);
 		const placementVector = new Vec3(1, 0, 0);
-		const referenceBlock = this.bot.autobot.homePosition;
+		const referenceBlock = this.bot.blockAt(this.bot.autobot.homePosition);
 		//console.log("callback: ", callback);
 		this.bot.equip(craftingTable, "hand", () => {
 			this.bot.placeBlock(referenceBlock, placementVector, (err) => {``
