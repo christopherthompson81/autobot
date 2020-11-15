@@ -135,6 +135,8 @@ class Inventory {
 		if (current) {
 			this.sendCraftToolsCrafting(current);
 			this.bot.autobot.autocraft.autoCraft(current, 1, (success) => {
+				// Timeout is for pathfinder not being spammed
+				// ...and possibly inventory updates.
 				sleep(100).then(() => {
 					this.craftToolNext(remainder, callback);
 				});

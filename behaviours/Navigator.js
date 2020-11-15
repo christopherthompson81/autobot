@@ -39,6 +39,8 @@ class Navigator {
 
 	backupBot(callback) {
 		this.bot.setControlState('back', true);
+		// Timeout is necessary to allow the bot to move.
+		// Possibly could be replaced with a while loop?
 		sleep(350).then(() => {
 			this.bot.clearControlStates();
 			callback();

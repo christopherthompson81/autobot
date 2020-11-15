@@ -66,6 +66,7 @@ class CollectDrops {
 			this.bot.pathfinder.setGoal(goal);
 		}
 		else {
+			// Timeout is for pathfinder not being spammed
 			sleep(350).then(() => {
 				this.sendCollectDropsSuccess(this.callback);
 			});

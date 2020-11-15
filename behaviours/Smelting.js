@@ -123,6 +123,7 @@ class Smelting {
 								description: `Added ${fuelAmount} coal to ${fuelCount}`
 							};
 						}
+						// Timeout is because mineflayer triggers callback before the player's inventory is updated.
 						sleep(350).then(() => {
 							if (callback) callback(result);
 							this.bot.emit(eventName, result);
@@ -173,6 +174,7 @@ class Smelting {
 						};
 					}
 					furnace.close();
+					// Timeout is because mineflayer triggers callback before the player's inventory is updated.
 					sleep(350).then(() => {
 						if (callback) callback(result);
 						this.bot.emit(eventName, result);
@@ -188,6 +190,8 @@ class Smelting {
 				resultCode: "skipped",
 				description: `No input was added to the furnace.`
 			};
+			// Timeout is because mineflayer triggers callback before the player's inventory is updated.
+			// Timeout could be removed, test.
 			sleep(350).then(() => {
 				if (callback) callback(result);
 				this.bot.emit(eventName, result);
@@ -273,16 +277,19 @@ class Smelting {
 
 	furnaceArrival() {
 		if (!this.cbFurnace) {
+			// Timeout is for pathfinder not being spammed
 			sleep(100).then(() => { this.bot.autobot.lumberjack.harvestNearestTree(32); });
 			return;
 		}
 		if (!this.validateFurnace(this.cbFurnace.position)) {
 			delete this.furnaceMap[getPosHash(this.cbFurnace.position)];
+			// Timeout is for pathfinder not being spammed
 			sleep(100).then(() => { this.smeltOre(this.callback); });
 			return;
 		}
 		if (Math.floor(this.bot.entity.position.distanceTo(this.cbFurnace.position)) > 3) {
 			// Didn't actually arrive. Start over.
+			// Timeout is for pathfinder not being spammed
 			sleep(100).then(() => { this.smeltOre(this.callback); });
 			return;
 		}
@@ -314,6 +321,7 @@ class Smelting {
 		const p = furnace.position;
 		const goal = new GoalNear(p.x, p.y, p.z, 3);
 		this.cbFurnace = furnace;
+		// Timeout is for pathfinder not being spammed
 		sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
 	}
 
