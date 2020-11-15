@@ -111,6 +111,7 @@ class Stash {
 	defaultPostStashBehaviour() {
 		const eventName = "autobot.stashing.behaviourSelect";
 		let result = {};
+		this.bot.autobot.resetAllBehaviours();
 		// If we have logs, mine, if we don't lumberjack
 		const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
 		const dirtCount = inventoryDict['dirt'] || 0;

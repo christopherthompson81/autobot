@@ -96,7 +96,7 @@ bot.once('spawn', () => {
 		stash();
 	});
 	bot.on('autobot.lumberjack.treeFound', (result) => {
-		console.log(result.description, result.tree[0]);
+		console.log(result.description, result.tree[0].position, result.tree[0].displayName);
 	});
 	bot.on('autobot.lumberjack.done', (result) => {
 		logResult(result);

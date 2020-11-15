@@ -119,7 +119,7 @@ class Lumberjack {
 			// Timeout is for blocks to land on the ground
 			sleep(1500).then(() => {
 				this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
-					this.sendLumberJackSuccess(callback);
+					this.sendLumberJackSuccess(this.callback);
 				});
 			});
 		}

@@ -165,7 +165,7 @@ function inject (bot) {
 		bot.autobot.navigator.resetBehaviour();
 		bot.autobot.smelting.resetBehaviour();
 		bot.autobot.stash.resetBehaviour();
-		callback();
+		if (callback) callback();
 	}
 }
 
