@@ -367,7 +367,7 @@ class Landscaping {
 		let result = {
 			error: false,
 			resultCode: "success",
-			errorDecription: "Finished placing blocks"
+			decription: "Finished placing blocks"
 		};
 		this.bot.emit(eventName, result);
 		this.placing = false;

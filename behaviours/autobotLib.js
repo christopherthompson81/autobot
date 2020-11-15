@@ -57,7 +57,7 @@ function getPosHash(p) {
 }
 
 exports.sleep = sleep;
+exports.bestHarvestTool = bestHarvestTool;
 exports.sortByDistanceFromBot = sortByDistanceFromBot;
 exports.sortByDistanceFromHome = sortByDistanceFromHome;
-exports.bestHarvestTool = bestHarvestTool;
 exports.getPosHash = getPosHash;
