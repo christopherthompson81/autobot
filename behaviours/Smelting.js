@@ -90,10 +90,7 @@ class Smelting {
 		else return false;
 	}
 
-
 	restoke(furnace, callback) {
-		let result = {};
-		const eventName = 'autobot.smelting.restoke';
 		const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
 		const fuel = furnace.fuelItem();
 		let fuelAmount = (inventoryDict['coal'] || 0) >= 64 ? 64 : (inventoryDict['coal'] || 0);
@@ -108,43 +105,17 @@ class Smelting {
 					null,
 					fuelAmount,
 					(err) => {
-						if (err) {
-							result = {
-								error: true,
-								resultCode: "restokeFailed",
-								description: `Error adding ${fuelAmount} coal to ${fuelCount}`,
-								parentError: err
-							};
-						}
-						else {
-							result = {
-								error: false,
-								resultCode: "success",
-								description: `Added ${fuelAmount} coal to ${fuelCount}`
-							};
-						}
 						// Timeout is because mineflayer triggers callback before the player's inventory is updated.
-						sleep(350).then(() => {
-							if (callback) callback(result);
-							this.bot.emit(eventName, result);
-						});
+						sleep(350).then(this.sendRestokeResult(err, fuelAmount, fuelCount, callback));
 					},
 				);
 				return;
 			}
 		}
-		result = {
-			error: false,
-			resultCode: "skipped",
-			description: `No fuel was added to the furnace.`
-		};
-		callback(result);
-		this.bot.emit(eventName, result);
+		this.sendRestokeSkipped(callback);
 	}
 
 	resupplyFurnace(furnace, callback) {
-		let result = {};
-		const eventName = 'autobot.smelting.resupply';
 		const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
 		if (inventoryDict["iron_ore"]) {
 			let inputAmount = inventoryDict["iron_ore"] || 0;
@@ -158,105 +129,34 @@ class Smelting {
 				null,
 				inputAmount,
 				(err) => {
-					if (err) {
-						result = {
-							error: true,
-							resultCode: "resupplyFailed",
-							description: `Error adding ${inputAmount} iron ore to input slot (${inputCount} currently)`,
-							parentError: err
-						};
-					}
-					else {
-						result = {
-							error: false,
-							resultCode: "success",
-							description: `Added ${inputAmount} iron ore to input slot (${inputCount} currently)`
-						};
-					}
 					furnace.close();
 					// Timeout is because mineflayer triggers callback before the player's inventory is updated.
-					sleep(350).then(() => {
-						if (callback) callback(result);
-						this.bot.emit(eventName, result);
-					});
+					sleep(350).then(() => this.sendResupplyResult(err, 'iron ore', inputAmount, inputCount, callback));
 				},
 			)
-
 		}
 		else {
 			furnace.close();
-			result = {
-				error: false,
-				resultCode: "skipped",
-				description: `No input was added to the furnace.`
-			};
 			// Timeout is because mineflayer triggers callback before the player's inventory is updated.
 			// Timeout could be removed, test.
-			sleep(350).then(() => {
-				if (callback) callback(result);
-				this.bot.emit(eventName, result);
-			});
+			sleep(350).then(() => this.sendResupplyResult(callback));
 		}		
 	}
 
 	smeltingCallback() {
 		let furnaceBlock = this.cbFurnace;
 		let callback = this.callback;
-		let result = {error: false};
-		const eventName = 'autobot.smelting.done';
 		const furnace = this.bot.openFurnace(furnaceBlock);
 		furnace.on('open', () => {
-			if (furnace.outputItem()) {
-				furnace.takeOutput((err, item) => {
-					this.restoke(furnace, (restokeResult) => {
-						this.resupplyFurnace(furnace, (resupplyResult) => {
-							if (err || restokeResult.error || resupplyResult.error) {
-								result.error = true;
-							}
-							if (err) {
-								result.takeOutputResult = {
-									error: true,
-									resultCode: "takeOutputError",
-									description: "There was an error taking the output from the furnace.",
-									parentError: err
-								};
-							}
-							else {
-								result.takeOutputResult = {
-									error: false,
-									resultCode: "tookOutput",
-									description: `Took ${item.count} ${item.name} from the furnace`,
-									item: item
-								};
-							}
-							result.restokeResult = restokeResult;
-							result.resupplyResult = resupplyResult;
-							if (callback) callback(result);
-							this.bot.emit(eventName, result);
-							this.active = false;
-						});
-					});
-				});
-			}
-			else {
+			let postTake = (err, item) => {
 				this.restoke(furnace, (restokeResult) => {
 					this.resupplyFurnace(furnace, (resupplyResult) => {
-						if (restokeResult.error || resupplyResult.error) {
-							result.error = true;
-						}
-						result.takeOutputResult = {
-							error: false,
-							resultCode: "skipping",
-							description: "No output in furnace to take"
-						};
-						result.restokeResult = restokeResult;
-						result.resupplyResult = resupplyResult;
-						if (callback) callback(result);
-						this.bot.emit(eventName, result);
-						this.active = false;
+						this.sendSmeltingResults(err, item, restokeResult, resupplyResult, callback);
 					});
 				});
 			}
+			if (furnace.outputItem()) furnace.takeOutput(postTake);
+			else postTake(null, 'skipped');
 		});
 		furnace.on('close', () => {
 			//console.log('Furnace closed');
@@ -354,6 +254,118 @@ class Smelting {
 				}
 			});
 		}
+	}
+
+	getTakeOutputResult(err, item) {
+		if (item === 'skipped') {
+			return {
+				error: false,
+				resultCode: "skipping",
+				description: "No output in furnace to take"
+			};
+		}
+		else if (err) {
+			return {
+				error: true,
+				resultCode: "takeOutputError",
+				description: "There was an error taking the output from the furnace.",
+				parentError: err
+			};
+		}
+		else {
+			return {
+				error: false,
+				resultCode: "tookOutput",
+				description: `Took ${item.count} ${item.name} from the furnace`,
+				item: item
+			};
+		}
+	}
+
+	getRestokeResult(err, fuelAmount, fuelCount) {
+		if (err) {
+			return {
+				error: true,
+				resultCode: "restokeFailed",
+				description: `Error adding ${fuelAmount} coal to ${fuelCount}`,
+				parentError: err
+			};
+		}
+		else {
+			return {
+				error: false,
+				resultCode: "success",
+				description: `Added ${fuelAmount} coal to ${fuelCount}`
+			};
+		}
+	}
+
+	sendRestokeResult(err, fuelAmount, fuelCount, callback) {
+		const eventName = 'autobot.smelting.restoke';
+		let result = this.getRestokeResult(err, fuelAmount, fuelCount);
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);		
+	}
+
+	sendRestokeSkipped(callback) {
+		const eventName = 'autobot.smelting.restoke';
+		let result = {
+			error: false,
+			resultCode: "skipped",
+			description: `No fuel was added to the furnace.`
+		};
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);
+	}
+
+	getResupplyResult(err, oreType, inputAmount, inputCount) {
+		if (err) {
+			result = {
+				error: true,
+				resultCode: "resupplyFailed",
+				description: `Error adding ${inputAmount} ${oreType} to input slot (${inputCount} currently)`,
+				parentError: err
+			};
+		}
+		else {
+			result = {
+				error: false,
+				resultCode: "success",
+				description: `Added ${inputAmount} ${oreType} to input slot (${inputCount} currently)`
+			};
+		}
+	}
+
+	sendResupplyResult(err, oreType, inputAmount, inputCount, callback) {
+		const eventName = 'autobot.smelting.resupply';
+		let result = this.getRestokeResult(err, oreType, inputAmount, inputCount);
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);
+	}
+
+	sendRestokeSkipped(callback) {
+		const eventName = 'autobot.smelting.resupply';
+		let result = {
+			error: false,
+			resultCode: "skipped",
+			description: `No input was added to the furnace.`
+		};
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);
+	}
+
+	sendSmeltingResults(takeOutputError, item, restokeResult, resupplyResult, callback) {
+		const eventName = 'autobot.smelting.done';
+		let result = {error: false};
+		if (takeOutputError || restokeResult.error || resupplyResult.error) {
+			result.error = true;
+		}
+		result.takeOutputResult = this.getTakeOutputResult(takeOutputError, item);
+		result.restokeResult = restokeResult;
+		result.resupplyResult = resupplyResult;
+		this.active = false;
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);
 	}
 }
 
