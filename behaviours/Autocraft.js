@@ -287,7 +287,7 @@ class Autocraft {
 				return;
 			}
 			if (!recipe) {
-				this.sendNoRecipe(callback);
+				this.sendNoRecipe(current, callback);
 				return;
 			}
 			// Fix for minecraft-data bug #231
@@ -450,7 +450,7 @@ class Autocraft {
 		this.autoCraftNext(craftingQueue, callback);
 	}
 
-	sendNoRecipe(callback) {
+	sendNoRecipe(current, callback) {
 		const eventName = 'autobot.autocraft.done';
 		let result = {
 			error: true,

@@ -104,8 +104,6 @@ class Lumberjack {
 	}
 
 	cutTreeNext() {
-		const eventName = 'autobot.lumberjack.done';
-		let result = {};
 		const current = this.tree[0];
 		this.tree = this.tree.slice(1, this.tree.length);
 		if (current) {
@@ -118,20 +116,10 @@ class Lumberjack {
 			});
 		}
 		else {
-			//console.log('Finished cutting. Waiting for drops.');
-			this.currentTask = null;
+			// Timeout is for blocks to land on the ground
 			sleep(1500).then(() => {
-				//console.log('Picking up uncollected blocks.');
 				this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
-					this.active = false;
-					result = {
-						error: false,
-						resultCode: "success",
-						description: "Finished cutting tree and collecting logs."
-					}
-					if (this.callback) this.callback(result);
-					//console.log("emitting: ", eventName, result)
-					this.bot.emit(eventName, result);
+					this.sendLumberJackSuccess(callback);
 				});
 			});
 		}
@@ -147,8 +135,6 @@ class Lumberjack {
 	}
 
 	harvestNearestTree(threshold, callback) {
-		const eventName = 'autobot.lumberjack.done';
-		let result = {};
 		this.active = true;
 		// count logs in inventory if a threshold was set
 		if (threshold) {
@@ -160,31 +146,65 @@ class Lumberjack {
 				}
 			}
 			if (logCount > threshold) {
-				result = {
-					error: false,
-					resultCode: "skipping",
-					description: "The bot possesses sufficient logs and therefore harvesting a tree is unnecessary."
-				};
-				if (callback) callback();
-				this.bot.emit(eventName, result);
-				this.active = false;
+				this.sendLumberJackSkipping(callback);
 				return;
 			}
 		}
 		const tree = this.findNearestTree();
 		if (tree) {
+			this.sendTreeFound(tree);
 			this.cutTree(tree, callback);
 		}
 		else {
-			result = {
-				error: true,
-				resultCode: "noTrees",
-				description: "No valid trees located."
-			};
-			if (callback) callback(result);
-			this.bot.emit(eventName, result);
-			this.active = false;
+			this.sendNoTrees(callback);
 		}
+	}
+
+	sendTreeFound(tree) {
+		const eventName = 'autobot.lumberjack.treeFound';
+		let result = {
+			error: false,
+			resultCode: "treeFound",
+			description: "Found a tree to harvest.",
+			tree: tree
+		}
+		this.bot.emit(eventName, result);
+	}
+
+	sendLumberJackSuccess(callback) {
+		const eventName = 'autobot.lumberjack.done';
+		let result = {
+			error: false,
+			resultCode: "success",
+			description: "Finished cutting tree and collecting logs."
+		}
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);
+		this.active = false;
+	}
+
+	sendLumberJackSkipping(callback) {
+		const eventName = 'autobot.lumberjack.done';
+		let result = {
+			error: false,
+			resultCode: "skipping",
+			description: "The bot possesses sufficient logs and therefore harvesting a tree is unnecessary."
+		};
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);
+		this.active = false;
+	}
+
+	sendNoTrees(callback) {
+		const eventName = 'autobot.lumberjack.done';
+		let result = {
+			error: true,
+			resultCode: "noTrees",
+			description: "No valid trees located."
+		};
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);
+		this.active = false;
 	}
 }
 

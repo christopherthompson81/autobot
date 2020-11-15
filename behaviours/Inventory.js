@@ -96,8 +96,9 @@ class Inventory {
 		return false;
 	}
 
+	/*
 	equipByName(itemName, callback) {
-		console.log(`Attempting to equip: ${itemName}.`);
+		//console.log(`Attempting to equip: ${itemName}.`);
 		const regex = new RegExp(`${itemName}$`, "i");
 		const itemList = this.listItemsByRegEx(regex);
 		let item = null;
@@ -126,14 +127,13 @@ class Inventory {
 			});
 		}
 	}
+	*/
 
 	craftToolNext(toolIds, callback) {
-		const eventName = 'autobot.craftTools.done';
-		let result = {};
 		const current = toolIds[0];
 		const remainder = toolIds.slice(1, toolIds.length);
 		if (current) {
-			console.log(`Crafting ${this.bot.mcData.items[current].displayName}`);
+			this.sendCraftToolsCrafting(current);
 			this.bot.autobot.autocraft.autoCraft(current, 1, (success) => {
 				sleep(100).then(() => {
 					this.craftToolNext(remainder, callback);
@@ -141,14 +141,7 @@ class Inventory {
 			});	
 		}
 		else {
-			result = {
-				error: false,
-				resultCode: "success",
-				description: "Finished crafting tools.",
-			};
-			if (callback) callback(result);
-			this.bot.emit(eventName, result);
-			this.craftingTools = false;
+			this.sendCraftToolsSuccess(callback);
 		}
 	}
 
@@ -180,18 +173,47 @@ class Inventory {
 		// Prefer iron, to stone, to wood by inventory
 		const toolIds = this.missingTools();
 		if (toolIds.length === 0) {
-			let result = {
-				error: false,
-				resultCode: "skipping",
-				description: "No missing tools.",
-			};
-			if (callback) callback(result);
-			this.bot.emit('autobot.craftTools.done', result);
+			this.sendCraftToolsSkipping(callback);
 			return;
 		}
 		this.craftingTools = true;
 		// Emit a skipping message if no missing tools
 		this.craftToolNext(toolIds, callback);
+	}
+
+	sendCraftToolsSkipping(callback) {
+		const eventName = 'autobot.craftTools.done';
+		let result = {
+			error: false,
+			resultCode: "skipping",
+			description: "No missing tools.",
+		};
+		this.craftingTools = false;
+		this.bot.emit(eventName, result);
+		if (callback) callback(result);
+	}
+
+	sendCraftToolsCrafting(currentTool) {
+		const eventName = 'autobot.craftTools.crafting';
+		let result = {
+			error: false,
+			resultCode: "craftingTool",
+			description: `Crafting ${this.bot.mcData.items[currentTool].displayName}`,
+			currentTool: currentTool
+		};
+		this.bot.emit(eventName, result);
+	}
+
+	sendCraftToolsSuccess(callback) {
+		const eventName = 'autobot.craftTools.done';
+		let result = {
+			error: false,
+			resultCode: "success",
+			description: "Finished crafting tools.",
+		};
+		this.craftingTools = false;
+		this.bot.emit(eventName, result);
+		if (callback) callback(result);
 	}
 }
 

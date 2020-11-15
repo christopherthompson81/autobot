@@ -1,5 +1,4 @@
 const autoBind = require('auto-bind');
-const { exit } = require('process');
 const Vec3 = require('vec3').Vec3;
 const { GoalBlock, GoalGetToBlock } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
@@ -57,7 +56,7 @@ class Landscaping {
 		const remainder = digQueue.slice(1, digQueue.length);
 		if (current) {
 			const block = this.bot.blockAt(current, false)
-			if (!block.diggable || ['air', 'cave_air', 'void_air'].includes(block.name)) {
+			if (!block.diggable || airBlocks.includes(block.name)) {
 				this.digNext(remainder, callback);
 				return;
 			}
@@ -91,6 +90,7 @@ class Landscaping {
 			});
 		}
 		else {
+			// Timeout is for blocks to land on the ground
 			sleep(1500).then(() => {
 				this.sendDiggingSuccess(callback);
 			});

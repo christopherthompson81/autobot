@@ -48,18 +48,6 @@ class CollectDrops {
 	pickUpNext() {
 		const eventName = 'autobot.collectDrops.done';
 		let result = {};
-		/*
-		let current = null;
-		let i;
-		for (i = 0; i < this.remainder.length; i++) {
-			const nextBlock = this.remainder[i];
-			if (nextBlock.position.distanceTo(this.bot.entity.position) >= 1) {
-				current = nextBlock;
-				break;
-			}
-		}
-		this.remainder = this.remainder.slice(i + 1, this.remainder.length);
-		*/
 		let current = this.remainder[0];
 		this.remainder = this.remainder.slice(1, this.remainder.length);
 		if (current) {
@@ -79,17 +67,7 @@ class CollectDrops {
 		}
 		else {
 			sleep(350).then(() => {
-				this.active = false;
-				result = {
-					error: false,
-					resultCode: "success",
-					description: "Finished picking up drops.",
-					collectedItems: this.collected
-				};
-				if (this.callback) {
-					this.callback(result);
-				}
-				this.bot.emit(eventName, result);
+				this.sendCollectDropsSuccess(this.callback);
 			});
 		}
 	}
@@ -101,6 +79,19 @@ class CollectDrops {
 		this.remainder = this.findNearbyDrops(10);
 		//console.log(`Found ${drops.length} broken blocks to collect.`)
 		this.pickUpNext();
+	}
+
+	sendCollectDropsSuccess(callback) {
+		const eventName = 'autobot.collectDrops.done';
+		let result = {
+			error: false,
+			resultCode: "success",
+			description: "Finished picking up drops.",
+			collectedItems: this.collected
+		};
+		this.active = false;
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);
 	}
 }
 
