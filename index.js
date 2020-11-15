@@ -65,6 +65,9 @@ bot.once('spawn', () => {
 				stash();
 				return;
 			}
+			if (result.activeFunction === 'collectDrops') return;
+			if (result.activeFunction === 'cachingChests') return;
+			if (result.activeFunction === 'landscaping.gettingDirt') return;
 			let message = `Reached goal of ${result.goalPosition}.`;
 			message += ` Bot is ${result.distanceFromGoal} blocks from the goal`;
 			message += ` and '${result.activeFunction}' is the active function.`;
@@ -91,6 +94,9 @@ bot.once('spawn', () => {
 	bot.on('autobot.navigator.arrivedHome', (result) => {
 		logResult(result);
 		stash();
+	});
+	bot.on('autobot.lumberjack.treeFound', (result) => {
+		console.log(result.description, result.tree[0]);
 	});
 	bot.on('autobot.lumberjack.done', (result) => {
 		logResult(result);
@@ -161,4 +167,8 @@ bot.once('spawn', () => {
 	});
 	bot.on('autobot.getUnstuck', logResult);
 	bot.on('autobot.stashing.itemDeposit', logResult);
+	bot.on('autobot.collectDrops.done', (result) => {
+		console.log(result.description, result.collectedItems);
+	});
+	bot.on('autobot.craftTools.crafting', logResult);
 });

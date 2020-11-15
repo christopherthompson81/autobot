@@ -1,5 +1,4 @@
 const autoBind = require('auto-bind');
-const { exit } = require('process');
 const Vec3 = require('vec3').Vec3;
 const { GoalBlock, GoalGetToBlock } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
@@ -45,6 +44,7 @@ class Landscaping {
 			this.bot.equip(item, 'hand', () => {
 				this.bot.placeBlock(referenceBlock, placementVector, (err) => {
 					if (err) this.sendPlacingError(err, current, remainder, callback);
+					// Timeout is for pathfinder not being spammed
 					else sleep(100).then(() => this.placeNext(remainder, callback));
 				});
 			});
@@ -57,7 +57,7 @@ class Landscaping {
 		const remainder = digQueue.slice(1, digQueue.length);
 		if (current) {
 			const block = this.bot.blockAt(current, false)
-			if (!block.diggable || ['air', 'cave_air', 'void_air'].includes(block.name)) {
+			if (!block.diggable || airBlocks.includes(block.name)) {
 				this.digNext(remainder, callback);
 				return;
 			}
@@ -91,6 +91,7 @@ class Landscaping {
 			});
 		}
 		else {
+			// Timeout is for blocks to land on the ground
 			sleep(1500).then(() => {
 				this.sendDiggingSuccess(callback);
 			});
@@ -265,6 +266,7 @@ class Landscaping {
 		this.digNext(this.dirtQueue, () => {
 			this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
 				this.gettingDirt = false;
+				// Timeout is for pathfinder not being spammed
 				sleep(100).then(this.callback);
 			});
 		});
@@ -315,6 +317,7 @@ class Landscaping {
 					this.sendStorageObjectCraftingFailed(storageObjectType, cbResult, callback);
 				}
 				else {
+					// Timeout is because mineflayer triggers callback before the player's inventory is updated.
 					// Wait timing might need to be adjusted up
 					sleep(350).then(() => {
 						this.placeNewStorageObject(storageObjectName, callback);
@@ -335,6 +338,7 @@ class Landscaping {
 				storageObject = this.bot.autobot.inventory.getInventoryItemById(storageObjectType.id);
 				this.bot.equip(storageObject, 'hand', (err) => {
 					const referenceBlock = this.bot.blockAt(buildPos);
+					// Timeout is because mineflayer triggers callback before the player's inventory is updated.
 					sleep(350).then(() => {
 						this.bot.placeBlock(referenceBlock, new Vec3(1, 0, 0), (err) => {
 							if (err) this.sendStorageObjectPlacingFailed(storageObjectType, err, callback);
@@ -367,7 +371,7 @@ class Landscaping {
 		let result = {
 			error: false,
 			resultCode: "success",
-			errorDecription: "Finished placing blocks"
+			decription: "Finished placing blocks"
 		};
 		this.bot.emit(eventName, result);
 		this.placing = false;

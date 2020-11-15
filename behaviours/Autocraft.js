@@ -273,8 +273,6 @@ class Autocraft {
 
 	// Recursively craft an item (craft parents if needed)
 	autoCraftNext(craftingQueue, callback) {
-		const eventName = 'autobot.autocraft.done';
-		let result = {};
 		const current = craftingQueue[0];
 		const remainder = craftingQueue.slice(1, craftingQueue.length);
 		if (current) {
@@ -289,14 +287,7 @@ class Autocraft {
 				return;
 			}
 			if (!recipe) {
-				result = {
-					error: true,
-					resultCode: 'noRecipe',
-					description: `Can't craft ${this.bot.mcData.items[current.id].displayName} because there is no usable recipe`
-				};
-				if (callback) callback(result);
-				this.bot.emit(eventName, result);
-				this.active = false;
+				this.sendNoRecipe(current, callback);
 				return;
 			}
 			// Fix for minecraft-data bug #231
@@ -314,41 +305,21 @@ class Autocraft {
 					maxDistance: 20
 				});
 				if (!craftingTable) {
-					// make one and put it on any block one move away that has the same Y value
-					// TODO: rewrite this to place on homePosition
 					this.craftCraftingTable(() => {
 						this.autoCraftNext(craftingQueue, callback);
 					});
 					return;
 				}
-				//console.log("Found one:", craftingTable.position);
 				const p = craftingTable.position;
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				this.callback = () => {
 					const targetCount = Math.floor(current.count / recipe.result.count);
 					this.bot.craft(recipe, targetCount, craftingTable, (err) => {
 						if (err) {
-							console.log(err, JSON.stringify(recipe), current.count, craftingTable);
-							result = {
-								error: true,
-								resultCode: 'craftingError',
-								parentError: err,
-								recipe: JSON.stringify(recipe),
-								targetCount: targetCount,
-								craftingTable: JSON.stringify(craftingTable),
-								description: `Error occurred on crafting call`
-							};
-							if (callback) callback(result);
-							this.bot.emit(eventName, result);
-							this.active = false;
+							this.sendCraftingError(err, recipe, targetCount, craftingTable, callback);
+							//console.log(err, JSON.stringify(recipe), current.count, craftingTable);
 							return;
 						}
-						/*
-						else {
-							//console.log("Theoretical success!", this.bot.inventory.items().map(x => { return {name: x.name, count: x.count}; }));
-							//console.log(JSON.stringify(recipe), current.count, craftingTable);
-						}
-						*/
 						this.autoCraftNext(remainder, callback);
 					});
 				}
@@ -361,14 +332,7 @@ class Autocraft {
 			});
 		}
 		else {
-			result = {
-				error: false,
-				resultCode: 'success',
-				description: `Successfully crafted a(n) ${this.bot.mcData.items[this.craftTarget].displayName}`
-			};
-			if (callback) callback(result);
-			this.bot.emit(eventName, result);
-			this.active = false;
+			this.sendCraftingSuccess(callback);
 		}
 	}
 
@@ -383,47 +347,20 @@ class Autocraft {
 		return false;
 	}
 
-	/*
-	// Find an orientation / vector from the bot in which a block can be placed.
-	// self.y == target.y
-	// block.type == 'air' for target
-	// block.material in ['rock', 'dirt', 'wood'] for target.y - 1
-	findPlacementVector() {
-		const sides = [
-			new Vec3(1, 0, 0),
-			new Vec3(-1, 0, 0),
-			new Vec3(0, 0, 1),
-			new Vec3(0, 0, -1)
-		];
-		const below = new Vec3(0, -1, 0);
-		const botPosition = this.bot.entity.position.clone();
-		for (const side of sides) {
-			const point = botPosition.clone();
-			point.add(side);
-			const block = this.bot.blockAt(point);
-			if (['cave_air', 'air'].includes(block.name)) {
-				//console.log(block, "is air");
-				const blockBelow = this.bot.blockAt(point.add(below));
-				if (['rock', 'dirt', 'wood'].includes(blockBelow.material)) {
-					//console.log(`And below is ${blockBelow.material}`);
-					return side;
-				}
-			}
-		}
-		//console.log("Could not find an adjacent space suitable for placement");
-		return false;
-	}
-	*/
-
 	placeCraftingTable(callback) {
 		let result = {};
 		const craftingTableId = this.bot.mcData.itemsByName.crafting_table.id;
 		const craftingTable = this.bot.autobot.inventory.getInventoryItemById(craftingTableId);
 		const placementVector = new Vec3(1, 0, 0);
 		const referenceBlock = this.bot.blockAt(this.bot.autobot.homePosition);
+		if (!referenceBlock) {
+			// No reference block is very bad.
+			console.log('Could not aquire the home position as a reference block. Exiting.');
+			process.exit();
+		}
 		//console.log("callback: ", callback);
 		this.bot.equip(craftingTable, "hand", () => {
-			this.bot.placeBlock(referenceBlock, placementVector, (err) => {``
+			this.bot.placeBlock(referenceBlock, placementVector, (err) => {
 				if (err) {
 					//console.log(err);
 					this.bot.autobot.navigator.backupBot(() => {
@@ -482,24 +419,13 @@ class Autocraft {
 	autoCraft(itemId, count, callback) {
 		this.active = true;
 		this.craftTarget = itemId;
-		const eventName = 'autobot.autocraft.done';
-		let result = {};
 		const craftingQueue = this.getCraftingQueue(itemId, count);
 		if (craftingQueue.length === 0) {
-			const missing = this.getMissing(itemId);
-			const blocks = this.findMissingItemsNearby(missing);
-			result = {
-				error: true,
-				resultCode: 'missingAcquisitionObligateItems',
-				description: `No path to craft a ${this.bot.mcData.items[itemId].displayName} due to lack of acquisition-obligate resources.`,
-				missingItems: missing,
-				nearbyResources: blocks
-			};
-			if (callback) callback(result);
-			this.bot.emit(eventName, result);
-			this.active = false;
+			this.sendMissingAcquisitionObligateItems(itemId, callback);
 			return;
 		}
+		/*
+		// I think the autoCraftNext function should handle this.
 		if (this.checkNeedsCraftingTable(craftingQueue)) {
 			const craftingTableId = this.bot.mcData.blocksByName('crafting_table').id;
 			const craftingTable = this.bot.findBlock({
@@ -519,8 +445,78 @@ class Autocraft {
 				return;
 			}
 		}
+		*/
 		//console.log("Calling autoCraftNext", craftingQueue);
 		this.autoCraftNext(craftingQueue, callback);
+	}
+
+	sendNoRecipe(current, callback) {
+		const eventName = 'autobot.autocraft.done';
+		let result = {
+			error: true,
+			resultCode: 'noRecipe',
+			description: `Can't craft ${this.bot.mcData.items[current.id].displayName} because there is no usable recipe`
+		};
+		this.active = false;
+		this.bot.emit(eventName, result);
+		if (callback) callback(result);
+	}
+
+	sendCraftingError(parentError, recipe, targetCount, craftingTable, callback) {
+		const eventName = 'autobot.autocraft.done';
+		let result = {
+			error: true,
+			resultCode: 'craftingError',
+			parentError: parentError,
+			recipe: JSON.stringify(recipe),
+			targetCount: targetCount,
+			craftingTable: JSON.stringify(craftingTable),
+			description: `Error occurred on crafting call`
+		};
+		this.active = false;
+		this.bot.emit(eventName, result);
+		if (callback) callback(result);
+	}
+
+	sendCraftingSuccess(callback) {
+		const eventName = 'autobot.autocraft.done';
+		let result = {
+			error: false,
+			resultCode: 'success',
+			description: `Successfully crafted a(n) ${this.bot.mcData.items[this.craftTarget].displayName}`
+		};
+		this.active = false;
+		this.bot.emit(eventName, result);
+		if (callback) callback(result);
+	}
+
+	sendMissingAcquisitionObligateItems(itemId, callback) {
+		const eventName = 'autobot.autocraft.done';
+		const missing = this.getMissing(itemId);
+		const blocks = this.findMissingItemsNearby(missing);
+		let result = {
+			error: true,
+			resultCode: 'missingAcquisitionObligateItems',
+			description: `No path to craft a ${this.bot.mcData.items[itemId].displayName} due to lack of acquisition-obligate resources.`,
+			missingItems: missing,
+			nearbyResources: blocks
+		};
+		this.active = false;
+		this.bot.emit(eventName, result);
+		if (callback) callback(result);
+	}
+	
+
+	sendFailedToPlaceCraftingTable(parentError, callback) {
+		const eventName = 'autobot.autocraft.makeCraftingTable';
+		let result = {
+			error: true,
+			resultCode: "failedToPlaceCraftingTable",
+			description: "Failed to place a crafting table",
+			parentError: parentError
+		};
+		this.bot.emit(eventName, result);
+		if (callback) callback(result);
 	}
 }
 

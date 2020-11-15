@@ -292,6 +292,7 @@ class Stash {
 		if (current) {
 			//console.log(`Compressing to ${this.bot.mcData.items[current.id].displayName}`);
 			this.bot.autobot.autocraft.autoCraft(current.id, current.count, (craftResult) => {
+				// Timout could possibly be removed - test
 				sleep(100).then(() => {
 					this.compressNext(remainder, callback);
 				});
@@ -401,16 +402,19 @@ class Stash {
 
 	chestArrival() {
 		if (!this.cbChest) {
+			// Timeout is for pathfinder not being spammed
 			sleep(100).then(() => { this.bot.autobot.lumberjack.harvestNearestTree(32); });
 			return;
 		}
 		if (!this.validateChest(this.cbChest.position)) {
 			delete this.chestMap[getPosHash(this.cbChest.position)];
+			// Timeout is for pathfinder not being spammed
 			sleep(100).then(() => { this.stashNonEssentialInventory(this.callback); });
 			return;
 		}
 		if (Math.floor(this.bot.entity.position.distanceTo(this.cbChest.position)) > 3) {
 			// Didn't actually arrive. Start over.
+			// Timeout is for pathfinder not being spammed
 			sleep(100).then(() => { this.stashNonEssentialInventory(this.callback); });
 			return;
 		}
@@ -442,6 +446,7 @@ class Stash {
 		const p = chest.position;
 		const goal = new GoalNear(p.x, p.y, p.z, 3);
 		this.cbChest = chest;
+		// Timeout is for pathfinder not being spammed
 		sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
 	}
 
@@ -460,6 +465,7 @@ class Stash {
 		if (this.chestsToCache.length > 0) {
 			const p = this.chestsToCache[0];
 			const goal = new GoalNear(p.x, p.y, p.z, 3);
+			// Timeout is for pathfinder not being spammed
 			sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
 			return;
 		}
