@@ -53,7 +53,9 @@ function logResult(result) {
 }
 
 bot.once('spawn', () => {
-	const stash = bot.autobot.stash.stashNonEssentialInventory;
+	const stash = () => {
+		bot.autobot.resetAllBehaviours(bot.autobot.stash.stashNonEssentialInventory);
+	};
 	bot.on('autobot.ready', (result) => {
 		logResult(result);
 		stash();

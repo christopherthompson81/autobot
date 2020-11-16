@@ -270,6 +270,16 @@ class Stash {
 				};
 				this.bot.emit(eventName, result);
 				chest.close();
+				let newChest = this.findChest(current);
+				if (newChest) {
+					if (!newChest.position.equals(chestWindow.position)) {
+						this.sendToChest(newChest);
+						return;
+					}
+					else {
+						this.stashNext(chest, remainder, chestWindow, callback);
+					}
+				}
 				this.stashNonEssentialInventory(callback);
 			}
 		}
