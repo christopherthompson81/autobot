@@ -213,7 +213,7 @@ class Smelting {
 		const eventName = "autobot.smelting.behaviourSelect";
 		let result = {
 			error: false,
-			resultCode: "smelt",
+			resultCode: "sendToFurnace",
 			description: `Bot is going to smelt items in a furnace`,
 			furnace: furnace
 		};
