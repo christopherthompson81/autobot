@@ -253,23 +253,7 @@ class Mining {
 
 	pushBadTarget(position) {
 		this.badTargets.push(position);
-		this.getBadTargets((badTargets) => {
-			if (!badTargets) {
-				storage.setItem('badTargets', this.badTargets);
-			}
-			else {
-				let known = false;
-				for (const badTarget of badTargets) {
-					if (position.equals(badTarget)) {
-						known = true;
-						break;
-					}
-				}
-				if (!known) badTargets.push(position);
-				storage.setItem('badTargets', badTargets);
-			}
-		})
-		
+		storage.setItem('badTargets', this.badTargets);
 	}
 
 	sendNoPickaxe(callback) {

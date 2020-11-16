@@ -111,6 +111,7 @@ class Stash {
 	defaultPostStashBehaviour() {
 		const eventName = "autobot.stashing.behaviourSelect";
 		let result = {};
+		this.bot.autobot.resetAllBehaviours();
 		// If we have logs, mine, if we don't lumberjack
 		const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
 		const dirtCount = inventoryDict['dirt'] || 0;
@@ -269,6 +270,16 @@ class Stash {
 				};
 				this.bot.emit(eventName, result);
 				chest.close();
+				let newChest = this.findChest(current);
+				if (newChest) {
+					if (!newChest.position.equals(chestWindow.position)) {
+						this.sendToChest(newChest);
+						return;
+					}
+					else {
+						this.stashNext(chest, remainder, chestWindow, callback);
+					}
+				}
 				this.stashNonEssentialInventory(callback);
 			}
 		}
