@@ -191,27 +191,12 @@ class Stash {
 	canStash(chestWindow, item) {
 		const itemData = this.bot.mcData.itemsByName[item.name];
 		let roomForItem = this.getRoomForItem(chestWindow, item);
-		// Convert to an event: autobot.stashing.itemDeposit
-		if (roomForItem > 0) {
-			const eventName = 'autobot.stashing.itemDeposit';
-			let result = {
-				error: false,
-				resultCode: "",
-				description: `Depositing ${item.count} ${item.name}(s) in chest at ${chestWindow.position}. Capacity for item: ${roomForItem}`,
-				item: item,
-				chestPosition: chestWindow.position,
-				roomForItem: roomForItem
-			}
-			//console.log(`chestPos: ${chestWindow.position}; roomforItem: ${roomForItem}; item.name: ${item.name}; item.count: ${item.count}`);
-			this.bot.emit(eventName, result);
-		}
+		if (roomForItem > 0) this.sendItemDeposit(item, chestWindow, roomForItem);
 		if (roomForItem >= item.count) return true;
 		return false;
 	}
 
 	stashNext(chest, stashList, chestWindow, callback) {
-		let result = {};
-		const eventName = 'autobot.stashing.done';
 		const current = stashList[0];
 		const remainder = stashList.slice(1, stashList.length);
 		if (current) {
@@ -232,24 +217,12 @@ class Stash {
 							return;
 						}
 						// Move on to the next item to stash.
-						const eventName = "autobot.stashing.behaviourSelect";
-						let result = {
-							error: true,
-							resultCode: "stashingError",
-							description: `Error while stashing.`,
-							chestWindow: chestWindow,
-							item: current,
-							parentError: err
-						};
-						this.bot.emit(eventName, result);
-						//chest.close();
-						//this.stashNonEssentialInventory(callback);
-						//return;
+						this.sendStashingError(chestWindow, current, err);
 					}
 					let newChest = remainder.length > 0 ? this.findChest(remainder[0]) : false;
 					if (newChest) {
 						if (!newChest.position.equals(chestWindow.position)) {
-							console.log('Chest Efficiency - Stashing to a different chest');
+							this.sendChestEfficiency(remainder[0], newChest);
 							chest.close();
 							this.sendToChest(newChest);
 							return;
@@ -260,15 +233,7 @@ class Stash {
 				});
 			}
 			else {
-				const eventName = "autobot.stashing.behaviourSelect";
-				let result = {
-					error: false,
-					resultCode: "cantStash",
-					description: `Can't stash an item in this chest. Finding another chest.`,
-					chestWindow: chestWindow,
-					item: current
-				};
-				this.bot.emit(eventName, result);
+				this.sendCantStash(chestWindow, current);
 				chest.close();
 				let newChest = this.findChest(current);
 				if (newChest) {
@@ -284,24 +249,15 @@ class Stash {
 			}
 		}
 		else {
+			this.sendStashSuccess(callback);
 			chest.close();
-			result = {
-				error: false,
-				resultCode: "success",
-				description: "Successfully stashed unneeded items."
-			};
-			if (callback) callback(result);
-			this.bot.emit(eventName, result);
 		}
 	}
 
 	compressNext(compressList, callback) {
-		let result = {};
-		const eventName = 'autobot.compression.done';
 		const current = compressList[0];
 		const remainder = compressList.slice(1, compressList.length);
 		if (current) {
-			//console.log(`Compressing to ${this.bot.mcData.items[current.id].displayName}`);
 			this.bot.autobot.autocraft.autoCraft(current.id, current.count, (craftResult) => {
 				// Timout could possibly be removed - test
 				sleep(100).then(() => {
@@ -309,15 +265,7 @@ class Stash {
 				});
 			});	
 		}
-		else {
-			result = {
-				error: false,
-				resultCode: "success",
-				description: "Successfully compressed all compressable items."
-			}
-			if (callback) callback(result);
-			this.bot.emit(eventName, result);
-		}
+		else this.sendCompressSuccess(callback);
 	}
 
 	getCompressList() {
@@ -446,14 +394,7 @@ class Stash {
 	}
 
 	sendToChest(chest) {
-		const eventName = "autobot.stashing.behaviourSelect";
-		let result = {
-			error: false,
-			resultCode: "stash",
-			description: `Bot is going to stash items in a chest`,
-			chest: chest
-		};
-		this.bot.emit(eventName, result);
+		this.sendSendToChest(chest);
 		const p = chest.position;
 		const goal = new GoalNear(p.x, p.y, p.z, 3);
 		this.cbChest = chest;
@@ -480,15 +421,7 @@ class Stash {
 			sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
 			return;
 		}
-		this.cachingChests = false;
-		const eventName = "autobot.stashing.cachingChests.done";
-		let result = {
-			error: false,
-			resultCode: "cachedAllChests",
-			description: `All the chests on the storage grid have been examined.`
-		};
-		this.bot.emit(eventName, result);
-		if (this.callback) this.callback(result);
+		sendCachedAllChests(this.callback);
 	}
 
 	fillChestMap(callback) {
@@ -496,13 +429,7 @@ class Stash {
 		if (this.chestsToCache.length > 0) {
 			this.cachingChests = true;
 			this.callback = callback;
-			const eventName = "autobot.stashing.behaviourSelect";
-			let result = {
-				error: false,
-				resultCode: "cacheChests",
-				description: `The bot is going to cache the contents of any unknown storage grid chests.`
-			};
-			this.bot.emit(eventName, result);
+			this.sendCacheChests();
 			this.sendToPeekInChest();
 		}
 	}
@@ -584,6 +511,111 @@ class Stash {
 			this.smeltingCheck = false;
 			this.active = false;
 		}
+	}
+
+	sendStashingError(chestWindow, item, parentError) {
+		const eventName = "autobot.stashing.behaviourSelect";
+		let result = {
+			error: true,
+			resultCode: "stashingError",
+			description: `Error while stashing.`,
+			chestWindow: chestWindow,
+			item: item,
+			parentError: parentError
+		};
+		this.bot.emit(eventName, result);
+	}
+
+	sendCantStash(chestWindow, item) {
+		const eventName = "autobot.stashing.behaviourSelect";
+		let result = {
+			error: false,
+			resultCode: "cantStash",
+			description: `Can't stash an item in this chest. Finding another chest.`,
+			chestWindow: chestWindow,
+			item: item
+		};
+		this.bot.emit(eventName, result);
+	}
+
+	sendSendToChest(chest) {
+		const eventName = "autobot.stashing.behaviourSelect";
+		let result = {
+			error: false,
+			resultCode: "sendToChest",
+			description: `Bot is going to stash items in a chest`,
+			chest: chest
+		};
+		this.bot.emit(eventName, result);
+	}
+
+	sendCacheChests() {
+		const eventName = "autobot.stashing.behaviourSelect";
+		let result = {
+			error: false,
+			resultCode: "cacheChests",
+			description: `The bot is going to cache the contents of any unknown storage grid chests.`
+		};
+		this.bot.emit(eventName, result);
+	}
+
+	sendItemDeposit(item, chestWindow, roomForItem) {
+		const eventName = 'autobot.stashing.itemDeposit';
+		let result = {
+			error: false,
+			resultCode: "itemDeposit",
+			description: `Depositing ${item.count} ${item.name}(s) in chest at ${chestWindow.position}. Capacity for item: ${roomForItem}`,
+			item: item,
+			chestPosition: chestWindow.position,
+			roomForItem: roomForItem
+		};
+		this.bot.emit(eventName, result);
+	}
+
+	sendChestEfficiency(item, newChest) {
+		const eventName = 'autobot.stashing.chestEfficiency';
+		let result = {
+			error: false,
+			resultCode: "chestEfficiency",
+			description: `Chest Efficiency - Stashing to a different chest`,
+			item: item,
+			newChest: newChest
+		};
+		this.bot.emit(eventName, result);
+	}
+
+	sendStashSuccess(callback) {
+		const eventName = 'autobot.stashing.done';
+		let result = {
+			error: false,
+			resultCode: "success",
+			description: "Successfully stashed unneeded items."
+		};
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);
+	}
+
+	sendCompressSuccess(callback) {
+		const eventName = 'autobot.compression.done';
+		let result = {
+			error: false,
+			resultCode: "success",
+			description: "Successfully compressed all compressable items."
+		};
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);
+	}
+
+	sendCachedAllChests(callback) {
+		const eventName = "autobot.stashing.cachingChests.done";
+		let result = {
+			error: false,
+			resultCode: "cachedAllChests",
+			description: `All the chests on the storage grid have been examined.`
+		};
+		this.cachingChests = false;
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);
 	}
 }
 
