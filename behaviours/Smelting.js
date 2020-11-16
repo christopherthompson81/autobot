@@ -210,14 +210,7 @@ class Smelting {
 	}
 
 	sendToFurnace(furnace) {
-		const eventName = "autobot.smelting.behaviourSelect";
-		let result = {
-			error: false,
-			resultCode: "sendToFurnace",
-			description: `Bot is going to smelt items in a furnace`,
-			furnace: furnace
-		};
-		this.bot.emit(eventName, result);
+		this.sendSendToFurnace(furnace);
 		const p = furnace.position;
 		const goal = new GoalNear(p.x, p.y, p.z, 3);
 		this.cbFurnace = furnace;
@@ -227,7 +220,7 @@ class Smelting {
 
 	smeltOre(callback) {
 		this.active = true;
-		const furnaceBlock = this.findFurnace();
+		let furnaceBlock = this.findFurnace();
 		// Only stash to surface / near surface chests
 		if (furnaceBlock) {
 			const p = furnaceBlock.position;
@@ -238,20 +231,13 @@ class Smelting {
 			this.bot.pathfinder.setGoal(goal);
 		}
 		else {
-			this.placeNewFurnace((result) => {
-				if (result.error) {
-					if (callback) callback(result);
-					this.bot.emit('autobot.smelting.done', {
-						error: true,
-						resultCode: 'placingFurnaceError',
-						description: 'There was an error while placing the new furnace',
-						parentResult: result
-					});
-					this.active = false;
-				}
-				else {
+			this.placeNewFurnace((placeResult) => {
+				if (this.findFurnace()) {
 					this.smeltOre(callback);
+					return;
 				}
+				if (placeResult.error) this.sendPlacingFurnaceError(parentResult, callback);
+				else this.smeltOre(callback);
 			});
 		}
 	}
@@ -365,6 +351,30 @@ class Smelting {
 		result.resupplyResult = resupplyResult;
 		this.active = false;
 		if (callback) callback(result);
+		this.bot.emit(eventName, result);
+	}
+
+	sendPlacingFurnaceError(parentResult, callback) {
+		const eventName = 'autobot.smelting.done';
+		let result = {
+			error: true,
+			resultCode: 'placingFurnaceError',
+			description: 'There was an error while placing the new furnace',
+			parentResult: parentResult
+		};
+		this.active = false;
+		this.bot.emit(eventName, result);
+		if (callback) callback(result);
+	}
+
+	sendSendToFurnace(furnace) {
+		const eventName = "autobot.smelting.behaviourSelect";
+		let result = {
+			error: false,
+			resultCode: "sendToFurnace",
+			description: `Bot is going to smelt items in a furnace`,
+			furnace: furnace
+		};
 		this.bot.emit(eventName, result);
 	}
 }

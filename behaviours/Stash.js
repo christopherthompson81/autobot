@@ -421,7 +421,7 @@ class Stash {
 			sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
 			return;
 		}
-		sendCachedAllChests(this.callback);
+		this.sendCachedAllChests(this.callback);
 	}
 
 	fillChestMap(callback) {
