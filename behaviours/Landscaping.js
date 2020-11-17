@@ -175,13 +175,13 @@ class Landscaping {
 		if (!this.flatteningCube) this.flatteningCube = true;
 		this.callback = callback;
 		if (!targetSubstrate) {
-			this.targetSubstrate = 'dirt';
+			this.targetSubstrate = 'cobblestone';
 		}
 		else {
 			this.targetSubstrate = targetSubstrate;
 		}
 		if (!substrateList) {
-			this.substrateList = ['dirt', 'grass_block'];
+			this.substrateList = ['dirt', 'grass_block', 'stone', 'cobblestone', 'diorite', 'andesite', 'granite', 'sand'];
 		}
 		else {
 			this.substrateList = substrateList;
@@ -381,10 +381,12 @@ class Landscaping {
 		const placeQueue = [];
 		const nextGridSpot = this.getNextStorageGridSpot();
 		const dVec = nextGridSpot.subtract(this.bot.autobot.homePosition);
+		//console.log(`dVec: ${dVec}`);
 		const dMax = Math.abs(dVec.x) > Math.abs(dVec.z) ? Math.abs(dVec.x) : Math.abs(dVec.z);
+		//console.log(`dMax: ${dMax}`);
 		let ringSize = 0;
 		let x, z;
-		while (ringSize < dMax) {
+		while (ringSize <= dMax+1) {
 			for (x = -1 * ringSize; x <= ringSize; x++) {
 				for (z = -1 * ringSize; z <= ringSize; z++) {
 					const targetPos = this.bot.autobot.homePosition.offset(x, -1, z);
@@ -393,7 +395,7 @@ class Landscaping {
 						digQueue.push(targetPos);
 					}
 					if (targetBlock.name !== 'cobblestone') {
-						placeQueue.push({name: 'cobblestone', postion: targetPos});
+						placeQueue.push({name: 'cobblestone', position: targetPos});
 					}
 				}
 			}

@@ -1,33 +1,6 @@
 
 /*
-This script will harvest trees and ore, then process and store them.
-
-- It will quit if no trees are found.
-- It uses the default behaviour to get the pathfinder routine unstuck
-- It will mine ore if it has no missing tools
-- it will craft all tools of the best type (up to iron) it can make, with spares
-- It will not harvest trees if there are 32 or greater logs in inventory
-AND
-- It will build chests on the storage grid
-- It will build furnaces on the storage grid
-- It will clear and flatten the target storage grid spaces
-- It will smelt iron ore
-- It will compress compressables
-- It will stash non-essential items, valuables, and superfluous tools
-- It will remember chests and their contents so as to optimize stashing
-
-Unmonitored Events:
-	* autobot.autocraft.done
-	* autobot.collectDrops.done
-	* autobot.compression.done
-	* autobot.landscaping.digQueue.done
-	* autobot.landscaping.flattenCube.done
-	* autobot.landscaping.newStorageObject
-	* autobot.landscaping.placeQueue.done
-	* autobot.smelting.done
-	* autobot.smelting.resupply
-	* autobot.smelting.restoke
-	* autobot.stashing.newChest
+This script will just attempt to smelt ores
 */
 'use strict';
 
