@@ -91,11 +91,11 @@ function inject (bot) {
 			activeFunction = "landscaping.flatteningCube";
 		}
 		else if (bot.autobot.landscaping.digging) {
-			sleep(350).then(bot.autobot.landscaping.callback);
+			sleep(350).then(bot.autobot.landscaping.digNext);
 			activeFunction = "landscaping.digging";
 		}
 		else if (bot.autobot.landscaping.placing) {
-			sleep(350).then(bot.autobot.landscaping.callback);
+			sleep(350).then(bot.autobot.landscaping.placeNext);
 			activeFunction = "landscaping.placing";
 		}
 		else if (bot.autobot.landscaping.gettingDirt) {

@@ -41,11 +41,18 @@ class Landscaping {
 		this.substrateList = [];
 	}
 
-	placeNext(placeQueue, callback) {
+	placeNext() {
 		if (!this.placing) this.placing = true;
-		const current = placeQueue[0];
-		const remainder = placeQueue.slice(1, placeQueue.length);
+		const current = this.placeQueue[0];
+		const remainder = this.placeQueue.slice(1, this.placeQueue.length);
 		if (current) {
+			if (Math.floor(this.bot.entity.position.distanceTo(current.position)) > 3) {
+				//this.sendTooFar(block);
+				const p = current.position;
+				const goal = new GoalGetToBlock(p.x, p.y, p.z);
+				this.bot.pathfinder.setGoal(goal);
+				return;
+			}
 			const item = this.bot.autobot.inventory.getInventoryItemById(this.bot.mcData.itemsByName[current.name].id);
 			const referenceBlock = this.bot.blockAt(current.position);
 			const placementVector = new Vec3(1, 0, 0);
@@ -53,14 +60,16 @@ class Landscaping {
 				this.bot.placeBlock(referenceBlock, placementVector, (err) => {
 					if (err) this.sendPlacingError(err, current, remainder);
 					// Timeout is for pathfinder not being spammed
-					sleep(100).then(() => this.placeNext(remainder, callback));
+					this.placeQueue = remainder;
+					sleep(100).then(() => this.placeNext());
 				});
 			});
 		}
-		else this.sendPlacingSuccess(callback);
+		else this.sendPlacingSuccess(this.placeCallback);
 	}
 
 	digNext() {
+		if (!this.digging) this.digging = true;
 		const current = this.digQueue[0];
 		const remainder = this.digQueue.slice(1, this.digQueue.length);
 		if (current) {
@@ -474,7 +483,7 @@ class Landscaping {
 			errorDecription: "Finished digging blocks"
 		};
 		this.bot.emit(eventName, result);
-		this.placing = false;
+		this.digging = false;
 		if (callback) callback(result);
 	}
 
