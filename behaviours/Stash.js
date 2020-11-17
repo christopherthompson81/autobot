@@ -222,8 +222,8 @@ class Stash {
 					let newChest = remainder.length > 0 ? this.findChest(remainder[0]) : false;
 					if (newChest) {
 						if (!newChest.position.equals(chestWindow.position)) {
-							this.sendChestEfficiency(remainder[0], newChest);
 							chest.close();
+							this.sendChestEfficiency(remainder[0], newChest);
 							this.sendToChest(newChest);
 							return;
 						}
@@ -233,8 +233,8 @@ class Stash {
 				});
 			}
 			else {
-				this.sendCantStash(chestWindow, current);
 				chest.close();
+				this.sendCantStash(chestWindow, current);
 				let newChest = this.findChest(current);
 				if (newChest) {
 					if (!newChest.position.equals(chestWindow.position)) {
@@ -249,8 +249,8 @@ class Stash {
 			}
 		}
 		else {
-			this.sendStashSuccess(callback);
 			chest.close();
+			this.sendStashSuccess(callback);
 		}
 	}
 

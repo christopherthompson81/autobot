@@ -2,6 +2,7 @@ const autoBind = require('auto-bind');
 const Vec3 = require('vec3').Vec3;
 const compressableItems = require('./constants').compressableItems;
 const { GoalNear } = require('../pathfinder/pathfinder').goals;
+const sleep = require('./autoBotLib').sleep;
 
 class Autocraft {
 	constructor(bot) {
@@ -271,23 +272,6 @@ class Autocraft {
 		return null;
 	}
 
-	autoCraftCallback() {
-		const current = this.autoCraftCallbackPayload.current;
-		const recipe = this.autoCraftCallbackPayload.recipe;
-		const craftingTable = this.autoCraftCallbackPayload.craftingTable;
-		const callback = this.autoCraftCallbackPayload.callback;
-		const remainder = this.autoCraftCallbackPayload.remainder;
-		const targetCount = Math.floor(current.count / recipe.result.count);
-		this.bot.craft(recipe, targetCount, craftingTable, (err) => {
-			if (err) {
-				this.sendCraftingError(err, recipe, targetCount, craftingTable, callback);
-				//console.log(err, JSON.stringify(recipe), current.count, craftingTable);
-				return;
-			}
-			this.autoCraftNext(remainder, callback);
-		});
-	}
-
 	// Recursively craft an item (craft parents if needed)
 	autoCraftNext(craftingQueue, callback) {
 		const current = craftingQueue[0];
@@ -339,15 +323,10 @@ class Autocraft {
 					});
 				}
 				const p = craftingTable.position;
-				if (Math.floor(this.bot.entity.position.distanceTo(p)) > 3) {
-					const goal = new GoalNear(p.x, p.y, p.z, 3);
-					//console.log("Moving to crafting table");
-					this.bot.pathfinder.setGoal(goal);
-					return;
-				}
-				else {
-					this.callback();
-				}
+				const goal = new GoalNear(p.x, p.y, p.z, 3);
+				//console.log("Moving to crafting table");
+				sleep(100).then(() => this.bot.pathfinder.setGoal(goal));
+				return;
 			}
 			this.bot.craft(recipe, current.count, null, () => {
 				this.autoCraftNext(remainder, callback)
