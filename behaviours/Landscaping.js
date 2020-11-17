@@ -13,7 +13,11 @@ class Landscaping {
 		autoBind(this);
 		this.bot = bot;
 		this.callback = () => {};
+		this.digCallback = () => {};
+		this.placeCallback = () => {};
 		this.dirtQueue = [];
+		this.digQueue = [];
+		this.placeQueue = [];
 		this.digging = false;
 		this.placing = false;
 		this.flatteningCube = false;
@@ -24,7 +28,11 @@ class Landscaping {
 
 	resetBehaviour() {
 		this.callback = () => {};
+		this.digCallback = () => {};
+		this.placeCallback = () => {};
 		this.dirtQueue = [];
+		this.digQueue = [];
+		this.placeQueue = [];
 		this.digging = false;
 		this.placing = false;
 		this.flatteningCube = false;
@@ -43,22 +51,23 @@ class Landscaping {
 			const placementVector = new Vec3(1, 0, 0);
 			this.bot.equip(item, 'hand', () => {
 				this.bot.placeBlock(referenceBlock, placementVector, (err) => {
-					if (err) this.sendPlacingError(err, current, remainder, callback);
+					if (err) this.sendPlacingError(err, current, remainder);
 					// Timeout is for pathfinder not being spammed
-					else sleep(100).then(() => this.placeNext(remainder, callback));
+					sleep(100).then(() => this.placeNext(remainder, callback));
 				});
 			});
 		}
 		else this.sendPlacingSuccess(callback);
 	}
 
-	digNext(digQueue, callback) {
-		const current = digQueue[0];
-		const remainder = digQueue.slice(1, digQueue.length);
+	digNext() {
+		const current = this.digQueue[0];
+		const remainder = this.digQueue.slice(1, this.digQueue.length);
 		if (current) {
 			const block = this.bot.blockAt(current, false)
 			if (!block.diggable || airBlocks.includes(block.name)) {
-				this.digNext(remainder, callback);
+				this.digQueue = remainder;
+				this.digNext();
 				return;
 			}
 			const tool = this.bot.pathfinder.bestHarvestTool(block)
@@ -66,19 +75,20 @@ class Landscaping {
 				const harvestTools = Object.keys(block.harvestTools);
 				if (!harvestTools.includes(tool)) {
 					this.sendNoSuitableTool(block, tool);
-					this.digNext(remainder, callback);
+					this.digQueue = remainder;
+					this.digNext();
 					return;
 				}
 			}
 			if (!this.bot.defaultMove.safeToBreak(block)) {
 				this.sendNotSafe(block);
 				this.bot.autobot.mining.pushBadTarget(block.position.clone());
-				this.digNext(remainder, callback);
+				this.digQueue = remainder;
+				this.digNext();
 				return;
 			}
 			if (Math.floor(this.bot.entity.position.distanceTo(current)) > 3) {
 				this.sendTooFar(block);
-				if (this.gettingDirt) this.dirtQueue = digQueue;
 				const p = block.position;
 				const goal = new GoalGetToBlock(p.x, p.y, p.z);
 				this.bot.pathfinder.setGoal(goal);
@@ -86,14 +96,15 @@ class Landscaping {
 			}
 			this.bot.equip(tool, 'hand', () => {
 				this.bot.dig(block, true, (err) => {
-					this.digNext(remainder, callback);
+					this.digQueue = remainder;
+					this.digNext();
 				});
 			});
 		}
 		else {
 			// Timeout is for blocks to land on the ground
 			sleep(1500).then(() => {
-				this.sendDiggingSuccess(callback);
+				this.sendDiggingSuccess(this.digCallback);
 			});
 		}
 	}
@@ -128,7 +139,9 @@ class Landscaping {
 				}
 			}
 		}
-		this.digNext(digQueue, (result) => {
+		this.digQueue = digQueue;
+		this.placeQueue = dirtPlaceQueue;
+		this.digCallback = () => {
 			// We need sufficient materials, otherwise fail. (9 dirt)
 			// Add target space dirt to inventory dirt
 			// TODO: add a collectBlocks routine
@@ -139,12 +152,14 @@ class Landscaping {
 				});
 				return;
 			}
-			this.placeNext(dirtPlaceQueue, () => {
-				this.bot.autobot.navigator.backupBot(() => {
-					this.sendFlatteningSuccess(callback);
-				});
+			this.placeNext();
+		};
+		this.placeCallback = () => {
+			this.bot.autobot.navigator.backupBot(() => {
+				this.sendFlatteningSuccess(this.callback);
 			});
-		});
+		}
+		this.digNext();
 	}
 
 	flattenCube(position, targetSubstrate, substrateList, callback) {
@@ -263,20 +278,21 @@ class Landscaping {
 	}
 
 	dirtArrival() {
-		this.digNext(this.dirtQueue, () => {
+		this.digCallback = () => {
 			this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => {
 				this.gettingDirt = false;
 				// Timeout is for pathfinder not being spammed
 				sleep(100).then(this.callback);
 			});
-		});
+		};
+		this.digNext();
 	}
 
 	getDirt(limit, callback) {
 		const dirtQueue = this.findDirtQueue(limit);
 		if (dirtQueue) {
 			this.gettingDirt = true;
-			this.dirtQueue = dirtQueue;
+			this.digQueue = dirtQueue;
 			this.callback = callback;
 			const p = dirtQueue[0];
 			const goal = new GoalBlock(p.x, p.y, p.z);
@@ -351,7 +367,47 @@ class Landscaping {
 		else this.sendNoSpot(storageObjectType, callback);
 	}
 
-	sendPlacingError(parentError, currentTarget, queueRemainder, callback) {
+	fixStorageGridFloorPlate(callback) {
+		const digQueue = [];
+		const placeQueue = [];
+		const nextGridSpot = this.getNextStorageGridSpot();
+		const dVec = nextGridSpot.subtract(this.bot.autobot.homePosition);
+		const dMax = Math.abs(dVec.x) > Math.abs(dVec.z) ? Math.abs(dVec.x) : Math.abs(dVec.z);
+		let ringSize = 0;
+		let x, z;
+		while (ringSize < dMax) {
+			for (x = -1 * ringSize; x <= ringSize; x++) {
+				for (z = -1 * ringSize; z <= ringSize; z++) {
+					const targetPos = this.bot.autobot.homePosition.offset(x, -1, z);
+					const targetBlock = this.bot.blockAt(targetPos);
+					if (!airBlocks.includes(targetBlock.name)) {
+						digQueue.push(targetPos);
+					}
+					if (targetBlock.name !== 'cobblestone') {
+						placeQueue.push({name: 'cobblestone', postion: targetPos});
+					}
+				}
+			}
+			ringSize++;
+		}
+		if (digQueue.length > 0) {
+			this.digQueue = digQueue;
+			this.digCallback = this.placeNext;
+			this.placeQueue = placeQueue;
+			this.placeCallback = callback;
+			this.digNext();
+		}
+		else if (placeQueue.length > 0) {
+			this.placeQueue = placeQueue;
+			this.placeCallback = callback;
+			this.placeNext();
+		}
+		else {
+			// Nothing to do
+		}
+	}
+
+	sendPlacingError(parentError, currentTarget, queueRemainder) {
 		const eventName = 'autobot.landscaping.placeQueue.done';
 		let result = {
 			error: true,
@@ -362,8 +418,6 @@ class Landscaping {
 			queueRemainder: queueRemainder
 		};
 		this.bot.emit(eventName, result);
-		this.placing = false;
-		if (callback) callback(result);
 	}
 
 	sendPlacingSuccess(callback) {

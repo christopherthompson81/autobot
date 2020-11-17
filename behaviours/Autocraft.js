@@ -310,8 +310,6 @@ class Autocraft {
 					});
 					return;
 				}
-				const p = craftingTable.position;
-				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				this.callback = () => {
 					const targetCount = Math.floor(current.count / recipe.result.count);
 					this.bot.craft(recipe, targetCount, craftingTable, (err) => {
@@ -323,6 +321,8 @@ class Autocraft {
 						this.autoCraftNext(remainder, callback);
 					});
 				}
+				const p = craftingTable.position;
+				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				//console.log("Moving to crafting table");
 				this.bot.pathfinder.setGoal(goal);
 				return;
