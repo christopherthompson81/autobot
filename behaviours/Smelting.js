@@ -289,8 +289,8 @@ class Smelting {
 	sendRestokeResult(err, fuelAmount, fuelCount, callback) {
 		const eventName = 'autobot.smelting.restoke';
 		let result = this.getRestokeResult(err, fuelAmount, fuelCount);
+		this.bot.emit(eventName, result);
 		if (callback) callback(result);
-		this.bot.emit(eventName, result);		
 	}
 
 	sendRestokeSkipped(callback) {
@@ -300,8 +300,8 @@ class Smelting {
 			resultCode: "skipped",
 			description: `No fuel was added to the furnace.`
 		};
-		if (callback) callback(result);
 		this.bot.emit(eventName, result);
+		if (callback) callback(result);
 	}
 
 	getResupplyResult(err, oreType, inputAmount, inputCount) {
@@ -325,8 +325,8 @@ class Smelting {
 	sendResupplyResult(err, oreType, inputAmount, inputCount, callback) {
 		const eventName = 'autobot.smelting.resupply';
 		let result = this.getRestokeResult(err, oreType, inputAmount, inputCount);
-		if (callback) callback(result);
 		this.bot.emit(eventName, result);
+		if (callback) callback(result);
 	}
 
 	sendRestokeSkipped(callback) {
@@ -336,8 +336,8 @@ class Smelting {
 			resultCode: "skipped",
 			description: `No input was added to the furnace.`
 		};
-		if (callback) callback(result);
 		this.bot.emit(eventName, result);
+		if (callback) callback(result);
 	}
 
 	sendSmeltingResults(takeOutputError, item, restokeResult, resupplyResult, callback) {
@@ -350,8 +350,8 @@ class Smelting {
 		result.restokeResult = restokeResult;
 		result.resupplyResult = resupplyResult;
 		this.active = false;
-		if (callback) callback(result);
 		this.bot.emit(eventName, result);
+		if (callback) callback(result);
 	}
 
 	sendPlacingFurnaceError(parentResult, callback) {

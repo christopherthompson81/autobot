@@ -159,7 +159,7 @@ bot.once('spawn', () => {
 		if (result.error) {
 			console.log("Consider Exiting: ", result.resultCode);
 		}
-		bot.autobot.stash.defaultPostStashBehaviour();
+		bot.autobot.behaviourSelect.defaultPostTaskBehaviour();
 	});
 	bot.on('autobot.autocraft.done', logResult);
 	bot.on('autobot.compression.done', (result) => {

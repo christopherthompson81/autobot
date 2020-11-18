@@ -46,8 +46,6 @@ class CollectDrops {
 	}
 
 	pickUpNext() {
-		const eventName = 'autobot.collectDrops.done';
-		let result = {};
 		let current = this.remainder[0];
 		this.remainder = this.remainder.slice(1, this.remainder.length);
 		if (current) {
@@ -91,8 +89,8 @@ class CollectDrops {
 			collectedItems: this.collected
 		};
 		this.active = false;
-		if (callback) callback(result);
 		this.bot.emit(eventName, result);
+		if (callback) callback(result);
 	}
 }
 

@@ -481,8 +481,8 @@ class Stash {
 			resultCode: "success",
 			description: "Successfully stashed unneeded items."
 		};
-		if (callback) callback(result);
 		this.bot.emit(eventName, result);
+		if (callback) callback(result);
 	}
 
 	sendCompressSuccess(callback) {
@@ -492,8 +492,8 @@ class Stash {
 			resultCode: "success",
 			description: "Successfully compressed all compressable items."
 		};
-		if (callback) callback(result);
 		this.bot.emit(eventName, result);
+		if (callback) callback(result);
 	}
 
 	sendCachedAllChests(callback) {
@@ -504,8 +504,8 @@ class Stash {
 			description: `All the chests on the storage grid have been examined.`
 		};
 		this.cachingChests = false;
-		if (callback) callback(result);
 		this.bot.emit(eventName, result);
+		if (callback) callback(result);
 	}
 
 	sendStashSkipping(callback) {
@@ -516,8 +516,8 @@ class Stash {
 			description: "No non-essential inventory to stash."
 		};
 		this.active = false;
-		if (callback) callback(result);
 		this.bot.emit(eventName, result);
+		if (callback) callback(result);
 	}
 }
 

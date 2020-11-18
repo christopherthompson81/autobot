@@ -178,9 +178,9 @@ class Lumberjack {
 			resultCode: "success",
 			description: "Finished cutting tree and collecting logs."
 		}
-		if (callback) callback(result);
 		this.bot.emit(eventName, result);
 		this.active = false;
+		if (callback) callback(result);
 	}
 
 	sendLumberJackSkipping(callback) {
@@ -190,9 +190,9 @@ class Lumberjack {
 			resultCode: "skipping",
 			description: "The bot possesses sufficient logs and therefore harvesting a tree is unnecessary."
 		};
-		if (callback) callback(result);
 		this.bot.emit(eventName, result);
 		this.active = false;
+		if (callback) callback(result);
 	}
 
 	sendNoTrees(callback) {
@@ -202,9 +202,9 @@ class Lumberjack {
 			resultCode: "noTrees",
 			description: "No valid trees located."
 		};
-		if (callback) callback(result);
 		this.bot.emit(eventName, result);
 		this.active = false;
+		if (callback) callback(result);
 	}
 }
 
