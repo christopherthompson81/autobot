@@ -62,46 +62,31 @@ bot.once('spawn', () => {
 		logResult(result);
 		selectBehaviour();
 	});
-	bot.on('autobot.pathfinder.progress', () => { process.stdout.write("+"); });
-	bot.on('autobot.pathfinder.botStuck', (goalProgress, path, stateGoal) => {
-		console.log("Bot Stuck.");
-		bot.autobot.getUnstuck.onBotStuck(goalProgress, path, stateGoal);
-	});
-	bot.on('autobot.pathfinder.exceededTravelTimeLimit', (goalProgress, path, stateGoal) => {
-		console.log("Exceeded pathfinder travel time limit.");
-		bot.autobot.getUnstuck.flattenAndGoHome({goalPosition: new Vec3(stateGoal.x, stateGoal.y, stateGoal.z)});
-	});
-	bot.on('autobot.pathfinder.excessiveBreakTime', (block, breakTime) => {
-		console.log(`Excessive break time (${breakTime}) trying to break ${block.displayName} at ${block.position}`);
-		if (bot.autobot.mining.active) {
-			bot.pathfinder.setGoal(null);
-			bot.autobot.mining.active = false;
-			console.log('Excess break time forcing tool crafting. Mining Abandoned.');
-			selectBehaviour();
+	// Alphabetical from here on
+	bot.on('autobot.autocraft.done', logResult);
+	bot.on("autobot.behaviourSelect.preTask", (result) => {
+		if (result.resultCode === "noPreTasks") {
+			bot.autobot.behaviourSelect.defaultPostTaskBehaviour();
+		}
+		else {
+			logResult(result);
 		}
 	});
-	bot.on('autobot.navigator.goalReached', (result) => {
-		if (result.resultCode === 'reachedGoal') {
-			if (result.activeFunction === '') {
-				selectBehaviour();
-				return;
-			}
-			if (result.activeFunction === 'collectDrops') return;
-			if (result.activeFunction === 'cachingChests') return;
-			if (result.activeFunction === 'landscaping.gettingDirt') return;
-			let message = `Reached goal of ${result.goalPosition}.`;
-			message += ` Bot is ${result.distanceFromGoal} blocks from the goal`;
-			message += ` and '${result.activeFunction}' is the active function.`;
-			console.log(message);
-		}
-	});
-	bot.on('autobot.navigator.arrivedHome', (result) => {
+	bot.on("autobot.behaviourSelect.postTask", logResult);
+	bot.on('autobot.compression.done', (result) => {
 		logResult(result);
 		selectBehaviour();
 	});
-	bot.on('autobot.lumberjack.treeFound', (result) => {
-		console.log(result.description, result.tree[0].position, result.tree[0].displayName);
+	bot.on('autobot.collectDrops.done', (result) => {
+		console.log(result.description, result.collectedItems);
 	});
+	bot.on('autobot.craftTools.crafting', logResult);
+	bot.on('autobot.craftTools.done', (result) => {
+		if (result.resultCode !== 'skipping') {
+			logResult(result);
+		}
+	});
+	bot.on('autobot.getUnstuck', logResult);
 	bot.on('autobot.lumberjack.done', (result) => {
 		logResult(result);
 		if (result.error) {
@@ -115,10 +100,8 @@ bot.once('spawn', () => {
 			selectBehaviour();
 		}
 	});
-	bot.on('autobot.craftTools.done', (result) => {
-		if (result.resultCode !== 'skipping') {
-			logResult(result);
-		}
+	bot.on('autobot.lumberjack.treeFound', (result) => {
+		console.log(result.description, result.tree[0].position, result.tree[0].displayName);
 	});
 	bot.on('autobot.mining.digging', (result) => {
 		if (result.resultCode === 'foundVein') {
@@ -144,6 +127,54 @@ bot.once('spawn', () => {
 		}
 		selectBehaviour();
 	});
+	bot.on('autobot.navigator.arrivedHome', (result) => {
+		logResult(result);
+		selectBehaviour();
+	});
+	bot.on('autobot.navigator.goalReached', (result) => {
+		if (result.resultCode === 'reachedGoal') {
+			if (result.activeFunction === '') {
+				selectBehaviour();
+				return;
+			}
+			if (result.activeFunction === 'collectDrops') return;
+			if (result.activeFunction === 'cachingChests') return;
+			if (result.activeFunction === 'landscaping.gettingDirt') return;
+			let message = `Reached goal of ${result.goalPosition}.`;
+			message += ` Bot is ${result.distanceFromGoal} blocks from the goal`;
+			message += ` and '${result.activeFunction}' is the active function.`;
+			console.log(message);
+		}
+	});
+	bot.on('autobot.pathfinder.progress', () => { process.stdout.write("+"); });
+	bot.on('autobot.pathfinder.botStuck', (goalProgress, path, stateGoal) => {
+		console.log("Bot Stuck.");
+		bot.autobot.getUnstuck.onBotStuck(goalProgress, path, stateGoal);
+	});
+	bot.on('autobot.pathfinder.exceededTravelTimeLimit', (goalProgress, path, stateGoal) => {
+		console.log("Exceeded pathfinder travel time limit.");
+		bot.autobot.getUnstuck.flattenAndGoHome({goalPosition: new Vec3(stateGoal.x, stateGoal.y, stateGoal.z)});
+	});
+	bot.on('autobot.pathfinder.excessiveBreakTime', (block, breakTime) => {
+		console.log(`Excessive break time (${breakTime}) trying to break ${block.displayName} at ${block.position}`);
+		if (bot.autobot.mining.active) {
+			bot.pathfinder.setGoal(null);
+			bot.autobot.mining.active = false;
+			console.log('Excess break time forcing tool crafting. Mining Abandoned.');
+			selectBehaviour();
+		}
+	});
+	bot.on('autobot.smelting.done', (result) => {
+		if (result.resultCode === 'placingFurnaceError') {
+			console.log(result);
+			selectBehaviour();
+			return;
+		}
+		console.log(result.takeOutputResult.description);
+		console.log(result.restokeResult.description);
+		console.log(result.resupplyResult.description);
+		selectBehaviour();
+	});
 	bot.on('autobot.stashing.behaviourSelect', (result) => {
 		logResult(result);
 		if (result.error) {
@@ -161,35 +192,5 @@ bot.once('spawn', () => {
 		}
 		bot.autobot.behaviourSelect.defaultPostTaskBehaviour();
 	});
-	bot.on('autobot.autocraft.done', logResult);
-	bot.on('autobot.compression.done', (result) => {
-		logResult(result);
-		selectBehaviour();
-	});
-	bot.on('autobot.smelting.done', (result) => {
-		if (result.resultCode === 'placingFurnaceError') {
-			console.log(result);
-			selectBehaviour();
-			return;
-		}
-		console.log(result.takeOutputResult.description);
-		console.log(result.restokeResult.description);
-		console.log(result.resupplyResult.description);
-		selectBehaviour();
-	});
-	bot.on('autobot.getUnstuck', logResult);
 	bot.on('autobot.stashing.itemDeposit', logResult);
-	bot.on('autobot.collectDrops.done', (result) => {
-		console.log(result.description, result.collectedItems);
-	});
-	bot.on('autobot.craftTools.crafting', logResult);
-	bot.on("autobot.behaviourSelect.preTask", (result) => {
-		if (result.resultCode === "noPreTasks") {
-			bot.autobot.behaviourSelect.defaultPostTaskBehaviour();
-		}
-		else {
-			logResult(result);
-		}
-	});
-	bot.on("autobot.behaviourSelect.postTask", logResult);
 });

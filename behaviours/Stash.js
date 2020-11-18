@@ -325,7 +325,7 @@ class Stash {
 	}
 
 	sendToChest(chest) {
-		this.sendSendToChest(chest);
+		//this.sendSendToChest(chest);
 		const p = chest.position;
 		const goal = new GoalNear(p.x, p.y, p.z, 3);
 		this.cbChest = chest;
@@ -416,6 +416,7 @@ class Stash {
 		this.bot.emit(eventName, result);
 	}
 
+	/*
 	sendSendToChest(chest) {
 		const eventName = "autobot.stashing.behaviourSelect";
 		let result = {
@@ -426,6 +427,7 @@ class Stash {
 		};
 		this.bot.emit(eventName, result);
 	}
+	*/
 
 	/*
 	sendCacheChests() {
