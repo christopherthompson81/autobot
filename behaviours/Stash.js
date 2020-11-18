@@ -153,8 +153,8 @@ class Stash {
 					let newChest = remainder.length > 0 ? this.findChest(remainder[0]) : false;
 					if (newChest) {
 						if (!newChest.position.equals(chestWindow.position)) {
-							this.sendChestEfficiency(remainder[0], newChest);
 							chest.close();
+							this.sendChestEfficiency(remainder[0], newChest);
 							this.sendToChest(newChest);
 							return;
 						}
@@ -164,8 +164,8 @@ class Stash {
 				});
 			}
 			else {
-				this.sendCantStash(chestWindow, current);
 				chest.close();
+				this.sendCantStash(chestWindow, current);
 				let newChest = this.findChest(current);
 				if (newChest) {
 					if (!newChest.position.equals(chestWindow.position)) {
@@ -180,8 +180,8 @@ class Stash {
 			}
 		}
 		else {
-			this.sendStashSuccess(callback);
 			chest.close();
+			this.sendStashSuccess(callback);
 		}
 	}
 
@@ -340,6 +340,8 @@ class Stash {
 		chest.on('open', () => {
 			this.saveChestWindow(chestToOpen.position, chest.window);
 			chest.close();
+		});
+		chest.on('close', () => {
 			this.sendToPeekInChest();
 		});
 	}
@@ -348,8 +350,7 @@ class Stash {
 		if (this.chestsToCache.length > 0) {
 			const p = this.chestsToCache[0];
 			const goal = new GoalNear(p.x, p.y, p.z, 3);
-			// Timeout is for pathfinder not being spammed
-			sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
+			this.bot.pathfinder.setGoal(goal);
 			return;
 		}
 		this.sendCachedAllChests(this.callback);
