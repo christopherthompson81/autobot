@@ -13,7 +13,6 @@ class Stash {
 		this.chestMap = {};
 		this.callback = () => {};
 		this.active = false;
-		this.smeltingCheck = false;
 		this.cbChest = null;
 		this.cachingChests = false;
 		this.chestsToCache = [];
@@ -22,7 +21,6 @@ class Stash {
 	resetBehaviour() {
 		this.callback = () => {};
 		this.active = false;
-		this.smeltingCheck = false;
 		this.cbChest = null;
 		this.cachingChests = false;
 		this.chestsToCache = [];
@@ -108,73 +106,6 @@ class Stash {
 		return false;
 	}
 
-	defaultPostStashBehaviour() {
-		const eventName = "autobot.stashing.behaviourSelect";
-		let result = {};
-		this.bot.autobot.resetAllBehaviours();
-		// If we have logs, mine, if we don't lumberjack
-		const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
-		const dirtCount = inventoryDict['dirt'] || 0;
-		if (Object.keys(inventoryDict).some(id => id.match(/_log$/))) {
-			// Don't start mining without a full set of tools
-			const missingTools = this.bot.autobot.inventory.missingTools();
-			if (missingTools.length > 0) {
-				//console.log('Returning to cutting trees because of missing tools.', missingTools);
-				result = {
-					error: false,
-					resultCode: "missingTools",
-					description: `Returning to cutting trees because of missing tools. ${missingTools}`,
-				};
-				this.bot.emit(eventName, result);
-				this.bot.autobot.inventory.craftTools((result) => {
-					this.bot.autobot.lumberjack.harvestNearestTree(32);
-				});
-			}
-			else if (dirtCount < 32) {
-				result = {
-					error: false,
-					resultCode: "gettingDirt",
-					description: `Getting dirt (${64 - dirtCount})`,
-				};
-				this.bot.emit(eventName, result);
-				this.bot.autobot.landscaping.getDirt(64 - dirtCount, (result) => {
-					// There is the case of a flattening error for chest placement causing this.
-					// If we have chest in inventory, stash. otherwise harvest tree
-					if (inventoryDict['chest']) {
-						this.stashNonEssentialInventory();
-					}
-					else {
-						this.bot.autobot.lumberjack.harvestNearestTree(32);
-					}
-				});
-			}
-			else {
-				//console.log('Returning to mining.');
-				result = {
-					error: false,
-					resultCode: "mining",
-					description: `Returning to mining.`,
-				};
-				this.bot.emit(eventName, result);
-				this.bot.autobot.inventory.craftTools((result) => {
-					this.bot.autobot.mining.mineBestOreVein();
-				});
-			}
-		}
-		else {
-			//console.log('Returning to cutting trees.', inventoryDict);
-			result = {
-				error: false,
-				resultCode: "noLogs",
-				description: `Returning to cutting trees.`,
-			};
-			this.bot.emit(eventName, result);
-			this.bot.autobot.inventory.craftTools((result) => {
-				this.bot.autobot.lumberjack.harvestNearestTree(32);
-			});
-		}
-	}
-
 	getRoomForItem(chestWindow, item) {
 		if (!item) return 0;
 		const itemData = this.bot.mcData.itemsByName[item.name];
@@ -222,8 +153,8 @@ class Stash {
 					let newChest = remainder.length > 0 ? this.findChest(remainder[0]) : false;
 					if (newChest) {
 						if (!newChest.position.equals(chestWindow.position)) {
-							chest.close();
 							this.sendChestEfficiency(remainder[0], newChest);
+							chest.close();
 							this.sendToChest(newChest);
 							return;
 						}
@@ -233,8 +164,8 @@ class Stash {
 				});
 			}
 			else {
-				chest.close();
 				this.sendCantStash(chestWindow, current);
+				chest.close();
 				let newChest = this.findChest(current);
 				if (newChest) {
 					if (!newChest.position.equals(chestWindow.position)) {
@@ -249,13 +180,8 @@ class Stash {
 			}
 		}
 		else {
-			try {
-				chest.close();
-			}
-			catch(err) {
-				// Do nothing
-			}
 			this.sendStashSuccess(callback);
+			chest.close();
 		}
 	}
 
@@ -434,62 +360,21 @@ class Stash {
 		if (this.chestsToCache.length > 0) {
 			this.cachingChests = true;
 			this.callback = callback;
-			this.sendCacheChests();
+			//this.sendCacheChests();
 			this.sendToPeekInChest();
 		}
 	}
 
-	/*
-	The stashing routine involves several prerequisite tasks. I'm not sure if this will work well split out yet.
-	*/
 	stashNonEssentialInventory(callback) {
 		this.active = true;
-		const eventName = "autobot.stashing.behaviourSelect";
-		let result = {};
 		if (this.checkInventoryToStash()) {
-			const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
-			// Smelt before stashing
-			if (!this.smeltingCheck && inventoryDict['iron_ore']) {
-				result = {
-					error: false,
-					resultCode: "smelting",
-					description: `Bot is going to smelt ore`
-				};
-				this.bot.emit(eventName, result);
-				this.smeltingCheck = true;
-				this.bot.autobot.smelting.smeltOre(() => this.stashNonEssentialInventory(callback));
-				return;
-			}
-			// Do compressables before stashing
-			const compressList = this.getCompressList();
-			if (compressList.length > 0) {
-				result = {
-					error: false,
-					resultCode: "compressing",
-					description: `Bot is going to compress compressable items`,
-					compressList: compressList
-				};
-				this.bot.emit(eventName, result);
-				this.compressNext(compressList, () => this.stashNonEssentialInventory(callback));
-				return;
-			}
-			if (this.listUnknownStorageGridChests().length > 0) {
-				this.fillChestMap(() => this.stashNonEssentialInventory(callback));
-				return;
-			}
-			//console.log("Stashing non-essential inventory");
 			const chest = this.findChest();
 			if (chest) {
 				this.callback = callback;
 				this.sendToChest(chest);
 			}
 			else {
-				result = {
-					error: false,
-					resultCode: "placeNewChest",
-					description: `Bot is going to place a new chest`
-				};
-				this.bot.emit(eventName, result);
+				this.sendPlaceNewChest();
 				this.placeNewChest((result) => {
 					if (this.findChest()) {
 						this.stashNonEssentialInventory(callback);
@@ -499,23 +384,11 @@ class Stash {
 						if (callback) callback(result);
 						this.bot.emit('autobot.stashing.done', result);
 					}
-					else {
-						this.stashNonEssentialInventory(callback);
-					}
+					else this.stashNonEssentialInventory(callback);
 				});
 			}
 		}
-		else {
-			result = {
-				error: false,
-				resultCode: "skipping",
-				description: "No non-essential inventory to stash."
-			}
-			if (callback) callback(result);
-			this.bot.emit('autobot.stashing.done', result);
-			this.smeltingCheck = false;
-			this.active = false;
-		}
+		else this.sendStashSkipping(callback);
 	}
 
 	sendStashingError(chestWindow, item, parentError) {
@@ -554,12 +427,24 @@ class Stash {
 		this.bot.emit(eventName, result);
 	}
 
+	/*
 	sendCacheChests() {
 		const eventName = "autobot.stashing.behaviourSelect";
 		let result = {
 			error: false,
 			resultCode: "cacheChests",
 			description: `The bot is going to cache the contents of any unknown storage grid chests.`
+		};
+		this.bot.emit(eventName, result);
+	}
+	*/
+
+	sendPlaceNewChest() {
+		const eventName = "autobot.stashing.behaviourSelect";
+		let result = {
+			error: false,
+			resultCode: "placeNewChest",
+			description: `Bot is going to place a new chest`
 		};
 		this.bot.emit(eventName, result);
 	}
@@ -619,6 +504,18 @@ class Stash {
 			description: `All the chests on the storage grid have been examined.`
 		};
 		this.cachingChests = false;
+		if (callback) callback(result);
+		this.bot.emit(eventName, result);
+	}
+
+	sendStashSkipping(callback) {
+		const eventName = 'autobot.stashing.done';
+		let result = {
+			error: false,
+			resultCode: "skipping",
+			description: "No non-essential inventory to stash."
+		};
+		this.active = false;
 		if (callback) callback(result);
 		this.bot.emit(eventName, result);
 	}

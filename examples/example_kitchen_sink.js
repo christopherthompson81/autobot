@@ -53,37 +53,18 @@ function logResult(result) {
 }
 
 bot.once('spawn', () => {
-	const selectBehaviour = () => {
-		bot.autobot.behaviourSelect.resetAllBehaviours(
-			bot.autobot.behaviourSelect.defaultPreTaskBehaviour
-		);
+	const stash = () => {
+		bot.autobot.resetAllBehaviours(bot.autobot.stash.stashNonEssentialInventory);
 	};
 	bot.on('autobot.ready', (result) => {
 		logResult(result);
-		selectBehaviour();
+		stash();
 	});
 	bot.on('autobot.pathfinder.progress', () => { process.stdout.write("+"); });
-	bot.on('autobot.pathfinder.botStuck', (goalProgress, path, stateGoal) => {
-		console.log("Bot Stuck.");
-		bot.autobot.getUnstuck.onBotStuck(goalProgress, path, stateGoal);
-	});
-	bot.on('autobot.pathfinder.exceededTravelTimeLimit', (goalProgress, path, stateGoal) => {
-		console.log("Exceeded pathfinder travel time limit.");
-		bot.autobot.getUnstuck.flattenAndGoHome({goalPosition: new Vec3(stateGoal.x, stateGoal.y, stateGoal.z)});
-	});
-	bot.on('autobot.pathfinder.excessiveBreakTime', (block, breakTime) => {
-		console.log(`Excessive break time (${breakTime}) trying to break ${block.displayName} at ${block.position}`);
-		if (bot.autobot.mining.active) {
-			bot.pathfinder.setGoal(null);
-			bot.autobot.mining.active = false;
-			console.log('Excess break time forcing tool crafting. Mining Abandoned.');
-			selectBehaviour();
-		}
-	});
-	bot.on('autobot.navigator.goalReached', (result) => {
+	bot.on('autobot.pathfinder.goalReached', (result) => {
 		if (result.resultCode === 'reachedGoal') {
 			if (result.activeFunction === '') {
-				selectBehaviour();
+				stash();
 				return;
 			}
 			if (result.activeFunction === 'collectDrops') return;
@@ -95,9 +76,26 @@ bot.once('spawn', () => {
 			console.log(message);
 		}
 	});
+	bot.on('bot_stuck', (goalProgress, path, stateGoal) => {
+		console.log("Bot Stuck.");
+		bot.autobot.getUnstuck.onBotStuck(goalProgress, path, stateGoal);
+	});
+	bot.on('autobot.pathfinder.exceededTravelTimeLimit', (goalProgress, path, stateGoal) => {
+		console.log("Exceeded pathfinder travel time limit.");
+		bot.autobot.getUnstuck.flattenAndGoHome({goalPosition: new Vec3(stateGoal.x, stateGoal.y, stateGoal.z)});
+	});
+	bot.on('excessive_break_time', (block, breakTime) => {
+		console.log(`Excessive break time (${breakTime}) trying to break ${block.displayName} at ${block.position}`);
+		if (bot.autobot.mining.active) {
+			bot.pathfinder.setGoal(null);
+			bot.autobot.mining.active = false;
+			console.log('Excess break time forcing tool crafting. Mining Abandoned.');
+			stash();
+		}
+	});
 	bot.on('autobot.navigator.arrivedHome', (result) => {
 		logResult(result);
-		selectBehaviour();
+		stash();
 	});
 	bot.on('autobot.lumberjack.treeFound', (result) => {
 		console.log(result.description, result.tree[0].position, result.tree[0].displayName);
@@ -112,7 +110,7 @@ bot.once('spawn', () => {
 			bot.autobot.mining.mineBestOreVein();
 		}
 		else {
-			selectBehaviour();
+			stash();
 		}
 	});
 	bot.on('autobot.craftTools.done', (result) => {
@@ -142,7 +140,7 @@ bot.once('spawn', () => {
 			console.log('Exiting');
 			return;
 		}
-		selectBehaviour();
+		stash();
 	});
 	bot.on('autobot.stashing.behaviourSelect', (result) => {
 		logResult(result);
@@ -150,10 +148,7 @@ bot.once('spawn', () => {
 			console.log(result);
 		}
 	});
-	bot.on('autobot.stashing.cachingChests.done', (result) => {
-		logResult(result);
-		selectBehaviour();
-	});
+	bot.on('autobot.stashing.cachingChests.done', logResult);
 	bot.on('autobot.stashing.done', (result) => {
 		logResult(result);
 		if (result.error) {
@@ -162,20 +157,15 @@ bot.once('spawn', () => {
 		bot.autobot.stash.defaultPostStashBehaviour();
 	});
 	bot.on('autobot.autocraft.done', logResult);
-	bot.on('autobot.compression.done', (result) => {
-		logResult(result);
-		selectBehaviour();
-	});
+	bot.on('autobot.compression.done', logResult);
 	bot.on('autobot.smelting.done', (result) => {
 		if (result.resultCode === 'placingFurnaceError') {
 			console.log(result);
-			selectBehaviour();
 			return;
 		}
 		console.log(result.takeOutputResult.description);
 		console.log(result.restokeResult.description);
 		console.log(result.resupplyResult.description);
-		selectBehaviour();
 	});
 	bot.on('autobot.getUnstuck', logResult);
 	bot.on('autobot.stashing.itemDeposit', logResult);
@@ -183,13 +173,4 @@ bot.once('spawn', () => {
 		console.log(result.description, result.collectedItems);
 	});
 	bot.on('autobot.craftTools.crafting', logResult);
-	bot.on("autobot.behaviourSelect.preTask", (result) => {
-		if (result.resultCode === "noPreTasks") {
-			bot.autobot.behaviourSelect.defaultPostTaskBehaviour();
-		}
-		else {
-			logResult(result);
-		}
-	});
-	bot.on("autobot.behaviourSelect.postTask", logResult);
 });

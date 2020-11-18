@@ -4,11 +4,6 @@ class BehaviourSelect {
 	constructor(bot) {
 		autoBind(this);
 		this.bot = bot;
-		this.smeltingCheck = false;
-	}
-
-	resetBehaviour() {
-		this.smeltingCheck = false;
 	}
 
 	/**************************************************************************
@@ -18,7 +13,7 @@ class BehaviourSelect {
 	 **************************************************************************/
 
 	defaultPostTaskBehaviour() {
-		this.bot.autobot.resetAllBehaviours();
+		this.resetAllBehaviours();
 		// If we have logs, mine, if we don't lumberjack
 		const inventoryDict = this.bot.autobot.inventory.getInventoryDictionary();
 		// Don't start mining without a full set of tools
@@ -40,6 +35,12 @@ class BehaviourSelect {
 				else this.bot.autobot.lumberjack.harvestNearestTree(32);
 			});
 			return;
+		}
+		const cobblestoneCount = inventoryDict['cobblestone'] || 0;
+		if (cobblestoneCount >= 32 && this.bot.autobot.landscaping.getFloorPlateQueues()[1].length > 0) {
+			this.bot.autobot.landscaping.fixStorageGridFloorPlate((result) => {
+				this.bot.autobot.lumberjack.harvestNearestTree(32);
+			});
 		}
 		if (Object.keys(inventoryDict).some(id => id.match(/_log$/))) {
 			this.sendMining();
@@ -70,7 +71,7 @@ class BehaviourSelect {
 			}
 			if (this.bot.autobot.stash.listUnknownStorageGridChests().length > 0) {
 				this.sendCacheChests();
-				this.fillChestMap();
+				this.bot.autobot.stash.fillChestMap();
 				return;
 			}
 			this.sendStashing();
@@ -80,6 +81,20 @@ class BehaviourSelect {
 			this.smeltingCheck = false;
 			this.sendNoPreTasks();
 		}
+	}
+	
+	resetAllBehaviours(callback) {
+		this.bot.autobot.autocraft.resetBehaviour();
+		this.bot.autobot.collectDrops.resetBehaviour();
+		//bot.autobot.getUnstuck.resetBehaviour();
+		this.bot.autobot.inventory.resetBehaviour();
+		this.bot.autobot.landscaping.resetBehaviour();
+		this.bot.autobot.lumberjack.resetBehaviour();
+		this.bot.autobot.mining.resetBehaviour();
+		this.bot.autobot.navigator.resetBehaviour();
+		this.bot.autobot.smelting.resetBehaviour();
+		this.bot.autobot.stash.resetBehaviour();
+		if (callback) callback();
 	}
 
 	sendMissingTools(missingTools) {

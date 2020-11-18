@@ -376,7 +376,7 @@ class Landscaping {
 		else this.sendNoSpot(storageObjectType, callback);
 	}
 
-	fixStorageGridFloorPlate(callback) {
+	getFloorPlateQueues() {
 		const digQueue = [];
 		const placeQueue = [];
 		const nextGridSpot = this.getNextStorageGridSpot();
@@ -401,6 +401,11 @@ class Landscaping {
 			}
 			ringSize++;
 		}
+		return [digQueue, placeQueue];
+	}
+
+	fixStorageGridFloorPlate(callback) {
+		const [digQueue, placeQueue] = this.getFloorPlateQueues();
 		if (digQueue.length > 0) {
 			this.digQueue = digQueue;
 			this.digCallback = this.placeNext;

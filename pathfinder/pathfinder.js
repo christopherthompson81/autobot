@@ -266,7 +266,7 @@ function inject (bot) {
 			!goalProgress.notified &&
 			stateGoal
 		) {
-			bot.emit('bot_stuck', goalProgress, path, stateGoal)
+			bot.emit('autobot.pathfinder.botStuck', goalProgress, path, stateGoal)
 			goalProgress.notified = true;
 			//return
 		}
@@ -309,7 +309,7 @@ function inject (bot) {
 				// Break time is in ms; Emit a message when breaking will take more than 3 seconds
 				if (blockBreakTime > 3000) {
 					// TODO: Rewrite event in autobot event format
-					bot.emit('excessive_break_time', block, blockBreakTime);
+					bot.emit('autobot.pathfinder.excessiveBreakTime', block, blockBreakTime);
 				}
 				fullStop()
 				bot.equip(tool, 'hand', function () {

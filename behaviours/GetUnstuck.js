@@ -196,7 +196,7 @@ class GetUnstuck {
 		if (this.bot.autobot.mining.active) {
 			this.bot.autobot.mining.pushBadTarget(progress.goalPosition.clone());
 		}
-		this.bot.autobot.resetAllBehaviours(this.bot.autobot.navigator.returnHome);
+		this.bot.autobot.behaviourSelect.resetAllBehaviours(this.bot.autobot.navigator.returnHome);
 		this.bot.emit(eventName, result);
 	}
 
@@ -213,7 +213,7 @@ class GetUnstuck {
 		const stuckPosition = this.bot.entity.position.floored();
 		// Flatten one up to try to force a column reload.
 		// There's a good chance the bot doesn't have a good picture of what the world looks like right now.
-		this.bot.autobot.resetAllBehaviours(() => {
+		this.bot.autobot.behaviourSelect.resetAllBehaviours(() => {
 			this.bot.autobot.landscaping.flattenCube(
 				stuckPosition.offset(0, 1, 0),
 				'cobblestone',
