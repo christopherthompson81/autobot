@@ -249,7 +249,12 @@ class Stash {
 			}
 		}
 		else {
-			chest.close();
+			try {
+				chest.close();
+			}
+			catch(err) {
+				// Do nothing
+			}
 			this.sendStashSuccess(callback);
 		}
 	}

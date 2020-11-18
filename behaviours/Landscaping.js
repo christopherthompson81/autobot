@@ -1,6 +1,6 @@
 const autoBind = require('auto-bind');
 const Vec3 = require('vec3').Vec3;
-const { GoalBlock, GoalGetToBlock } = require('../pathfinder/pathfinder').goals;
+const { GoalBlock, GoalGetToBlock, GoalNear } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
 //const sortByDistanceFromBot = require('./autoBotLib').sortByDistanceFromBot;
 const sortByDistanceFromHome = require('./autoBotLib').sortByDistanceFromHome;
@@ -49,7 +49,7 @@ class Landscaping {
 			if (Math.floor(this.bot.entity.position.distanceTo(current.position)) > 3) {
 				//this.sendTooFar(block);
 				const p = current.position;
-				const goal = new GoalGetToBlock(p.x, p.y, p.z);
+				const goal = new GoalNear(p.x, p.y, p.z, 2);
 				this.bot.pathfinder.setGoal(goal);
 				return;
 			}
@@ -99,7 +99,7 @@ class Landscaping {
 			if (Math.floor(this.bot.entity.position.distanceTo(current)) > 3) {
 				this.sendTooFar(block);
 				const p = block.position;
-				const goal = new GoalGetToBlock(p.x, p.y, p.z);
+				const goal = new GoalNear(p.x, p.y, p.z, 2);
 				this.bot.pathfinder.setGoal(goal);
 				return;
 			}
