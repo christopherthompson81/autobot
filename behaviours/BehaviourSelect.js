@@ -38,6 +38,7 @@ class BehaviourSelect {
 		}
 		const cobblestoneCount = inventoryDict['cobblestone'] || 0;
 		if (cobblestoneCount >= 32 && this.bot.autobot.landscaping.getFloorPlateQueues()[1].length > 0) {
+			this.sendFixingFloorPlate();
 			this.bot.autobot.landscaping.fixStorageGridFloorPlate((result) => {
 				this.bot.autobot.lumberjack.harvestNearestTree(32);
 			});
@@ -133,6 +134,16 @@ class BehaviourSelect {
 			error: false,
 			resultCode: "lumberjack",
 			description: `Returning to cutting trees.`,
+		};
+		this.bot.emit(eventName, result);
+	}
+
+	sendFixingFloorPlate() {
+		const eventName = "autobot.behaviourSelect.postTask";
+		let result = {
+			error: false,
+			resultCode: "fixingFloorPlate",
+			description: `Fixing the storage grid floor plate.`,
 		};
 		this.bot.emit(eventName, result);
 	}
