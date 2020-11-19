@@ -324,7 +324,7 @@ class Smelting {
 
 	sendResupplyResult(err, oreType, inputAmount, inputCount, callback) {
 		const eventName = 'autobot.smelting.resupply';
-		let result = this.getRestokeResult(err, oreType, inputAmount, inputCount);
+		let result = this.getResupplyResult(err, oreType, inputAmount, inputCount);
 		this.bot.emit(eventName, result);
 		if (callback) callback(result);
 	}

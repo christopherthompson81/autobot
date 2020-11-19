@@ -223,6 +223,8 @@ class GetUnstuck {
 		});
 		this.bot.emit(eventName, result);
 	}
+
+	// TODO: Add a logger for super-stuck events. Record surroundings, inventory, and pathfinding data to a file.
 }
 
 module.exports = GetUnstuck;
