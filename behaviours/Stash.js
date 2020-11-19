@@ -164,11 +164,11 @@ class Stash {
 				});
 			}
 			else {
-				chest.close();
 				this.sendCantStash(chestWindow, current);
 				let newChest = this.findChest(current);
 				if (newChest) {
 					if (!newChest.position.equals(chestWindow.position)) {
+						chest.close();
 						this.sendToChest(newChest);
 						return;
 					}
