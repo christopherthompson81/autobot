@@ -42,6 +42,7 @@ class BehaviourSelect {
 			this.bot.autobot.landscaping.fixStorageGridFloorPlate((result) => {
 				this.bot.autobot.lumberjack.harvestNearestTree(32);
 			});
+			return;
 		}
 		if (Object.keys(inventoryDict).some(id => id.match(/_log$/))) {
 			this.sendMining();

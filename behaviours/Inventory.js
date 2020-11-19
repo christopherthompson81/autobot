@@ -183,6 +183,8 @@ class Inventory {
 		this.craftToolNext(toolIds, callback);
 	}
 
+	// TODO: Optimize inventory (merge duplicate stacks for max/min sizing)
+
 	sendCraftToolsSkipping(callback) {
 		const eventName = 'autobot.craftTools.done';
 		let result = {

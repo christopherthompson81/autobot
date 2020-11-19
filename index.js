@@ -139,7 +139,9 @@ bot.once('spawn', () => {
 			}
 			if (result.activeFunction === 'collectDrops') return;
 			if (result.activeFunction === 'cachingChests') return;
+			if (result.activeFunction === 'landscaping.digging') return;
 			if (result.activeFunction === 'landscaping.gettingDirt') return;
+			if (result.activeFunction === 'stash') return;
 			let message = `Reached goal of ${result.goalPosition}.`;
 			message += ` Bot is ${result.distanceFromGoal} blocks from the goal`;
 			message += ` and '${result.activeFunction}' is the active function.`;
