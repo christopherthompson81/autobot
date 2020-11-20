@@ -305,6 +305,7 @@ class Smelting {
 	}
 
 	getResupplyResult(err, oreType, inputAmount, inputCount) {
+		let result = {};
 		if (err) {
 			result = {
 				error: true,
@@ -320,6 +321,7 @@ class Smelting {
 				description: `Added ${inputAmount} ${oreType} to input slot (${inputCount} currently)`
 			};
 		}
+		return result;
 	}
 
 	sendResupplyResult(err, oreType, inputAmount, inputCount, callback) {

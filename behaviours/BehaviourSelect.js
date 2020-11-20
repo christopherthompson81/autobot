@@ -31,7 +31,7 @@ class BehaviourSelect {
 			this.bot.autobot.landscaping.getDirt(64 - dirtCount, (result) => {
 				// There is the case of a flattening error for chest placement causing this.
 				// If we have chest in inventory, stash. otherwise harvest tree
-				if (inventoryDict['chest']) this.stashNonEssentialInventory();
+				if (inventoryDict['chest']) this.bot.autobot.stash.stashNonEssentialInventory();
 				else this.bot.autobot.lumberjack.harvestNearestTree(32);
 			});
 			return;
