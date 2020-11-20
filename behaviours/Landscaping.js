@@ -82,7 +82,7 @@ class Landscaping {
 			const tool = this.bot.pathfinder.bestHarvestTool(block)
 			if (block.harvestTools) {
 				const harvestTools = Object.keys(block.harvestTools);
-				if (!harvestTools.includes(tool)) {
+				if (!harvestTools.includes(tool.type.toString())) {
 					this.sendNoSuitableTool(block, tool);
 					this.digQueue = remainder;
 					this.digNext();
@@ -391,10 +391,8 @@ class Landscaping {
 				for (z = -1 * ringSize; z <= ringSize; z++) {
 					const targetPos = this.bot.autobot.homePosition.offset(x, -1, z);
 					const targetBlock = this.bot.blockAt(targetPos);
-					if (!airBlocks.includes(targetBlock.name)) {
-						digQueue.push(targetPos);
-					}
 					if (targetBlock.name !== 'cobblestone') {
+						digQueue.push(targetPos);
 						placeQueue.push({name: 'cobblestone', position: targetPos});
 					}
 				}

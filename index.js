@@ -100,6 +100,7 @@ bot.once('spawn', () => {
 			selectBehaviour();
 		}
 	});
+	bot.on('autobot.landscaping.digQueue.digging', logResult);
 	bot.on('autobot.lumberjack.treeFound', (result) => {
 		console.log(result.description, result.tree[0].position, result.tree[0].displayName);
 	});
