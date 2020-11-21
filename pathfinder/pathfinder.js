@@ -384,6 +384,21 @@ function inject (bot) {
 				};
 				bot.emit('autobot.pathfinder.progress', result);
 			}
+			const lavaBlocks = bot.findBlocks({
+				point: bot.entity.position,
+				matching: bot.mcData.blocksByName.lava.id,
+				maxDistance: 5,
+				count: 1
+			});
+			if (lavaBlocks.length > 0) {
+				const result = {
+					error: false,
+					resultCode: "lavaNearby",
+					description: "Bot encountered lava during pathfinding",
+					stateGoal: this.stateGoal
+				};
+				bot.emit('autobot.pathfinder.progress', result);
+			}
 			if (!goalProgress.position.equals(bot.entity.position.floored())) {
 				//console.log('+');
 				const result = {
@@ -397,11 +412,14 @@ function inject (bot) {
 			lastNodeTime = performance.now()
 			path.shift()
 			if (path.length === 0) { // done
-				if (!dynamicGoal && stateGoal.isEnd(p.floored())) {
-					bot.emit('goal_reached', stateGoal)
-					stateGoal = null
+				try {
+					if (!dynamicGoal && stateGoal.isEnd(p.floored())) {
+						bot.emit('goal_reached', stateGoal)
+						stateGoal = null
+					}
+					fullStop()
 				}
-				fullStop()
+				catch(err) {}
 				return
 			}
 			// not done yet

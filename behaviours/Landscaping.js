@@ -24,7 +24,7 @@ class Landscaping {
 		this.gettingDirt = false;
 		this.targetSubstrate = '';
 		this.substrateList = [];
-		this.fillWaterBody = false;
+		this.fillingWater = false;
 	}
 
 	resetBehaviour() {
@@ -40,7 +40,7 @@ class Landscaping {
 		this.gettingDirt = false;
 		this.targetSubstrate = '';
 		this.substrateList = [];
-		this.fillWaterBody = false;
+		this.fillingWater = false;
 	}
 
 	placeNext() {
@@ -465,7 +465,7 @@ class Landscaping {
 	}
 
 	fillWaterBody(position, callback) {
-		this.fillWaterBody = true;
+		this.fillingWater = true;
 		let waterPositions = this.bot.findBlocks({
 			point: position,
 			matching: (b) => {
@@ -491,7 +491,7 @@ class Landscaping {
 		// Execute placeNext
 		this.placeQueue = placeQueue;
 		this.placeCallback = (result) => {
-			this.fillWaterBody = false;
+			this.fillingWater = false;
 			callback(result);
 		};
 		this.placeNext();

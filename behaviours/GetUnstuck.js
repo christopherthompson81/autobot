@@ -170,7 +170,14 @@ class GetUnstuck {
 				stuckPosition,
 				'cobblestone',
 				['stone', 'cobblestone', 'diorite', 'andesite', 'granite', 'sand', 'dirt', 'grass_block'],
-				() => this.bot.pathfinder.setGoal(goal)
+				() => {
+					if (!this.bot.autobot.landscaping.gettingDirt) {
+						this.bot.pathfinder.setGoal(goal);
+					}
+					else {
+						this.bot.autobot.behaviourSelect.resetAllBehaviours(this.bot.autobot.navigator.returnHome);
+					}
+				}
 			);
 		});
 		this.bot.emit(eventName, result);

@@ -25,7 +25,7 @@ class Navigator {
 		// Only set home on near surface crafting tables
 		let craftingTable = null;
 		for (const point of craftingTables) {
-			if (point.y >= 60) {
+			if (point.y >= 58) {
 				craftingTable = this.bot.blockAt(point);
 				break;
 			}

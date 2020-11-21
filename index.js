@@ -153,14 +153,20 @@ bot.once('spawn', () => {
 		if (result.resultCode === 'reachedNextPoint') {
 			process.stdout.write("+");
 		}
-		else if (result.resultCode === 'inWater') {
+		else if (result.resultCode === 'inWater' && !bot.autobot.landscaping.fillingWater) {
 			console.log('In water, attempting to fill source');
 			bot.pathfinder.setGoal(null);
 			bot.autobot.landscaping.fillWaterBody(bot.entity.position, (fillWaterBodyResult) => {
-				logResult(fillWaterBodyResult);
-				console.log('Resuming pathfinding to prior goal');
-				bot.pathfinder.setGoal(result.stateGoal);
+				//logResult(fillWaterBodyResult);
+				//console.log('Resuming pathfinding to prior goal');
+				//bot.pathfinder.setGoal(result.stateGoal);
+				bot.autobot.behaviourSelect.resetAllBehaviours(
+					bot.autobot.navigator.returnHome
+				);
 			});
+		}
+		else if (result.resultCode === 'lavaNearby') {
+			logResult(result);
 		}
 	});
 	bot.on('autobot.pathfinder.botStuck', (goalProgress, path, stateGoal) => {

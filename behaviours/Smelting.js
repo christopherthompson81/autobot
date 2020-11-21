@@ -248,6 +248,7 @@ class Smelting {
 			//this.callback = () => { this.smeltingCallback(furnaceBlock, callback); };
 			this.cbFurnace = furnaceBlock;
 			this.callback = callback;
+			console.log('Found Furnace');
 			this.bot.pathfinder.setGoal(goal);
 		}
 		else {
