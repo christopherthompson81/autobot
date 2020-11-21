@@ -216,7 +216,7 @@ class Smelting {
 		const callback = this.callback;
 		const furnace = this.bot.openFurnace(furnaceToOpen);
 		furnace.on('open', () => {
-			this.saveFurnaceWindow(furnaceToOpen.position, furnace.window);
+			this.saveFurnaceWindow(furnaceToOpen.position, 'iron_ore', furnace.window);
 			const furnaceWindow = this.furnaceMap[getPosHash(furnaceToOpen.position)];
 			const oresToSmelt = this.listSmeltableOres();
 			// TODO: write a function to check the stashing queue against the chest
