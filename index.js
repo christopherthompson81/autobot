@@ -149,14 +149,28 @@ bot.once('spawn', () => {
 			console.log(message);
 		}
 	});
-	bot.on('autobot.pathfinder.progress', () => { process.stdout.write("+"); });
+	bot.on('autobot.pathfinder.progress', (result) => {
+		if (result.resultCode === 'reachedNextPoint') {
+			process.stdout.write("+");
+		}
+		else if (result.resultCode === 'inWater') {
+			console.log('In water, attempting to fill source');
+			bot.pathfinder.setGoal(null);
+			bot.autobot.landscaping.fillWaterBody(bot.entity.position, (fillWaterBodyResult) => {
+				logResult(fillWaterBodyResult);
+				console.log('Resuming pathfinding to prior goal');
+				bot.pathfinder.setGoal(result.stateGoal);
+			});
+		}
+	});
 	bot.on('autobot.pathfinder.botStuck', (goalProgress, path, stateGoal) => {
 		console.log("Bot Stuck.");
 		bot.autobot.getUnstuck.onBotStuck(goalProgress, path, stateGoal);
 	});
 	bot.on('autobot.pathfinder.exceededTravelTimeLimit', (goalProgress, path, stateGoal) => {
 		console.log("Exceeded pathfinder travel time limit.");
-		bot.autobot.getUnstuck.flattenAndGoHome({goalPosition: new Vec3(stateGoal.x, stateGoal.y, stateGoal.z)});
+		bot.autobot.getUnstuck.onBotStuck(goalProgress, path, stateGoal);
+		//bot.autobot.getUnstuck.flattenAndGoHome({goalPosition: new Vec3(stateGoal.x, stateGoal.y, stateGoal.z)});
 	});
 	bot.on('autobot.pathfinder.excessiveBreakTime', (block, breakTime) => {
 		console.log(`Excessive break time (${breakTime}) trying to break ${block.displayName} at ${block.position}`);

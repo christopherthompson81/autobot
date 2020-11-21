@@ -40,7 +40,7 @@ class Smelting {
 	saveFurnaceWindow(position, forOre, furnaceWindow) {
 		const p = position;
 		const posHash = getPosHash(position);
-		this.chestMap[posHash] = {
+		this.furnaceMap[posHash] = {
 			id: furnaceWindow.id,
 			forOre: forOre,
 			position: position,
@@ -165,7 +165,7 @@ class Smelting {
 		let callback = this.callback;
 		const furnace = this.bot.openFurnace(furnaceBlock);
 		furnace.on('open', () => {
-			this.saveFurnaceWindow(furnaceBlock.position, furnace.window);
+			this.saveFurnaceWindow(furnaceBlock.position, 'iron_ore', furnace.window);
 			let postTake = (err, item) => {
 				this.restoke(furnace, (restokeResult) => {
 					this.resupplyFurnace(furnace, (resupplyResult) => {

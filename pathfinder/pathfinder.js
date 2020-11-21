@@ -379,7 +379,8 @@ function inject (bot) {
 				const result = {
 					error: false,
 					resultCode: "inWater",
-					description: "Bot entered water during pathfinding"
+					description: "Bot entered water during pathfinding",
+					stateGoal: this.stateGoal
 				};
 				bot.emit('autobot.pathfinder.progress', result);
 			}

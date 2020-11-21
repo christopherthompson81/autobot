@@ -2,7 +2,7 @@ const autoBind = require('auto-bind');
 const Vec3 = require('vec3').Vec3;
 const { GoalBlock, GoalGetToBlock, GoalNear } = require('../pathfinder/pathfinder').goals;
 const sleep = require('./autoBotLib').sleep;
-//const sortByDistanceFromBot = require('./autoBotLib').sortByDistanceFromBot;
+const sortByDistanceFromBot = require('./autoBotLib').sortByDistanceFromBot;
 const sortByDistanceFromHome = require('./autoBotLib').sortByDistanceFromHome;
 const airBlocks = require('./constants').airBlocks;
 const clearPattern = require('./constants').clearPattern;
@@ -24,6 +24,7 @@ class Landscaping {
 		this.gettingDirt = false;
 		this.targetSubstrate = '';
 		this.substrateList = [];
+		this.fillWaterBody = false;
 	}
 
 	resetBehaviour() {
@@ -39,6 +40,7 @@ class Landscaping {
 		this.gettingDirt = false;
 		this.targetSubstrate = '';
 		this.substrateList = [];
+		this.fillWaterBody = false;
 	}
 
 	placeNext() {
@@ -49,7 +51,7 @@ class Landscaping {
 			if (Math.floor(this.bot.entity.position.distanceTo(current.position)) > 3) {
 				//this.sendTooFar(block);
 				const p = current.position;
-				const goal = new GoalNear(p.x, p.y, p.z, 2);
+				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				this.bot.pathfinder.setGoal(goal);
 				return;
 			}
@@ -421,9 +423,51 @@ class Landscaping {
 		}
 	}
 
-	fillWaterBody(position) {
-		const waterPositions = this.bot.findBlocks({
-			point: this.bot.entity.position,
+	// Return an array of blocks forming a contiguous queue (of specified types)
+	blockToWaterBody(p, oldQueue, limit) {
+		// Scan the cube 9-8-9, all new positve cubes recursively scan. 
+		let point = p.clone();
+		let queue = [...oldQueue];
+		//console.log(oreBlocks);
+		for (let y = -1; y <= 1; y++) {
+			for (let x = -1; x <= 1; x++) {
+				for (let z = -1; z <= 1; z++) {
+					if (x == 0 && y == 0 && z == 0) {
+						continue;
+					}
+					const scanBlock = this.bot.blockAt(point.offset(x, y, z));
+					//console.log(`scanblock: `, scanBlock);
+					if (scanBlock.type === this.bot.mcData.blocksByName.water.id && scanBlock.stateId === 34) {
+						//console.log(`Adjacent block ${x} ${y} ${z} is also ore.`);
+						let knownBlock = false;
+						for (const known of queue) {
+							if (known.equals(scanBlock.position)) {
+								knownBlock = true;
+								break;
+							}
+						}
+						if (!knownBlock) queue.push(scanBlock.position);
+					}
+				}
+			}
+		}
+		if (queue.length >= limit) {
+			return queue.slice(0, limit);
+		}
+		if (queue.length > oldQueue.length) {
+			const newLength = queue.length;
+			for (let i = oldQueue.length; i < newLength; i++) {
+				queue = this.blockToWaterBody(queue[i], queue, limit);
+				if (queue.length >= limit) break;
+			}
+		}
+		return queue;
+	}
+
+	fillWaterBody(position, callback) {
+		this.fillWaterBody = true;
+		let waterPositions = this.bot.findBlocks({
+			point: position,
 			matching: (b) => {
 				if (b.type === this.bot.mcData.blocksByName.water.id) {
 					if (b.stateId === 34) {
@@ -435,9 +479,22 @@ class Landscaping {
 			maxDistance: 35,
 			count: 100,
 		}, true);
+		let cobblestoneCount = this.bot.autobot.inventory.getInventoryDictionary().cobblestone || 0;
+		waterPositions = sortByDistanceFromBot(this.bot, waterPositions);
 		// Turn the block into a body
+		waterPositions = this.blockToWaterBody(waterPositions[0], [waterPositions[0]], cobblestoneCount);
 		// Make a placeQueue
+		const placeQueue = [];
+		for (const waterPosition of waterPositions) {
+			placeQueue.push({name: 'cobblestone', position: waterPosition});
+		}
 		// Execute placeNext
+		this.placeQueue = placeQueue;
+		this.placeCallback = (result) => {
+			this.fillWaterBody = false;
+			callback(result);
+		};
+		this.placeNext();
 	}
 
 	sendPlacingError(parentError, currentTarget, queueRemainder) {

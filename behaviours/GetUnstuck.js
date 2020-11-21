@@ -121,6 +121,9 @@ class GetUnstuck {
 	// 4). Mark the goal position as a bad target, try to flatten surroundings, and go home
 	// 5). All behaviours after 4 are the same as 4.
 	selectOnStuckBehaviour(progress, goal) {
+		if (this.bot.isInWater) {
+			this.fillWaterSource();
+		}
 		if (progress.errorCount > 0 && progress.errorCount <= 1) {
 			this.backupAndContinue(goal, progress);
 		}
@@ -242,9 +245,12 @@ class GetUnstuck {
 			maxDistance: 35,
 			count: 100,
 		}, true);
-		for (const position of waterPositions) {
-			const waterBlock = this.bot.blockAt(position);
-			console.log(waterBlock);
+		if (waterPositions.length > 0) {
+			this.bot.autobot.landscaping.fillWaterBody(waterPositions[0])
+			return true;
+		}
+		else {
+			return false;
 		}
 	}
 }
