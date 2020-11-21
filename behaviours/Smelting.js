@@ -144,10 +144,28 @@ class Smelting {
 	}
 
 	smeltingCallback() {
+		if (!this.cbFurnace) {
+			// Timeout is for pathfinder not being spammed
+			sleep(100).then(() => { this.bot.autobot.lumberjack.harvestNearestTree(32); });
+			return;
+		}
+		if (!this.validateFurnace(this.cbFurnace.position)) {
+			delete this.furnaceMap[getPosHash(this.cbFurnace.position)];
+			// Timeout is for pathfinder not being spammed
+			sleep(100).then(() => { this.smeltOre(this.callback); });
+			return;
+		}
+		if (Math.floor(this.bot.entity.position.distanceTo(this.cbFurnace.position)) > 3) {
+			// Didn't actually arrive. Start over.
+			// Timeout is for pathfinder not being spammed
+			sleep(100).then(() => { this.smeltOre(this.callback); });
+			return;
+		}
 		let furnaceBlock = this.cbFurnace;
 		let callback = this.callback;
 		const furnace = this.bot.openFurnace(furnaceBlock);
 		furnace.on('open', () => {
+			this.saveFurnaceWindow(furnaceBlock.position, furnace.window);
 			let postTake = (err, item) => {
 				this.restoke(furnace, (restokeResult) => {
 					this.resupplyFurnace(furnace, (resupplyResult) => {
@@ -159,6 +177,7 @@ class Smelting {
 			else postTake(null, 'skipped');
 		});
 		furnace.on('close', () => {
+			this.active = false;
 			//console.log('Furnace closed');
 		});
 	}
@@ -205,6 +224,7 @@ class Smelting {
 			this.smeltNext(furnace, oresToSmelt, furnaceWindow, callback);
 		});
 		furnace.on('close', () => {
+			this.active = false;
 			//console.log('Chest closed');
 		});
 	}

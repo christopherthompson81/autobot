@@ -107,6 +107,8 @@ class GetUnstuck {
 		}
 	}
 
+	// TODO: Detect single source water flow scenario.
+
 	onBotStuck(goalProgress, path, goal) {
 		this.checkStuckProgress(goal);
 		this.selectOnStuckBehaviour(this.stuckProgress, goal);
@@ -225,6 +227,26 @@ class GetUnstuck {
 	}
 
 	// TODO: Add a logger for super-stuck events. Record surroundings, inventory, and pathfinding data to a file.
+
+	fillWaterSource() {
+		const waterPositions = this.bot.findBlocks({
+			point: this.bot.entity.position,
+			matching: (b) => {
+				if (b.type === this.bot.mcData.blocksByName.water.id) {
+					if (b.stateId === 34) {
+						return true;
+					}
+				}
+				return false;
+			},
+			maxDistance: 35,
+			count: 100,
+		}, true);
+		for (const position of waterPositions) {
+			const waterBlock = this.bot.blockAt(position);
+			console.log(waterBlock);
+		}
+	}
 }
 
 module.exports = GetUnstuck;

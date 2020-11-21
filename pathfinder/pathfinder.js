@@ -375,6 +375,14 @@ function inject (bot) {
 		const dz = nextPoint.z - p.z
 		if ((dx * dx + dz * dz) <= 0.15 * 0.15 && (bot.entity.onGround || bot.entity.isInWater)) {
 			// arrived at next point
+			if (bot.entity.isInWater) {
+				const result = {
+					error: false,
+					resultCode: "inWater",
+					description: "Bot entered water during pathfinding"
+				};
+				bot.emit('autobot.pathfinder.progress', result);
+			}
 			if (!goalProgress.position.equals(bot.entity.position.floored())) {
 				//console.log('+');
 				const result = {
@@ -382,7 +390,7 @@ function inject (bot) {
 					resultCode: "reachedNextPoint",
 					description: "Pathfinder reached the next point on its path"
 				};
-				bot.emit('autobot.pathfinder.progress', result)
+				bot.emit('autobot.pathfinder.progress', result);
 				setGoalProgress();
 			}
 			lastNodeTime = performance.now()

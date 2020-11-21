@@ -421,6 +421,25 @@ class Landscaping {
 		}
 	}
 
+	fillWaterBody(position) {
+		const waterPositions = this.bot.findBlocks({
+			point: this.bot.entity.position,
+			matching: (b) => {
+				if (b.type === this.bot.mcData.blocksByName.water.id) {
+					if (b.stateId === 34) {
+						return true;
+					}
+				}
+				return false;
+			},
+			maxDistance: 35,
+			count: 100,
+		}, true);
+		// Turn the block into a body
+		// Make a placeQueue
+		// Execute placeNext
+	}
+
 	sendPlacingError(parentError, currentTarget, queueRemainder) {
 		const eventName = 'autobot.landscaping.placeQueue.done';
 		let result = {
