@@ -84,7 +84,7 @@ class Landscaping {
 			const tool = this.bot.pathfinder.bestHarvestTool(block)
 			if (block.harvestTools) {
 				const harvestTools = Object.keys(block.harvestTools);
-				if (!harvestTools.includes(tool.type.toString())) {
+				if (!tool || !harvestTools.includes(tool.type.toString())) {
 					this.sendNoSuitableTool(block, tool);
 					this.digQueue = remainder;
 					this.digNext();
@@ -479,6 +479,11 @@ class Landscaping {
 			maxDistance: 35,
 			count: 100,
 		}, true);
+		if (waterPositions.length === 0) {
+			this.fillingWater = false;
+			if (callback) callback();
+			return;
+		}
 		let cobblestoneCount = this.bot.autobot.inventory.getInventoryDictionary().cobblestone || 0;
 		waterPositions = sortByDistanceFromBot(this.bot, waterPositions);
 		// Turn the block into a body

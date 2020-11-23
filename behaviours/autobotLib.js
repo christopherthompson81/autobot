@@ -9,6 +9,13 @@ function getToolDamage(tool) {
 	return (tool && tool.nbt) ? tool.nbt.value.Damage.value : 0;
 }
 
+function breakTime(block, tool) {
+	const enchants = (tool && tool.nbt) ? nbt.simplify(tool.nbt).Enchantments : [];
+	const effects = bot.entity.effects;
+	const digTime = block.digTime(tool ? tool.type : null, false, false, false, enchants, effects);
+	return digTime;
+}
+
 function bestHarvestTool(bot, block) {
 	const availableTools = bot.inventory.items();
 	const effects = bot.entity.effects;
@@ -58,6 +65,7 @@ function getPosHash(p) {
 
 exports.sleep = sleep;
 exports.bestHarvestTool = bestHarvestTool;
+exports.breakTime = breakTime;
 exports.sortByDistanceFromBot = sortByDistanceFromBot;
 exports.sortByDistanceFromHome = sortByDistanceFromHome;
 exports.getPosHash = getPosHash;
