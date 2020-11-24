@@ -330,7 +330,7 @@ class Stash {
 		const goal = new GoalNear(p.x, p.y, p.z, 3);
 		this.cbChest = chest;
 		// Timeout is for pathfinder not being spammed
-		sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
+		sleep(100).then(() => { this.bot.autobot.navigator.setGoal(goal); });
 	}
 
 	cacheChest() {
@@ -350,7 +350,7 @@ class Stash {
 		if (this.chestsToCache.length > 0) {
 			const p = this.chestsToCache[0];
 			const goal = new GoalNear(p.x, p.y, p.z, 3);
-			this.bot.pathfinder.setGoal(goal);
+			this.bot.autobot.navigator.setGoal(goal);
 			return;
 		}
 		this.sendCachedAllChests(this.callback);

@@ -192,7 +192,7 @@ class Mining {
 					this.sendTooFar(current);
 					const p = current.position;
 					const goal = new GoalGetToBlock(p.x, p.y, p.z);
-					this.bot.pathfinder.setGoal(goal);
+					this.bot.autobot.navigator.setGoal(goal);
 					this.callback = () => this.mineVeinNext(vein, callback);
 					return;
 				}
@@ -217,7 +217,7 @@ class Mining {
 		this.callback = () => {
 			this.mineVeinNext(vein, callback);
 		};
-		this.bot.pathfinder.setGoal(goal);
+		this.bot.autobot.navigator.setGoal(goal);
 	}
 
 	mineNearestOreVein(callback) {

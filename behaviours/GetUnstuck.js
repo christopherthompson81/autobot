@@ -99,7 +99,7 @@ class GetUnstuck {
 	onExcessiveBreakTime(block, breakTime) {
 		//console.log(`Excessive break time (${breakTime}) trying to break ${block.displayName} at ${block.position}`);
 		if (this.bot.autobot.mining.active) {
-			this.bot.pathfinder.setGoal(null);
+			this.bot.autobot.navigator.setGoal(null);
 			this.bot.autobot.mining.active = false;
 			// TODO: Add an event for this
 			//console.log('Excess break time forcing tool crafting. Mining Abandoned.');
@@ -109,7 +109,7 @@ class GetUnstuck {
 
 	// TODO: Detect single source water flow scenario.
 
-	onBotStuck(goalProgress, path, goal) {
+	onBotStuck(goalProgress, goal) {
 		this.checkStuckProgress(goal);
 		this.selectOnStuckBehaviour(this.stuckProgress, goal);
 	}
@@ -151,7 +151,7 @@ class GetUnstuck {
 			resultCode: "tooFar",
 			description: `An error happened in attempting to reach the goal. Distance: ${progress.distanceFromGoal}`
 		};
-		this.bot.autobot.navigator.backupBot(() => this.bot.pathfinder.setGoal(goal));
+		this.bot.autobot.navigator.backupBot(() => this.bot.autobot.navigator.setGoal(goal));
 		this.bot.emit(eventName, result);
 	}
 	
@@ -162,7 +162,7 @@ class GetUnstuck {
 			resultCode: "tooFar",
 			description: `Another error happened in attempting to reach the goal. Flattening Surroundings. Distance: ${progress.distanceFromGoal}`
 		};
-		this.bot.pathfinder.setGoal(null);
+		this.bot.autobot.navigator.setGoal(null);
 		this.bot.clearControlStates();
 		const stuckPosition = this.bot.entity.position.floored();
 		this.bot.autobot.navigator.backupBot(() => {
@@ -172,7 +172,7 @@ class GetUnstuck {
 				['stone', 'cobblestone', 'diorite', 'andesite', 'granite', 'sand', 'dirt', 'grass_block'],
 				() => {
 					if (!this.bot.autobot.landscaping.gettingDirt) {
-						this.bot.pathfinder.setGoal(goal);
+						this.bot.autobot.navigator.setGoal(goal);
 					}
 					else {
 						this.bot.autobot.behaviourSelect.resetAllBehaviours(this.bot.autobot.navigator.returnHome);
@@ -194,7 +194,7 @@ class GetUnstuck {
 		const chunkX = botLocation.blockPoint.x;
 		const chunkZ = botLocation.blockPoint.z;
 		this.bot.world.unloadColumn(chunkX, chunkZ);
-		this.bot.autobot.navigator.backupBot(() => this.bot.pathfinder.setGoal(goal));
+		this.bot.autobot.navigator.backupBot(() => this.bot.autobot.navigator.setGoal(goal));
 		this.bot.emit(eventName, result);
 	}
 

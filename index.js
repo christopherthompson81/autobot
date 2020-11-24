@@ -155,11 +155,8 @@ bot.once('spawn', () => {
 		}
 		else if (result.resultCode === 'inWater' && !bot.autobot.landscaping.fillingWater) {
 			console.log('In water, attempting to fill source');
-			bot.pathfinder.setGoal(null);
+			bot.autobot.navigator.setGoal(null);
 			bot.autobot.landscaping.fillWaterBody(bot.entity.position, (fillWaterBodyResult) => {
-				//logResult(fillWaterBodyResult);
-				//console.log('Resuming pathfinding to prior goal');
-				//bot.pathfinder.setGoal(result.stateGoal);
 				bot.autobot.behaviourSelect.resetAllBehaviours(
 					bot.autobot.navigator.returnHome
 				);
@@ -169,9 +166,9 @@ bot.once('spawn', () => {
 			logResult(result);
 		}
 	});
-	bot.on('autobot.navigator.botStuck', (goalProgress, path, stateGoal) => {
+	bot.on('autobot.navigator.botStuck', (goalProgress, stateGoal) => {
 		console.log("Bot Stuck.");
-		bot.autobot.getUnstuck.onBotStuck(goalProgress, path, stateGoal);
+		bot.autobot.getUnstuck.onBotStuck(goalProgress, stateGoal);
 	});
 	bot.on('autobot.navigator.exceededTravelTimeLimit', (goalProgress, path, stateGoal) => {
 		console.log("Exceeded pathfinder travel time limit.");
@@ -181,7 +178,7 @@ bot.once('spawn', () => {
 	bot.on('autobot.navigator.excessiveBreakTime', (block, breakTime) => {
 		console.log(`Excessive break time (${breakTime}) trying to break ${block.displayName} at ${block.position}`);
 		if (bot.autobot.mining.active) {
-			bot.pathfinder.setGoal(null);
+			bot.autobot.navigator.setGoal(null);
 			bot.autobot.mining.active = false;
 			console.log('Excess break time forcing tool crafting. Mining Abandoned.');
 			selectBehaviour();

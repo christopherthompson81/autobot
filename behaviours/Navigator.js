@@ -81,11 +81,11 @@ class Navigator {
 	returnHome() {
 		//console.log("Returning to home position: ", this.bot.autobot.homePosition);
 		this.active = true;
-		this.bot.pathfinder.setGoal(null);
+		this.bot.autobot.navigator.setGoal(null);
 		this.backupBot(() => {
 			const p = this.bot.autobot.homePosition;
 			const goal = new GoalNear(p.x, p.y, p.z, 3);
-			this.bot.pathfinder.setGoal(goal);
+			this.bot.autobot.navigator.setGoal(goal);
 		});
 	}
 

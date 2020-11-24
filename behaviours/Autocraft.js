@@ -326,7 +326,7 @@ class Autocraft {
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
 				//console.log("Moving to crafting table");
 				sleep(100).then(() => {
-					this.bot.pathfinder.setGoal(goal);
+					this.bot.autobot.navigator.setGoal(goal);
 				});
 				return;
 			}

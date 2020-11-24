@@ -131,7 +131,7 @@ class Lumberjack {
 		this.callback = callback;
 		const p = tree[0].position;
 		const goal = new GoalGetToBlock(p.x, p.y, p.z);
-		this.bot.pathfinder.setGoal(goal);
+		this.bot.autobot.navigator.setGoal(goal);
 	}
 
 	harvestNearestTree(threshold, callback) {

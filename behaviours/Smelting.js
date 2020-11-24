@@ -235,7 +235,7 @@ class Smelting {
 		const goal = new GoalNear(p.x, p.y, p.z, 3);
 		this.cbFurnace = furnace;
 		// Timeout is for pathfinder not being spammed
-		sleep(100).then(() => { this.bot.pathfinder.setGoal(goal); });
+		sleep(100).then(() => { this.bot.autobot.navigator.setGoal(goal); });
 	}
 
 	smeltOre(callback) {
@@ -249,7 +249,7 @@ class Smelting {
 			this.cbFurnace = furnaceBlock;
 			this.callback = callback;
 			console.log('Found Furnace');
-			this.bot.pathfinder.setGoal(goal);
+			this.bot.autobot.navigator.setGoal(goal);
 		}
 		else {
 			this.placeNewFurnace((placeResult) => {

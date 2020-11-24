@@ -52,7 +52,7 @@ class Landscaping {
 				//this.sendTooFar(block);
 				const p = current.position;
 				const goal = new GoalNear(p.x, p.y, p.z, 3);
-				this.bot.pathfinder.setGoal(goal);
+				this.bot.autobot.navigator.setGoal(goal);
 				return;
 			}
 			const item = this.bot.autobot.inventory.getInventoryItemById(this.bot.mcData.itemsByName[current.name].id);
@@ -102,7 +102,7 @@ class Landscaping {
 				this.sendTooFar(block);
 				const p = block.position;
 				const goal = new GoalNear(p.x, p.y, p.z, 2);
-				this.bot.pathfinder.setGoal(goal);
+				this.bot.autobot.navigator.setGoal(goal);
 				return;
 			}
 			this.bot.equip(tool, 'hand', () => {
@@ -196,7 +196,7 @@ class Landscaping {
 			// Set a goal of exactly standing inside the block at foot level.
 			const goal = new GoalBlock(p.x, p.y, p.z);
 			//this.bot.autobot.currentTask = 'flattenCube';
-			this.bot.pathfinder.setGoal(goal);
+			this.bot.autobot.navigator.setGoal(goal);
 		}
 	}
 
@@ -307,7 +307,7 @@ class Landscaping {
 			this.callback = callback;
 			const p = dirtQueue[0];
 			const goal = new GoalBlock(p.x, p.y, p.z);
-			this.bot.pathfinder.setGoal(goal);
+			this.bot.autobot.navigator.setGoal(goal);
 		}
 		else {
 			console.log('No dirt');

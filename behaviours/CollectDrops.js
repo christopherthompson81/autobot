@@ -61,7 +61,7 @@ class CollectDrops {
 			}
 			const p = current.position;
 			const goal = new GoalBlock(p.x, p.y, p.z);
-			this.bot.pathfinder.setGoal(goal);
+			this.bot.autobot.navigator.setGoal(goal);
 		}
 		else {
 			// Timeout is for pathfinder not being spammed
