@@ -48,7 +48,7 @@ class Navigator {
 
 	setHomePosition() {
 		const craftingTables = this.bot.findBlocks({
-			matching: this.bot.mcData.blocksByName['crafting_table'].id,
+			matching: this.bot.mcData.blocksByName.crafting_table.id,
 			maxDistance: 128,
 			count: 10
 		});
@@ -77,16 +77,6 @@ class Navigator {
 			callback();
 		});
 	}
-
-	arrivedHome() {
-		const result = {
-			error: false,
-			resultCode: "arrivedHome",
-			description: "Bot arrived back at the home position."
-		};
-		this.bot.emit('autobot.navigator.arrivedHome', result);
-		this.active = false;
-	}
 		
 	returnHome() {
 		//console.log("Returning to home position: ", this.bot.autobot.homePosition);
@@ -99,72 +89,160 @@ class Navigator {
 		});
 	}
 
-	onGoalReached (goal) {
-		const eventName = 'autobot.navigator.goalReached';
-		let result = {};
+	findActiveFunction() {
 		let activeFunction = "";
+		// navigating first
+		if (this.active) activeFunction = "navigator";
+		// collect drops next
+		else if (this.bot.autobot.collectDrops.active) activeFunction = "collectDrops";
+		// landscaping next
+		else if (this.bot.autobot.landscaping.flatteningCube) activeFunction = "landscaping.flatteningCube";
+		else if (this.bot.autobot.landscaping.digging) activeFunction = "landscaping.digging";
+		else if (this.bot.autobot.landscaping.placing) activeFunction = "landscaping.placing";
+		else if (this.bot.autobot.landscaping.gettingDirt) activeFunction = "landscaping.gettingDirt";
+		// then the rest
+		else if (this.bot.autobot.autocraft.active) activeFunction = "autocraft";
+		else if (this.bot.autobot.lumberjack.active) activeFunction = "lumberjack";
+		else if (this.bot.autobot.mining.active) activeFunction = "mining";
+		else if (this.bot.autobot.smelting.active) activeFunction = "smelting";
+		else if (this.bot.autobot.stash.cachingChests) activeFunction = "cachingChests";
+		else if (this.bot.autobot.stash.active) activeFunction = "stash";
+		return activeFunction;
+	}
+
+	onGoalReached (goal) {
+		let activeFunction = this.findActiveFunction();
 		const goalVec3 = new Vec3(goal.x, goal.y, goal.z);
 		const distanceFromGoal = Math.floor(goalVec3.distanceTo(this.bot.entity.position));
 		if (!this.bot.autobot.getUnstuck.checkGoalProgress(goal)) {
-			//console.log('Selecting getUnstuck behaviour');
 			this.bot.autobot.getUnstuck.selectOnStuckBehaviour(this.bot.autobot.getUnstuck.goalProgress, goal);
 			return;
 		}
 		// navigating first
-		if (this.active) {
-			sleep(350).then(this.arrivedHome);
-			activeFunction = "navigator";
-		}
+		if (activeFunction === "navigator") sleep(350).then(this.sendArrivedHome);
 		// collect drops next
-		else if (this.bot.autobot.collectDrops.active) {
-			sleep(350).then(this.bot.autobot.collectDrops.pickUpNext);
-			activeFunction = "collectDrops";
-		}
+		else if (activeFunction === "collectDrops") sleep(350).then(this.bot.autobot.collectDrops.pickUpNext);
 		// landscaping next
-		else if (this.bot.autobot.landscaping.flatteningCube) {
-			sleep(350).then(() => {
-				this.bot.autobot.landscaping.flattenCallback(goalVec3);
-			});
-			activeFunction = "landscaping.flatteningCube";
+		else if (activeFunction === "landscaping.flatteningCube") {
+			sleep(350).then(() => { this.bot.autobot.landscaping.flattenCallback(goalVec3); });
 		}
-		else if (this.bot.autobot.landscaping.digging) {
-			sleep(350).then(this.bot.autobot.landscaping.digNext);
-			activeFunction = "landscaping.digging";
-		}
-		else if (this.bot.autobot.landscaping.placing) {
-			sleep(350).then(this.bot.autobot.landscaping.placeNext);
-			activeFunction = "landscaping.placing";
-		}
-		else if (this.bot.autobot.landscaping.gettingDirt) {
-			sleep(350).then(this.bot.autobot.landscaping.dirtArrival);
-			activeFunction = "landscaping.gettingDirt";
-		}
+		else if (activeFunction === "landscaping.digging") sleep(350).then(this.bot.autobot.landscaping.digNext);
+		else if (activeFunction === "landscaping.placing") sleep(350).then(this.bot.autobot.landscaping.placeNext);
+		else if (activeFunction === "landscaping.gettingDirt") sleep(350).then(this.bot.autobot.landscaping.dirtArrival);
 		// then the rest
-		else if (this.bot.autobot.autocraft.active) {
-			sleep(350).then(this.bot.autobot.autocraft.callback);
-			activeFunction = "autocraft";
+		else if (activeFunction === "autocraft") sleep(350).then(this.bot.autobot.autocraft.callback);
+		else if (activeFunction === "lumberjack") this.bot.autobot.lumberjack.cutTreeNext();
+		else if (activeFunction === "mining") sleep(350).then(this.bot.autobot.mining.callback);
+		else if (activeFunction === "smelting") sleep(350).then(this.bot.autobot.smelting.smeltingCallback);
+		else if (activeFunction === "cachingChests") sleep(350).then(this.bot.autobot.stash.cacheChest);
+		else if (activeFunction === "stash") sleep(350).then(this.bot.autobot.stash.chestArrival);
+		this.sendReachedGoal(goalVec3, distanceFromGoal, activeFunction);
+	}
+
+	setGoal(goal, dynamic = false) {
+		this.goal = null;
+		this.setGoalProgress();
+		this.goalProgress.startTimestamp = Date.now();
+		let goalPosition = goal ? new Vec3(goal.x, goal.y, goal.z) : null;
+		this.goalProgress.distance = goalPosition ? this.bot.entity.position.distanceTo(goalPosition) : 0;
+		this.goalProgress.movementLoopNotified = false;
+		this.bot.pathfinder.setGoal(goal, dynamic);
+	}
+
+	isStuck() {
+		return (
+			this.goalProgress.position.distanceTo(this.bot.entity.position) < 2 &&
+			Date.now() > (this.goalProgress.timestamp + (this.goalProgress.threshold * 1000))
+		);
+	}
+
+	exceededTravelTimeLimit() {
+		// Experiment: 3 * distance * (2*averageDigTime + moveOneBlockTime) === travelTimeLimit
+		// Maybe it's a good limit, maybe not.
+		// We're assuming an unmodified stone pickaxe as the tool and a stone block as the target (600 ms)
+		if (this.goalProgress.distance > 0) {
+			const stoneBlockDigTime = 600;
+			const moveOneBlockTime = 500;
+			const travelTimeLimit = 4 *	this.goalProgress.distance * (2*stoneBlockDigTime + moveOneBlockTime) + 10000;
+			return this.goalProgress.startTimestamp + travelTimeLimit < Date.now();
 		}
-		else if (this.bot.autobot.lumberjack.active) { 
-			this.bot.autobot.lumberjack.cutTreeNext();
-			activeFunction = "lumberjack";
+		return false;
+	}
+
+	testExcessiveBreakTime() {
+		if (this.bot.targetDigBlock) {
+			//if (!digging && bot.entity.onGround) {
+			if (!this.digging) {
+				this.digging = true
+				const block = this.bot.targetDigBlock;
+				const tool = bestHarvestTool(this.bot, block);
+				const blockBreakTime = breakTime(block, tool);
+				this.goalProgress.threshold += (blockBreakTime / 1000);
+				// Break time is in ms; Emit a message when breaking will take more than 3 seconds
+				return blockBreakTime > 3000;
+			}
 		}
-		else if (this.bot.autobot.mining.active) {
-			sleep(350).then(this.bot.autobot.mining.callback);
-			activeFunction = "mining";
+		else {
+			this.digging = false;
 		}
-		else if (this.bot.autobot.smelting.active) {
-			sleep(350).then(this.bot.autobot.smelting.smeltingCallback);
-			activeFunction = "smelting";
+		return false;
+	}
+
+	canSeeBlockType(blockType) {
+		const blocks = this.bot.findBlocks({
+			point: this.bot.entity.position,
+			matching: (b) => {
+				if (!this.bot.canSeeBlock(b)) return false;
+				if (b.type !== blockType) return false;
+				return true;
+			},
+			maxDistance: 3,
+			count: 1
+		});
+		return blocks.length > 0;
+	}
+
+	canSeeLava() {
+		return canSeeBlockType(this.bot.mcData.blocksByName.lava.id);
+	}
+
+	canSeeCobwebs() {
+		return canSeeBlockType(this.bot.mcData.blocksByName.cobweb.id);
+	}
+
+	monitorMovement () {
+		// Bail if not pathfinding
+		if (!this.bot.pathfinder.isMoving()) return;
+		// Test if stuck
+		if (this.isStuck() && !this.goalProgress.notified) this.sendBotStuck();
+		// Test if caught in a movement loop
+		if (this.exceededTravelTimeLimit() && !this.goalProgress.movementLoopNotified) this.sendExceededTravelTimeLimit();
+		// Test for excessive break time
+		if (this.testExcessiveBreakTime()) this.sendExcessiveBreakTime();
+		// Test for arrival at next point
+		if (!this.goalProgress.position.equals(this.bot.entity.position.floored())) {
+			this.sendReachedNextPoint();
+			this.setGoalProgress();
+			if (this.bot.entity.isInWater) this.sendInWater();
+			if (this.canSeeLava()) this.sendLavaNearby();
+			if (this.canSeeCobwebs()) this.sendCobwebsNearby();
 		}
-		else if (this.bot.autobot.stash.cachingChests) {
-			sleep(350).then(this.bot.autobot.stash.cacheChest);
-			activeFunction = "cachingChests";
-		}
-		else if (this.bot.autobot.stash.active) {
-			sleep(350).then(this.bot.autobot.stash.chestArrival);
-			activeFunction = "stash";
-		}
-		result = {
+	}
+
+	sendArrivedHome() {
+		const eventName = 'autobot.navigator.arrivedHome';
+		let result = {
+			error: false,
+			resultCode: "arrivedHome",
+			description: "Bot arrived back at the home position."
+		};
+		this.bot.emit(eventName, result);
+		this.active = false;
+	}
+
+	sendReachedGoal(goalVec3, distanceFromGoal, activeFunction) {
+		const eventName = 'autobot.navigator.goalReached';
+		let result = {
 			error: false,
 			resultCode: "reachedGoal",
 			description: "Reached the target goal successfully.",
@@ -175,127 +253,64 @@ class Navigator {
 		this.bot.emit(eventName, result);
 	}
 
-	setGoal(goal, dynamic = false) {
-		this.goal = null;
-		this.setGoalProgress();
-		this.goalProgress.startTimestamp = Date.now();
-		let goalPosition = goal ? new Vec3(goal.x, goal.y, goal.z) : null;
-		this.goalProgress.distance = goalPosition ? bot.entity.position.distanceTo(goalPosition) : 0;
-		this.goalProgress.movementLoopNotified = false;
-		this.bot.pathfinder.setGoal(goal, dynamic);
+	sendBotStuck() {
+		this.bot.emit('autobot.navigator.botStuck', this.goalProgress, this.goal);
+		this.goalProgress.notified = true;
 	}
 
-	monitorMovement () {
-		if (!this.bot.pathfinder.isMoving()) {
-			return;
-		}
-		// Test if stuck
-		if (
-			this.goalProgress.position.distanceTo(this.bot.entity.position) < 2 &&
-			Date.now() > (this.goalProgress.timestamp + (this.goalProgress.threshold * 1000)) &&
-			!this.goalProgress.notified
-		) {
-			//bot.emit('autobot.pathfinder.botStuck', this.goalProgress, path, stateGoal)
-			bot.emit('autobot.navigator.botStuck', this.goalProgress, null, null);
-			this.goalProgress.notified = true;
-			//return
-		}
+	sendExceededTravelTimeLimit() {
+		this.bot.emit('autobot.navigator.exceededTravelTimeLimit', this.goalProgress, null, null);
+		this.goalProgress.movementLoopNotified = true;
+	}
 
-		// Test if caught in a movement loop
-		// Experiment: 3 * distance * (2*averageDigTime + moveOneBlockTime) === travelTimeLimit
-		// Maybe it's a good limit, maybe not.
-		// We're assuming an unmodified stone pickaxe as the tool and a stone block as the target (600 ms)
-		if (this.goalProgress.distance > 0) {
-			const stoneBlockDigTime = 600;
-			const moveOneBlockTime = 500;
-			const travelTimeLimit = 4 *	this.goalProgress.distance * (2*stoneBlockDigTime + moveOneBlockTime) + 10000;
-			if (
-				this.goalProgress.startTimestamp + travelTimeLimit < Date.now() &&
-				!this.goalProgress.movementLoopNotified
-			) {
-				//this.bot.emit('autobot.pathfinder.exceededTravelTimeLimit', this.goalProgress, path, stateGoal)
-				this.bot.emit('autobot.navigator.exceededTravelTimeLimit', this.goalProgress, null, null);
-				this.goalProgress.movementLoopNotified = true;
-			}
-		}
-		// Test for excessive break time
-		if (this.bot.targetDigBlock) {
-			//if (!digging && bot.entity.onGround) {
-			if (!this.digging) {
-				this.digging = true
-				const block = this.bot.targetDigBlock;
-				const tool = bestHarvestTool(this.bot, block);
-				const blockBreakTime = breakTime(block, tool);
-				this.goalProgress.threshold += (blockBreakTime / 1000);
-				// Break time is in ms; Emit a message when breaking will take more than 3 seconds
-				if (blockBreakTime > 3000) {
-					// TODO: Rewrite event in autobot event format
-					bot.emit('autobot.navigator.excessiveBreakTime', block, blockBreakTime);
-				}
-			}
-		}
-		else {
-			this.digging = false;
-		}
-		if (!this.goalProgress.position.equals(bot.entity.position.floored())) {
-			//console.log('+');
-			const result = {
-				error: false,
-				resultCode: "reachedNextPoint",
-				description: "Bot reached the next point on its path"
-			};
-			bot.emit('autobot.navigator.progress', result);
-			setGoalProgress();
-			if (bot.entity.isInWater) {
-				const result = {
-					error: false,
-					resultCode: "inWater",
-					description: "Bot entered water during pathfinding",
-					stateGoal: this.stateGoal
-				};
-				bot.emit('autobot.navigator.progress', result);
-			}
-			const lavaBlocks = bot.findBlocks({
-				point: bot.entity.position,
-				matching: (b) => {
-					if (!this.bot.canSeeBlock(b)) return false;
-					if (b.type !== bot.mcData.blocksByName.lava.id) return false;
-					return true;
-				},
-				maxDistance: 3,
-				count: 1
-			});
-			if (lavaBlocks.length > 0) {
-				const result = {
-					error: false,
-					resultCode: "lavaNearby",
-					description: "Bot encountered lava during pathfinding",
-					stateGoal: this.stateGoal
-				};
-				bot.emit('autobot.navigator.progress', result);
-			}
-			// Test for webs
-			const cobwebs = bot.findBlocks({
-				point: bot.entity.position,
-				matching: (b) => {
-					if (!this.bot.canSeeBlock(b)) return false;
-					if (b.type !== bot.mcData.blocksByName.cobweb.id) return false;
-					return true;
-				},
-				maxDistance: 3,
-				count: 1
-			});
-			if (cobwebs.length > 0) {
-				const result = {
-					error: false,
-					resultCode: "cobwebsNearby",
-					description: "Bot encountered cobwebs during pathfinding",
-					stateGoal: this.stateGoal
-				};
-				bot.emit('autobot.navigator.progress', result);
-			}
-			// Test for webs
-		}
+	sendExcessiveBreakTime() {
+		const block = this.bot.targetDigBlock;
+		const tool = bestHarvestTool(this.bot, block);
+		const blockBreakTime = breakTime(block, tool);
+		this.bot.emit('autobot.navigator.excessiveBreakTime', block, blockBreakTime);
+	}
+
+	sendReachedNextPoint() {
+		const eventName = 'autobot.navigator.progress';
+		let result = {
+			error: false,
+			resultCode: "reachedNextPoint",
+			description: "Bot reached the next point on its path"
+		};
+		this.bot.emit(eventName, result);
+	}
+
+	sendInWater() {
+		const eventName = 'autobot.navigator.progress';
+		let result = {
+			error: false,
+			resultCode: "inWater",
+			description: "Bot entered water during pathfinding",
+			goal: this.goal
+		};
+		this.bot.emit(eventName, result);
+	}
+
+	sendLavaNearby() {
+		const eventName = 'autobot.navigator.progress';
+		let result = {
+			error: false,
+			resultCode: "lavaNearby",
+			description: "Bot encountered lava during pathfinding",
+			goal: this.goal
+		};
+		this.bot.emit(eventName, result);
+	}
+
+	sendCobwebsNearby() {
+		const eventName = 'autobot.navigator.progress';
+		let result = {
+			error: false,
+			resultCode: "cobwebsNearby",
+			description: "Bot encountered cobwebs during pathfinding",
+			goal: this.goal
+		};
+		this.bot.emit(eventName, result);
 	}
 }
 
