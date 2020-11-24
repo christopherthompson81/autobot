@@ -140,7 +140,7 @@ class Navigator {
 	}
 
 	setGoal(goal, dynamic = false) {
-		this.goal = null;
+		this.goal = goal;
 		this.setGoalProgress();
 		this.goalProgress.startTimestamp = Date.now();
 		let goalPosition = goal ? new Vec3(goal.x, goal.y, goal.z) : null;
