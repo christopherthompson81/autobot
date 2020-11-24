@@ -62,22 +62,6 @@ function inject (bot) {
 	let placingBlock = null
 	let thinking = false
 	let lastNodeTime = performance.now()
-	const goalProgress = {
-		timestamp: Date.now(),
-		position: new Vec3(0, 0, 0),
-		threshold: 10,
-		notified: false,
-		startTimestamp: Date.now(),
-		totalDistance: 0,
-		movementLoopNotified: false,
-	};
-
-	function setGoalProgress() {
-		goalProgress.timestamp = Date.now();
-		goalProgress.position = bot.entity.position.floored();
-		goalProgress.threshold = 10;
-		goalProgress.notified = false;
-	}
 
 	function resetPath (clearStates = true) {
 		path = []
@@ -93,11 +77,6 @@ function inject (bot) {
 	}
 
 	bot.pathfinder.setGoal = function (goal, dynamic = false) {
-		setGoalProgress();
-		goalProgress.startTimestamp = Date.now();
-		let goalPosition = goal ? new Vec3(goal.x, goal.y, goal.z) : null;
-		goalProgress.distance = goalPosition ? bot.entity.position.distanceTo(goalPosition) : 0;
-		goalProgress.movementLoopNotified = false;
 		stateGoal = goal
 		dynamicGoal = dynamic
 		resetPath()
@@ -211,20 +190,12 @@ function inject (bot) {
 		return false
 	}
 
-	function breakTime(block, tool) {
-		const enchants = (tool && tool.nbt) ? nbt.simplify(tool.nbt).Enchantments : [];
-		const effects = bot.entity.effects;
-		const digTime = block.digTime(tool ? tool.type : null, false, false, false, enchants, effects);
-		return digTime;
-	}
-
 	function monitorMovement () {
 		// Test freemotion
 		if (stateMovements && stateMovements.allowFreeMotion && stateGoal && stateGoal.entity) {
 			const target = stateGoal.entity
 			if (canStraightPathTo(target.position)) {
 				bot.lookAt(target.position.offset(0, 1.6, 0))
-
 				if (target.position.distanceTo(bot.entity.position) > Math.sqrt(stateGoal.rangeSq)) {
 					bot.setControlState('forward', true)
 				} else {
@@ -259,36 +230,6 @@ function inject (bot) {
 			return
 		}
 
-		// Test if stuck
-		if (
-			goalProgress.position.distanceTo(bot.entity.position) < 2 &&
-			Date.now() > (goalProgress.timestamp + (goalProgress.threshold * 1000)) &&
-			!goalProgress.notified &&
-			stateGoal
-		) {
-			bot.emit('autobot.pathfinder.botStuck', goalProgress, path, stateGoal)
-			goalProgress.notified = true;
-			//return
-		}
-
-		// Test if caught in a movement loop
-		// Experiment: 3 * distance * (2*averageDigTime + moveOneBlockTime) === travelTimeLimit
-		// Maybe it's a good limit, maybe not.
-		// We're assuming an unmodified stone pickaxe as the tool and a stone block as the target (600 ms)
-		if (stateGoal && goalProgress.distance > 0) {
-			const stoneBlockDigTime = 600;
-			const moveOneBlockTime = 500;
-			const travelTimeLimit = 4 *	goalProgress.distance *	(2*stoneBlockDigTime + moveOneBlockTime) + 10000;
-			if (
-				goalProgress.startTimestamp + travelTimeLimit < Date.now() &&
-				!goalProgress.movementLoopNotified
-			) {
-				//console.log(goalProgress);
-				bot.emit('autobot.pathfinder.exceededTravelTimeLimit', goalProgress, path, stateGoal)
-				goalProgress.movementLoopNotified = true;
-			}
-		}
-
 		let nextPoint = path[0]
 		const p = bot.entity.position
 
@@ -304,13 +245,6 @@ function inject (bot) {
 				const b = nextPoint.toBreak.shift()
 				const block = bot.blockAt(new Vec3(b.x, b.y, b.z), false)
 				const tool = bot.pathfinder.bestHarvestTool(block)
-				const blockBreakTime = breakTime(block, tool);
-				goalProgress.threshold += (blockBreakTime / 1000);
-				// Break time is in ms; Emit a message when breaking will take more than 3 seconds
-				if (blockBreakTime > 3000) {
-					// TODO: Rewrite event in autobot event format
-					bot.emit('autobot.pathfinder.excessiveBreakTime', block, blockBreakTime);
-				}
 				fullStop()
 				bot.equip(tool, 'hand', function () {
 					bot.dig(block, function (err) {
@@ -375,40 +309,6 @@ function inject (bot) {
 		const dz = nextPoint.z - p.z
 		if ((dx * dx + dz * dz) <= 0.15 * 0.15 && (bot.entity.onGround || bot.entity.isInWater)) {
 			// arrived at next point
-			if (bot.entity.isInWater) {
-				const result = {
-					error: false,
-					resultCode: "inWater",
-					description: "Bot entered water during pathfinding",
-					stateGoal: this.stateGoal
-				};
-				bot.emit('autobot.pathfinder.progress', result);
-			}
-			const lavaBlocks = bot.findBlocks({
-				point: bot.entity.position,
-				matching: bot.mcData.blocksByName.lava.id,
-				maxDistance: 5,
-				count: 1
-			});
-			if (lavaBlocks.length > 0) {
-				const result = {
-					error: false,
-					resultCode: "lavaNearby",
-					description: "Bot encountered lava during pathfinding",
-					stateGoal: this.stateGoal
-				};
-				bot.emit('autobot.pathfinder.progress', result);
-			}
-			if (!goalProgress.position.equals(bot.entity.position.floored())) {
-				//console.log('+');
-				const result = {
-					error: false,
-					resultCode: "reachedNextPoint",
-					description: "Pathfinder reached the next point on its path"
-				};
-				bot.emit('autobot.pathfinder.progress', result);
-				setGoalProgress();
-			}
 			lastNodeTime = performance.now()
 			path.shift()
 			if (path.length === 0) { // done

@@ -149,7 +149,7 @@ bot.once('spawn', () => {
 			console.log(message);
 		}
 	});
-	bot.on('autobot.pathfinder.progress', (result) => {
+	bot.on('autobot.navigator.progress', (result) => {
 		if (result.resultCode === 'reachedNextPoint') {
 			process.stdout.write("+");
 		}
@@ -169,16 +169,16 @@ bot.once('spawn', () => {
 			logResult(result);
 		}
 	});
-	bot.on('autobot.pathfinder.botStuck', (goalProgress, path, stateGoal) => {
+	bot.on('autobot.navigator.botStuck', (goalProgress, path, stateGoal) => {
 		console.log("Bot Stuck.");
 		bot.autobot.getUnstuck.onBotStuck(goalProgress, path, stateGoal);
 	});
-	bot.on('autobot.pathfinder.exceededTravelTimeLimit', (goalProgress, path, stateGoal) => {
+	bot.on('autobot.navigator.exceededTravelTimeLimit', (goalProgress, path, stateGoal) => {
 		console.log("Exceeded pathfinder travel time limit.");
 		bot.autobot.getUnstuck.onBotStuck(goalProgress, path, stateGoal);
 		//bot.autobot.getUnstuck.flattenAndGoHome({goalPosition: new Vec3(stateGoal.x, stateGoal.y, stateGoal.z)});
 	});
-	bot.on('autobot.pathfinder.excessiveBreakTime', (block, breakTime) => {
+	bot.on('autobot.navigator.excessiveBreakTime', (block, breakTime) => {
 		console.log(`Excessive break time (${breakTime}) trying to break ${block.displayName} at ${block.position}`);
 		if (bot.autobot.mining.active) {
 			bot.pathfinder.setGoal(null);

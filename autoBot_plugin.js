@@ -52,6 +52,7 @@ function inject (bot) {
 		bot.defaultMove = new Movements(bot, bot.mcData);
 		bot.pathfinder.setMovements(bot.defaultMove);
 		bot.on('goal_reached', bot.autobot.navigator.onGoalReached);
+		bot.on('physicTick', bot.autobot.navigator.monitorMovement);
 		bot.waitForChunksToLoad(() => {
 			sleep(5000).then(() => {
 				bot.autobot.homePosition = bot.autobot.navigator.setHomePosition();

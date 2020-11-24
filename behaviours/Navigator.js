@@ -41,7 +41,7 @@ class Navigator {
 
 	setGoalProgress() {
 		this.goalProgress.timestamp = Date.now();
-		this.goalProgress.position = bot.entity.position.floored();
+		this.goalProgress.position = this.bot.entity.position.floored();
 		this.goalProgress.threshold = 10;
 		this.goalProgress.notified = false;
 	}
@@ -176,7 +176,7 @@ class Navigator {
 				this.digging = true
 				const block = this.bot.targetDigBlock;
 				const tool = bestHarvestTool(this.bot, block);
-				const blockBreakTime = breakTime(block, tool);
+				const blockBreakTime = breakTime(this.bot, block, tool);
 				this.goalProgress.threshold += (blockBreakTime / 1000);
 				// Break time is in ms; Emit a message when breaking will take more than 3 seconds
 				return blockBreakTime > 3000;
@@ -189,25 +189,26 @@ class Navigator {
 	}
 
 	canSeeBlockType(blockType) {
-		const blocks = this.bot.findBlocks({
+		let blocks = this.bot.findBlocks({
 			point: this.bot.entity.position,
-			matching: (b) => {
-				if (!this.bot.canSeeBlock(b)) return false;
-				if (b.type !== blockType) return false;
-				return true;
-			},
+			matching: blockType,
 			maxDistance: 3,
-			count: 1
+			count: 50
+		});
+		blocks = blocks.filter(p => {
+			const b = this.bot.blockAt(p);
+			if (!this.bot.canSeeBlock(b)) return false;
+			return true;
 		});
 		return blocks.length > 0;
 	}
 
 	canSeeLava() {
-		return canSeeBlockType(this.bot.mcData.blocksByName.lava.id);
+		return this.canSeeBlockType(this.bot.mcData.blocksByName.lava.id);
 	}
 
 	canSeeCobwebs() {
-		return canSeeBlockType(this.bot.mcData.blocksByName.cobweb.id);
+		return this.canSeeBlockType(this.bot.mcData.blocksByName.cobweb.id);
 	}
 
 	monitorMovement () {
@@ -266,7 +267,7 @@ class Navigator {
 	sendExcessiveBreakTime() {
 		const block = this.bot.targetDigBlock;
 		const tool = bestHarvestTool(this.bot, block);
-		const blockBreakTime = breakTime(block, tool);
+		const blockBreakTime = breakTime(this.bot, block, tool);
 		this.bot.emit('autobot.navigator.excessiveBreakTime', block, blockBreakTime);
 	}
 
