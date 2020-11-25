@@ -322,9 +322,10 @@ const naturalBlocks = [
 	'wither_rose'
 ];
 const clearPattern = [
-	// Body space (probably unneeded)
+	// Body space
 	[0, 0, 0],
 	[0, 1, 0],
+	[0, 2, 0], //Directly Above
 	// Foot level
 	[0, 0, -1], // N
 	[1, 0, -1], // NE
@@ -343,6 +344,15 @@ const clearPattern = [
 	[-1, 1, 1], // SW
 	[-1, 1, 0], // W
 	[-1, 1, -1], // NW
+	// Overhead
+	[0, 2, -1], // N
+	[1, 2, -1], // NE
+	[1, 2, 0], // E
+	[1, 2, 1], // SE
+	[0, 2, 1], // S
+	[-1, 2, 1], // SW
+	[-1, 2, 0], // W
+	[-1, 2, -1], // NW
 ];
 const dirtPattern = [
 	[-1, -1, -1], // NW
