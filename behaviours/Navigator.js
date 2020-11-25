@@ -213,7 +213,7 @@ class Navigator {
 
 	monitorMovement () {
 		// Bail if not pathfinding
-		if (!this.bot.pathfinder.isMoving()) return;
+		if (!this.bot.pathfinder.isMoving() || !this.goal) return;
 		// Test if stuck
 		if (this.isStuck() && !this.goalProgress.notified) this.sendBotStuck();
 		// Test if caught in a movement loop
