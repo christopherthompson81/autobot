@@ -502,6 +502,65 @@ class Landscaping {
 		this.placeNext();
 	}
 
+	fillLava(position, callback) {
+		this.fillingLava = true;
+		let cobblestoneCount = this.bot.autobot.inventory.getInventoryDictionary().cobblestone || 0;
+		let lavaPositions = this.bot.findBlocks({
+			point: position,
+			matching: (b) => {
+				if (b.type === this.bot.mcData.blocksByName.lava.id) {
+					if (b.stateId === 34) {
+						return true;
+					}
+				}
+				return false;
+			},
+			maxDistance: 35,
+			count: cobblestoneCount,
+		}, true);
+		if (lavaPositions.length === 0) {
+			this.fillingLava = false;
+			if (callback) callback();
+			return;
+		}
+		// sort by y
+		lavaPositions = lavaPositions.sort((a, b) => b.y - a.y);
+		// Make a placeQueue
+		const placeQueue = [];
+		for (const lavaPosition of lavaPositions) {
+			placeQueue.push({name: 'cobblestone', position: lavaPosition});
+		}
+		// Execute placeNext
+		this.placeQueue = placeQueue;
+		this.placeCallback = (result) => {
+			this.fillingLava = false;
+			callback(result);
+		};
+		this.placeNext();
+	}
+
+	removeCobwebs(callback) {
+		this.removingCobwebs = true;
+		let cobwebs = this.bot.findBlocks({
+			point: this.bot.entity.position,
+			matching: this.bot.mcData.blocksByName.cobweb.id,
+			maxDistance: 5,
+			count: 100,
+		}, true);
+		if (cobwebs.length === 0) {
+			this.removingCobwebs = false;
+			if (callback) callback();
+			return;
+		}
+		cobwebs = sortByDistanceFromBot(this.bot, cobwebs);
+		this.digQueue = cobwebs;
+		this.digCallback = (result) => {
+			this.removingCobwebs = false;
+			callback(result);
+		};
+		this.digNext();
+	}
+
 	sendPlacingError(parentError, currentTarget, queueRemainder) {
 		const eventName = 'autobot.landscaping.placeQueue.done';
 		let result = {

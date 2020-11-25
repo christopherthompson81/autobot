@@ -147,6 +147,12 @@ class Stash {
 							this.stashNext(chest, remainder, chestWindow, callback);
 							return;
 						}
+						else if (err.message.startsWith('Server rejected transaction')) {
+							chest.close();
+							this.sendCantStash(chestWindow, current);
+							callback();
+							return;
+						}
 						// Move on to the next item to stash.
 						this.sendStashingError(chestWindow, current, err);
 					}
