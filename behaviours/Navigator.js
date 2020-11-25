@@ -260,7 +260,7 @@ class Navigator {
 	}
 
 	sendExceededTravelTimeLimit() {
-		this.bot.emit('autobot.navigator.exceededTravelTimeLimit', this.goalProgress, null, null);
+		this.bot.emit('autobot.navigator.exceededTravelTimeLimit', this.goalProgress, this.goal);
 		this.goalProgress.movementLoopNotified = true;
 	}
 

@@ -170,9 +170,9 @@ bot.once('spawn', () => {
 		console.log("Bot Stuck.");
 		bot.autobot.getUnstuck.onBotStuck(goalProgress, stateGoal);
 	});
-	bot.on('autobot.navigator.exceededTravelTimeLimit', (goalProgress, path, stateGoal) => {
+	bot.on('autobot.navigator.exceededTravelTimeLimit', (goalProgress, stateGoal) => {
 		console.log("Exceeded pathfinder travel time limit.");
-		bot.autobot.getUnstuck.onBotStuck(goalProgress, path, stateGoal);
+		bot.autobot.getUnstuck.onBotStuck(goalProgress, stateGoal);
 		//bot.autobot.getUnstuck.flattenAndGoHome({goalPosition: new Vec3(stateGoal.x, stateGoal.y, stateGoal.z)});
 	});
 	bot.on('autobot.navigator.excessiveBreakTime', (block, breakTime) => {
