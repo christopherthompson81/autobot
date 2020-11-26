@@ -164,6 +164,11 @@ bot.once('spawn', () => {
 		}
 		else if (result.resultCode === 'lavaNearby') {
 			logResult(result);
+			bot.autobot.navigator.handleLava();
+		}
+		else if (result.resultCode === 'cobwebsNearby') {
+			logResult(result);
+			bot.autobot.navigator.handleCobwebs();
 		}
 	});
 	bot.on('autobot.navigator.botStuck', (goalProgress, stateGoal) => {

@@ -25,6 +25,8 @@ class Landscaping {
 		this.targetSubstrate = '';
 		this.substrateList = [];
 		this.fillingWater = false;
+		this.fillingLava = false;
+		this.removingCobwebs = false;
 	}
 
 	resetBehaviour() {
@@ -41,6 +43,8 @@ class Landscaping {
 		this.targetSubstrate = '';
 		this.substrateList = [];
 		this.fillingWater = false;
+		this.fillingLava = false;
+		this.removingCobwebs = false;
 	}
 
 	placeNext() {
@@ -488,6 +492,7 @@ class Landscaping {
 		waterPositions = sortByDistanceFromBot(this.bot, waterPositions);
 		// Turn the block into a body
 		waterPositions = this.blockToWaterBody(waterPositions[0], [waterPositions[0]], cobblestoneCount);
+		waterPositions = waterPositions.sort((a, b) => b.y - a.y);
 		// Make a placeQueue
 		const placeQueue = [];
 		for (const waterPosition of waterPositions) {
@@ -505,11 +510,16 @@ class Landscaping {
 	fillLava(position, callback) {
 		this.fillingLava = true;
 		let cobblestoneCount = this.bot.autobot.inventory.getInventoryDictionary().cobblestone || 0;
+		if (cobblestoneCount === 0) {
+			this.fillingLava = false;
+			if (callback) callback();
+			return;
+		}
 		let lavaPositions = this.bot.findBlocks({
 			point: position,
 			matching: (b) => {
 				if (b.type === this.bot.mcData.blocksByName.lava.id) {
-					if (b.stateId === 34) {
+					if (b.stateId === 50) {
 						return true;
 					}
 				}

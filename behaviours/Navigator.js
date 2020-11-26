@@ -204,11 +204,31 @@ class Navigator {
 	}
 
 	canSeeLava() {
+		if (this.bot.autobot.landscaping.fillingLava) return false;
 		return this.canSeeBlockType(this.bot.mcData.blocksByName.lava.id);
 	}
 
+	handleLava() {
+		let cobblestoneCount = this.bot.autobot.inventory.getInventoryDictionary().cobblestone || 0;
+		if (cobblestoneCount === 0) return;
+		const savedGoal = this.goal;
+		this.bot.pathfinder.setGoal(null);
+		this.bot.autobot.landscaping.fillLava(this.bot.entity.position, () => {
+			this.bot.pathfinder.setGoal(savedGoal);
+		});
+	}
+
 	canSeeCobwebs() {
+		if (this.bot.autobot.landscaping.removingCobwebs) return false;
 		return this.canSeeBlockType(this.bot.mcData.blocksByName.cobweb.id);
+	}
+
+	handleCobwebs() {
+		const savedGoal = this.goal;
+		this.bot.pathfinder.setGoal(null);
+		this.bot.autobot.landscaping.removeCobwebs(() => {
+			this.bot.pathfinder.setGoal(savedGoal);
+		});
 	}
 
 	monitorMovement () {
