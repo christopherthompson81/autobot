@@ -212,11 +212,13 @@ class Navigator {
 	handleWater() {
 		let cobblestoneCount = this.bot.autobot.inventory.getInventoryDictionary().cobblestone || 0;
 		if (cobblestoneCount === 0) return;
-		const savedGoal = this.goal;
 		this.bot.pathfinder.setGoal(null);
-		this.bot.autobot.landscaping.fillWaterBody(this.bot.entity.position, () => {
-			this.bot.pathfinder.setGoal(savedGoal);
+		this.bot.autobot.behaviourSelect.resetAllBehaviours(() => {
+			this.bot.autobot.landscaping.fillWaterBody(this.bot.entity.position, () => {
+				this.returnHome();
+			});
 		});
+		
 	}
 
 	canSeeLava() {

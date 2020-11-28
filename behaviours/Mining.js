@@ -168,7 +168,6 @@ class Mining {
 	}
 
 	mineVeinNext(vein, callback) {
-		let result = {};
 		const current = vein[0];
 		const remainder = vein.slice(1, vein.length);
 		if (!this.havePickaxe()) {
@@ -176,26 +175,31 @@ class Mining {
 			return;
 		}
 		if (current) {
+			const tool = this.bot.pathfinder.bestHarvestTool(current)
+			if (current.harvestTools) {
+				const harvestTools = Object.keys(current.harvestTools);
+				if (!tool || !harvestTools.includes(tool.type.toString())) {
+					this.sendNoSuitableTool(current, tool);
+					this.digQueue = remainder;
+					this.digNext();
+					return;
+				}
+			}
 			if (!this.bot.defaultMove.safeToBreak(current)) {
 				this.sendNotSafe(current);
 				this.pushBadTarget(current.position.clone());
 				this.mineVeinNext(remainder, callback);
 				return;
 			}
-			this.equipBestHarvestTool(current, (cbResult) => {
-				if (cbResult.error) {
-					if (callback) callback(result);
-					this.bot.emit(eventName, cbResult);
-					return;
-				}
-				if (Math.floor(this.bot.entity.position.distanceTo(current.position)) > 3) {
-					this.sendTooFar(current);
-					const p = current.position;
-					const goal = new GoalGetToBlock(p.x, p.y, p.z);
-					this.bot.autobot.navigator.setGoal(goal);
-					this.callback = () => this.mineVeinNext(vein, callback);
-					return;
-				}
+			if (Math.floor(this.bot.entity.position.distanceTo(current.position)) > 3) {
+				this.sendTooFar(current);
+				const p = current.position;
+				const goal = new GoalGetToBlock(p.x, p.y, p.z);
+				this.bot.autobot.navigator.setGoal(goal);
+				this.callback = () => this.mineVeinNext(vein, callback);
+				return;
+			}
+			this.bot.equip(tool, 'hand', () => {
 				this.bot.dig(current, true, (err) => {
 					if (err) this.sendDigError(current, err);
 					this.mineVeinNext(remainder, callback);
@@ -290,6 +294,18 @@ class Mining {
 		this.active = false;
 		this.bot.emit(eventName, result);
 		if (callback) callback(result);
+	}
+
+	sendNoSuitableTool(block, bestTool) {
+		const eventName = 'autobot.mining.digging';
+		let result = {
+			error: true,
+			resultCode: "noSuitableTool",
+			description: "The bot lacks a suitable tool to break a block in the queue",
+			block: block,
+			bestTool: bestTool
+		}
+		this.bot.emit(eventName, result);
 	}
 
 	sendNotSafe(block) {

@@ -1,4 +1,5 @@
 const autoBind = require('auto-bind');
+const { sortByDistanceFromBot } = require('./autoBotLib');
 const toolItems = require('./constants').toolItems;
 const essentialItems = require('./constants').essentialItems;
 const compressableItems = require('./constants').compressableItems;
@@ -341,7 +342,7 @@ class Stash {
 
 	cacheChest() {
 		const chestToOpen = this.bot.blockAt(this.chestsToCache[0]);
-		this.chestsToCache = this.chestsToCache.slice(1, this.chestsToCache.length);
+		this.chestsToCache = sortByDistanceFromBot(this.bot, this.chestsToCache.slice(1, this.chestsToCache.length));
 		const chest = this.bot.openChest(chestToOpen);
 		chest.on('open', () => {
 			this.saveChestWindow(chestToOpen.position, chest.window);
