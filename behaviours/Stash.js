@@ -399,6 +399,10 @@ class Stash {
 		else this.sendStashSkipping(callback);
 	}
 
+	withdrawScaffolds(callback) {
+		// Write a function to pull dirt and cobblestone back out of chests
+	}
+
 	sendStashingError(chestWindow, item, parentError) {
 		const eventName = "autobot.stashing.behaviourSelect";
 		let result = {

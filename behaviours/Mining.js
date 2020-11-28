@@ -169,7 +169,12 @@ class Mining {
 
 	mineVeinNext(vein, callback) {
 		const current = vein[0];
-		const remainder = vein.slice(1, vein.length);
+		const remainder = vein.slice(1, vein.length).sort((a, b) => {
+			const [pA, pB] = [a.position, b.position];
+			const distA = this.bot.entity.position.distanceTo(new Vec3(pA.x, pA.y, pA.z));
+			const distB = this.bot.entity.position.distanceTo(new Vec3(pB.x, pB.y, pB.z));
+			return distA - distB;
+		});
 		if (!this.havePickaxe()) {
 			this.bot.autobot.collectDrops.pickUpBrokenBlocks(() => this.sendNoPickaxe(callback));
 			return;

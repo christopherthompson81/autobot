@@ -257,7 +257,7 @@ class Smelting {
 					this.smeltOre(callback);
 					return;
 				}
-				if (placeResult.error) this.sendPlacingFurnaceError(parentResult, callback);
+				if (placeResult.error) this.sendPlacingFurnaceError(placeResult, callback);
 				else this.smeltOre(callback);
 			});
 		}

@@ -395,20 +395,17 @@ class Landscaping {
 		//console.log(`dVec: ${dVec}`);
 		const dMax = Math.abs(dVec.x) > Math.abs(dVec.z) ? Math.abs(dVec.x) : Math.abs(dVec.z);
 		//console.log(`dMax: ${dMax}`);
-		let ringSize = 0;
+		let ringSize = dMax;
 		let x, z;
-		while (ringSize <= dMax+1) {
-			for (x = -1 * ringSize; x <= ringSize; x++) {
-				for (z = -1 * ringSize; z <= ringSize; z++) {
-					const targetPos = this.bot.autobot.homePosition.offset(x, -1, z);
-					const targetBlock = this.bot.blockAt(targetPos);
-					if (targetBlock.name !== 'cobblestone') {
-						digQueue.push(targetPos);
-						placeQueue.push({name: 'cobblestone', position: targetPos});
-					}
+		for (x = -1 * ringSize; x <= ringSize; x++) {
+			for (z = -1 * ringSize; z <= ringSize; z++) {
+				const targetPos = this.bot.autobot.homePosition.offset(x, -1, z);
+				const targetBlock = this.bot.blockAt(targetPos);
+				if (targetBlock.name !== 'cobblestone') {
+					digQueue.push(targetPos);
+					placeQueue.push({name: 'cobblestone', position: targetPos});
 				}
 			}
-			ringSize++;
 		}
 		return [digQueue, placeQueue];
 	}
