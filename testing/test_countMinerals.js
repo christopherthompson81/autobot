@@ -5,9 +5,10 @@ This script will test the fixStorageGridFloorPlate function
 'use strict';
 
 const mineflayer = require('mineflayer');
-const autoBot = require("./autoBot_plugin.js").autoBot;
+const autoBot = require("../autoBot_plugin.js").autoBot;
 const fs = require('fs');
-let config = JSON.parse(fs.readFileSync('autobot_config.json'));
+let config = JSON.parse(fs.readFileSync('./autobot_config.json'));
+const oreBlockTypes = require('../behaviours/constants').oreBlocks;
 
 let botId = process.argv[2]
 botId = !botId ? '' : '_' + botId.toString();
@@ -29,12 +30,15 @@ bot.once('spawn', () => {
 	//const stash = bot.autobot.stash.stashNonEssentialInventory;
 	bot.on('autobot.ready', (result) => {
 		logResult(result);
-		const ironOreBlocks = bot.findBlocks({
-			point: bot.autobot.homePosition,
-			matching: bot.mcData.blocksByName.iron_ore.id,
-			maxDistance: 128,
-			count: 5000
-		});
-		console.log(`Iron ore remaining: ${ironOreBlocks.length}`);
+		for (const name of oreBlockTypes) {
+			const oreType = bot.mcData.blocksByName[name];
+			const oreBlocks = bot.findBlocks({
+				point: bot.autobot.homePosition,
+				matching: oreType.id,
+				maxDistance: 128,
+				count: 5000
+			});
+			console.log(`${oreType.displayName} remaining: ${oreBlocks.length}`);
+		}
 	});
 });

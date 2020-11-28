@@ -153,14 +153,9 @@ bot.once('spawn', () => {
 		if (result.resultCode === 'reachedNextPoint') {
 			process.stdout.write("+");
 		}
-		else if (result.resultCode === 'inWater' && !bot.autobot.landscaping.fillingWater) {
-			console.log('In water, attempting to fill source');
-			bot.autobot.navigator.setGoal(null);
-			bot.autobot.landscaping.fillWaterBody(bot.entity.position, (fillWaterBodyResult) => {
-				bot.autobot.behaviourSelect.resetAllBehaviours(
-					bot.autobot.navigator.returnHome
-				);
-			});
+		else if (result.resultCode === 'waterNearby') {
+			logResult(result);
+			bot.autobot.navigator.handleWater();
 		}
 		else if (result.resultCode === 'lavaNearby') {
 			logResult(result);

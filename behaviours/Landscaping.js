@@ -50,7 +50,12 @@ class Landscaping {
 	placeNext() {
 		if (!this.placing) this.placing = true;
 		const current = this.placeQueue[0];
-		const remainder = this.placeQueue.slice(1, this.placeQueue.length);
+		const remainder = this.placeQueue.slice(1, this.placeQueue.length).sort((a, b) => {
+			const [pA, pB] = [a.position, b.position];
+			const distA = this.bot.entity.position.distanceTo(new Vec3(pA.x, pA.y, pA.z));
+			const distB = this.bot.entity.position.distanceTo(new Vec3(pB.x, pB.y, pB.z));
+			return distA - distB;
+		});
 		if (current) {
 			if (Math.floor(this.bot.entity.position.distanceTo(current.position)) > 3) {
 				//this.sendTooFar(block);
@@ -77,7 +82,7 @@ class Landscaping {
 	digNext() {
 		if (!this.digging) this.digging = true;
 		const current = this.digQueue[0];
-		const remainder = this.digQueue.slice(1, this.digQueue.length);
+		const remainder = sortByDistanceFromBot(this.bot, this.digQueue.slice(1, this.digQueue.length));
 		if (current) {
 			const block = this.bot.blockAt(current, false)
 			if (!block.diggable || airBlocks.includes(block.name)) {
@@ -470,6 +475,12 @@ class Landscaping {
 
 	fillWaterBody(position, callback) {
 		this.fillingWater = true;
+		let cobblestoneCount = this.bot.autobot.inventory.getInventoryDictionary().cobblestone || 0;
+		if (cobblestoneCount === 0) {
+			this.fillingWater = false;
+			if (callback) callback();
+			return;
+		}
 		let waterPositions = this.bot.findBlocks({
 			point: position,
 			matching: (b) => {
@@ -481,17 +492,16 @@ class Landscaping {
 				return false;
 			},
 			maxDistance: 35,
-			count: 100,
+			count: cobblestoneCount,
 		}, true);
 		if (waterPositions.length === 0) {
 			this.fillingWater = false;
 			if (callback) callback();
 			return;
 		}
-		let cobblestoneCount = this.bot.autobot.inventory.getInventoryDictionary().cobblestone || 0;
-		waterPositions = sortByDistanceFromBot(this.bot, waterPositions);
+		//waterPositions = sortByDistanceFromBot(this.bot, waterPositions);
 		// Turn the block into a body
-		waterPositions = this.blockToWaterBody(waterPositions[0], [waterPositions[0]], cobblestoneCount);
+		//waterPositions = this.blockToWaterBody(waterPositions[0], [waterPositions[0]], cobblestoneCount);
 		waterPositions = waterPositions.sort((a, b) => b.y - a.y);
 		// Make a placeQueue
 		const placeQueue = [];

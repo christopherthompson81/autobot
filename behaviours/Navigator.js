@@ -196,11 +196,27 @@ class Navigator {
 			count: 50
 		});
 		blocks = blocks.filter(p => {
+			if (this.bot.entity.position.distanceTo(p) > 3) return false;
 			const b = this.bot.blockAt(p);
 			if (!this.bot.canSeeBlock(b)) return false;
 			return true;
 		});
 		return blocks.length > 0;
+	}
+
+	canSeeWater() {
+		if (this.bot.autobot.landscaping.fillingWater) return false;
+		return this.canSeeBlockType(this.bot.mcData.blocksByName.water.id);
+	}
+
+	handleWater() {
+		let cobblestoneCount = this.bot.autobot.inventory.getInventoryDictionary().cobblestone || 0;
+		if (cobblestoneCount === 0) return;
+		const savedGoal = this.goal;
+		this.bot.pathfinder.setGoal(null);
+		this.bot.autobot.landscaping.fillWaterBody(this.bot.entity.position, () => {
+			this.bot.pathfinder.setGoal(savedGoal);
+		});
 	}
 
 	canSeeLava() {
@@ -244,7 +260,7 @@ class Navigator {
 		if (!this.goalProgress.position.equals(this.bot.entity.position.floored())) {
 			this.sendReachedNextPoint();
 			this.setGoalProgress();
-			if (this.bot.entity.isInWater) this.sendInWater();
+			if (this.canSeeWater()) this.sendWaterNearby();
 			if (this.canSeeLava()) this.sendLavaNearby();
 			if (this.canSeeCobwebs()) this.sendCobwebsNearby();
 		}
@@ -301,12 +317,12 @@ class Navigator {
 		this.bot.emit(eventName, result);
 	}
 
-	sendInWater() {
+	sendWaterNearby() {
 		const eventName = 'autobot.navigator.progress';
 		let result = {
 			error: false,
-			resultCode: "inWater",
-			description: "Bot entered water during pathfinding",
+			resultCode: "waterNearby",
+			description: "Bot encountered water during pathfinding",
 			goal: this.goal
 		};
 		this.bot.emit(eventName, result);
