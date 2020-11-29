@@ -395,7 +395,7 @@ class Landscaping {
 		//console.log(`dVec: ${dVec}`);
 		const dMax = Math.abs(dVec.x) > Math.abs(dVec.z) ? Math.abs(dVec.x) : Math.abs(dVec.z);
 		//console.log(`dMax: ${dMax}`);
-		let ringSize = dMax;
+		let ringSize = dMax + 1;
 		let x, z;
 		for (x = -1 * ringSize; x <= ringSize; x++) {
 			for (z = -1 * ringSize; z <= ringSize; z++) {

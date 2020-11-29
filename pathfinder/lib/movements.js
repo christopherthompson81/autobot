@@ -49,8 +49,8 @@ class Movements {
     this.gravityBlocks.add(mcData.blocksByName.sand.id)
 
     this.scafoldingBlocks = []
-    this.scafoldingBlocks.push(mcData.blocksByName.cobblestone.id)
-    this.scafoldingBlocks.push(mcData.blocksByName.dirt.id)
+    this.scafoldingBlocks.push(mcData.itemsByName.cobblestone.id)
+    this.scafoldingBlocks.push(mcData.itemsByName.dirt.id)
 
     this.airBlocks = new Set()
     this.airBlocks.add(mcData.blocksByName.air.id);
