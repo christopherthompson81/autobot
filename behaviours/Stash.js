@@ -151,7 +151,7 @@ class Stash {
 						else if (err.message.startsWith('Server rejected transaction')) {
 							chest.close();
 							this.sendCantStash(chestWindow, current);
-							callback();
+							if (callback) callback();
 							return;
 						}
 						// Move on to the next item to stash.
@@ -376,7 +376,8 @@ class Stash {
 	stashNonEssentialInventory(callback) {
 		this.active = true;
 		if (this.checkInventoryToStash()) {
-			const chest = this.findChest();
+			const itemsToStash = this.listNonEssentialInventory();
+			const chest = this.findChest(itemsToStash[0]);
 			if (chest) {
 				this.callback = callback;
 				this.sendToChest(chest);
@@ -384,7 +385,7 @@ class Stash {
 			else {
 				this.sendPlaceNewChest();
 				this.placeNewChest((result) => {
-					if (this.findChest()) {
+					if (this.findChest(itemsToStash[0])) {
 						this.stashNonEssentialInventory(callback);
 						return;
 					}
