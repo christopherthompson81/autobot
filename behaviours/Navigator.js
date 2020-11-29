@@ -130,7 +130,7 @@ class Navigator {
 		else if (activeFunction === "landscaping.placing") sleep(350).then(this.bot.autobot.landscaping.placeNext);
 		else if (activeFunction === "landscaping.gettingDirt") sleep(350).then(this.bot.autobot.landscaping.dirtArrival);
 		// then the rest
-		else if (activeFunction === "autocraft") sleep(350).then(this.bot.autobot.autocraft.callback);
+		else if (activeFunction === "autocraft") sleep(350).then(this.bot.autobot.autocraft.autoCraftNext);
 		else if (activeFunction === "lumberjack") this.bot.autobot.lumberjack.cutTreeNext();
 		else if (activeFunction === "mining") sleep(350).then(this.bot.autobot.mining.callback);
 		else if (activeFunction === "smelting") sleep(350).then(this.bot.autobot.smelting.smeltingCallback);

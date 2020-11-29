@@ -12,12 +12,14 @@ class Autocraft {
 		this.callback = () => {};
 		this.active = false;
 		this.craftTarget = null;
+		this.craftingQueue = null;
 	}
 
 	resetBehaviour() {
 		this.callback = () => {};
-		this.craftTarget = null;
 		this.active = false;
+		this.craftTarget = null;
+		this.craftingQueue = null;
 	}
 
 	/**************************************************************************
@@ -273,9 +275,9 @@ class Autocraft {
 	}
 
 	// Recursively craft an item (craft parents if needed)
-	autoCraftNext(craftingQueue, callback) {
-		const current = craftingQueue[0];
-		const remainder = craftingQueue.slice(1, craftingQueue.length);
+	autoCraftNext() {
+		const current = this.craftingQueue[0];
+		const remainder = this.craftingQueue.slice(1, this.craftingQueue.length);
 		if (current) {
 			//console.log(`Crafting ${this.bot.mcData.items[current.id].displayName}`);
 			let recipe = this.findUsableRecipe(current.id);
@@ -284,11 +286,12 @@ class Autocraft {
 				this.haveIngredient(current.id, targetCount) &&
 				remainder.length > 0
 			) {
-				this.autoCraftNext(remainder, callback);
+				this.craftingQueue = remainder;
+				this.autoCraftNext();
 				return;
 			}
 			if (!recipe) {
-				this.sendNoRecipe(current, callback);
+				this.sendNoRecipe(current, this.callback);
 				return;
 			}
 			// Fix for minecraft-data bug #231
@@ -307,11 +310,18 @@ class Autocraft {
 				});
 				if (!craftingTable) {
 					this.craftCraftingTable(() => {
-						this.autoCraftNext(craftingQueue, callback);
+						this.autoCraftNext();
 					});
 					return;
 				}
-				this.callback = () => {
+				const p = craftingTable.position;
+				if (Math.floor(p.distanceTo(this.bot.entity.position)) > 3) {
+					const goal = new GoalNear(p.x, p.y, p.z, 3);
+					//console.log("Moving to crafting table");
+					this.bot.autobot.navigator.setGoal(goal);
+					return;
+				}
+				else {
 					const targetCount = Math.floor(current.count / recipe.result.count);
 					this.bot.craft(recipe, targetCount, craftingTable, (err) => {
 						if (err) {
@@ -319,23 +329,20 @@ class Autocraft {
 							//console.log(err, JSON.stringify(recipe), current.count, craftingTable);
 							return;
 						}
-						this.autoCraftNext(remainder, callback);
+						this.craftingQueue = remainder;
+						this.autoCraftNext();
 					});
 				}
-				const p = craftingTable.position;
-				const goal = new GoalNear(p.x, p.y, p.z, 3);
-				//console.log("Moving to crafting table");
-				sleep(100).then(() => {
-					this.bot.autobot.navigator.setGoal(goal);
-				});
-				return;
 			}
-			this.bot.craft(recipe, current.count, null, () => {
-				this.autoCraftNext(remainder, callback)
-			});
+			else {
+				this.bot.craft(recipe, current.count, null, () => {
+					this.craftingQueue = remainder;
+					this.autoCraftNext();
+				});
+			}
 		}
 		else {
-			this.sendCraftingSuccess(callback);
+			this.sendCraftingSuccess(this.callback);
 		}
 	}
 
@@ -450,7 +457,9 @@ class Autocraft {
 		}
 		*/
 		//console.log("Calling autoCraftNext", craftingQueue);
-		this.autoCraftNext(craftingQueue, callback);
+		this.craftingQueue = craftingQueue;
+		this.callback = callback;
+		this.autoCraftNext();
 	}
 
 	sendNoRecipe(current, callback) {
