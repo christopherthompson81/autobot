@@ -340,18 +340,17 @@ function inject (bot) {
 			gottaJump = horizontalDelta > 1.5 && horizontalDelta < 2.5
 		}
 		gottaJump = gottaJump || bot.entity.isInWater
-		bot.setControlState('jump', gottaJump)
-
-		// run toward next point
-		bot.look(Math.atan2(-dx, -dz), 0)
-
 		const lx = -Math.sin(bot.entity.yaw)
 		const lz = -Math.cos(bot.entity.yaw)
 
 		const frontBackProj = lx * dx + lz * dz
-		bot.setControlState('forward', frontBackProj > 0)
-		bot.setControlState('back', frontBackProj < 0)
-
+		// run toward next point
+		bot.look(Math.atan2(-dx, -dz), 0, false, () => {
+			bot.setControlState('jump', gottaJump)
+			bot.setControlState('forward', frontBackProj > 0)
+			bot.setControlState('back', frontBackProj < 0)
+		})
+		
 		// check for futility
 		if (performance.now() - lastNodeTime > 1500) {
 			// should never take this long to go to the next node
