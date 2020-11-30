@@ -150,7 +150,7 @@ class Stash {
 						}
 						else if (err.message.startsWith('Server rejected transaction')) {
 							chest.close();
-							this.sendCantStash(chestWindow, current);
+							this.sendStashFail(chestWindow, current);
 							if (callback) callback();
 							return;
 						}
@@ -498,6 +498,18 @@ class Stash {
 		};
 		this.bot.emit(eventName, result);
 		if (callback) callback(result);
+	}
+
+	sendStashFail(chestWindow, item) {
+		const eventName = "autobot.stashing.done";
+		let result = {
+			error: true,
+			resultCode: "stashFail",
+			description: `Can't stash an item in this chest due to server rejection. Failing.`,
+			chestWindow: chestWindow,
+			item: item
+		};
+		this.bot.emit(eventName, result);
 	}
 
 	sendCompressSuccess(callback) {
