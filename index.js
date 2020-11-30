@@ -165,6 +165,10 @@ bot.once('spawn', () => {
 			logResult(result);
 			bot.autobot.navigator.handleCobwebs();
 		}
+		else if(result.resultCode === 'torchAtFeet') {
+			logResult(result);
+			bot.autobot.navigator.handleTorchFoot();
+		}
 	});
 	bot.on('autobot.navigator.botStuck', (goalProgress, stateGoal) => {
 		console.log("Bot Stuck.");

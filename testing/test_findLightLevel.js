@@ -30,17 +30,23 @@ bot.once('spawn', () => {
 	//const stash = bot.autobot.stash.stashNonEssentialInventory;
 	bot.on('autobot.ready', (result) => {
 		logResult(result);
-		const footBlock = bot.world.getBlockLight(bot.entity.position);
-		console.log(footBlock);
-		for (const name of oreBlockTypes) {
-			const oreType = bot.mcData.blocksByName[name];
-			const oreBlocks = bot.findBlocks({
-				point: bot.autobot.homePosition,
-				matching: oreType.id,
-				maxDistance: 128,
-				count: 5000
-			});
-			console.log(`${oreType.displayName} remaining: ${oreBlocks.length}`);
+		const footBlock = bot.blockAt(bot.entity.position);
+		const torchBlockTypes = [
+			bot.mcData.blocksByName.torch.id,
+			bot.mcData.blocksByName.wall_torch.id
+		];
+		let torches = bot.findBlocks({
+			point: bot.entity.position,
+			matching: torchBlockTypes,
+			maxDistance: 7,
+			count: 50
+		});
+		torches = torches.filter(p => bot.canSeeBlock(bot.blockAt(p)));
+		if (footBlock.skyLight > 0 || torches.length > 0) {
+			console.log("Bot is in sufficient light");
+		}
+		else {
+			console.log("Bot is in darkness");
 		}
 	});
 });

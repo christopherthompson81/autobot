@@ -249,6 +249,40 @@ class Navigator {
 		});
 	}
 
+	torchAtFeet() {
+		const torchBlockTypes = [
+			this.bot.mcData.blocksByName.torch.id,
+			this.bot.mcData.blocksByName.wall_torch.id
+		];
+		const footBlock = this.bot.blockAt(this.bot.entity.position);
+		return torchBlockTypes.includes(footBlock.type);
+	}
+
+	handleTorchFoot() {
+		const savedGoal = this.goal;
+		this.bot.pathfinder.setGoal(null);
+		const footBlock = this.bot.blockAt(this.bot.entity.position);
+		this.bot.dig(footBlock, true, (err) => {
+			this.bot.pathfinder.setGoal(savedGoal);
+		});
+	}
+
+	isInDarkness() {
+		const footBlock = this.bot.blockAt(this.bot.entity.position);
+		const torchBlockTypes = [
+			this.bot.mcData.blocksByName.torch.id,
+			this.bot.mcData.blocksByName.wall_torch.id
+		];
+		let torches = this.bot.findBlocks({
+			point: bot.entity.position,
+			matching: torchBlockTypes,
+			maxDistance: 7,
+			count: 50
+		});
+		torches = torches.filter(p => this.bot.canSeeBlock(this.bot.blockAt(p)));
+		return (footBlock.skyLight === 0 && torches.length === 0);
+	}
+
 	monitorMovement () {
 		// Bail if not pathfinding
 		if (!this.bot.pathfinder.isMoving() || !this.goal) return;
@@ -265,6 +299,7 @@ class Navigator {
 			if (this.canSeeWater()) this.sendWaterNearby();
 			if (this.canSeeLava()) this.sendLavaNearby();
 			if (this.canSeeCobwebs()) this.sendCobwebsNearby();
+			if (this.torchAtFeet()) this.sendTorchAtFeet();
 		}
 	}
 
@@ -347,6 +382,17 @@ class Navigator {
 			error: false,
 			resultCode: "cobwebsNearby",
 			description: "Bot encountered cobwebs during pathfinding",
+			goal: this.goal
+		};
+		this.bot.emit(eventName, result);
+	}
+
+	sendTorchAtFeet() {
+		const eventName = 'autobot.navigator.progress';
+		let result = {
+			error: false,
+			resultCode: "torchAtFeet",
+			description: "Bot has a torch in the foot block space",
 			goal: this.goal
 		};
 		this.bot.emit(eventName, result);
