@@ -37,7 +37,11 @@ class BehaviourSelect {
 			return;
 		}
 		const cobblestoneCount = inventoryDict['cobblestone'] || 0;
-		if (cobblestoneCount >= 32 && this.bot.autobot.landscaping.getFloorPlateQueues()[1].length > 0) {
+		if (
+			cobblestoneCount >= 32 &&
+			this.bot.autobot.landscaping.getFloorPlateQueues()[1].length > 0 &&
+			this.bot.entity.position.distanceTo(this.bot.autobot.homePosition) < 16
+		) {
 			this.sendFixingFloorPlate();
 			this.bot.autobot.landscaping.fixStorageGridFloorPlate((result) => {
 				this.bot.autobot.lumberjack.harvestNearestTree(32);

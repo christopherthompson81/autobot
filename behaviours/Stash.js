@@ -90,6 +90,14 @@ class Stash {
 		return inventory;
 	}
 	
+	countFreeSlots() {
+		const inventory = this.bot.inventory.slots.slice(
+			this.bot.inventory.inventoryStart,
+			this.bot.inventory.inventoryEnd
+		);
+		return inventory.filter((r) => r === null).length;
+	}
+
 	checkInventoryToStash() {
 		// This returns true when a non-essential item type shows as a full stack and therefore should be stashed
 		//
@@ -100,9 +108,12 @@ class Stash {
 		//console.log(nonEssentialInventory);
 		if (nonEssentialInventory.length > 0) {
 			if (this.bot.entity.position.distanceTo(this.bot.autobot.homePosition) < 16) return true;
+			/*
 			for (const item of nonEssentialInventory) {
 				if (item.count === item.stackSize) return true;
 			}
+			*/
+			if (this.countFreeSlots() <= 2) return true;
 		}
 		return false;
 	}

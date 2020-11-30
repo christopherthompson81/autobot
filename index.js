@@ -94,7 +94,12 @@ bot.once('spawn', () => {
 			return;
 		}
 		if (result.resultCode === 'skipping') {
-			bot.autobot.mining.mineBestOreVein();
+			if (bot.autobot.stash.checkInventoryToStash()) {
+				selectBehaviour();	
+			}
+			else {
+				bot.autobot.mining.mineBestOreVein();
+			}
 		}
 		else {
 			selectBehaviour();

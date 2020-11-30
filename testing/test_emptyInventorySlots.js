@@ -30,17 +30,11 @@ bot.once('spawn', () => {
 	//const stash = bot.autobot.stash.stashNonEssentialInventory;
 	bot.on('autobot.ready', (result) => {
 		logResult(result);
-		const footBlock = bot.world.getBlockLight(bot.entity.position);
-		console.log(footBlock);
-		for (const name of oreBlockTypes) {
-			const oreType = bot.mcData.blocksByName[name];
-			const oreBlocks = bot.findBlocks({
-				point: bot.autobot.homePosition,
-				matching: oreType.id,
-				maxDistance: 128,
-				count: 10000
-			});
-			console.log(`${oreType.displayName} remaining: ${oreBlocks.length}`);
-		}
+		const inventory = bot.inventory.slots.slice(
+			bot.inventory.inventoryStart,
+			bot.inventory.inventoryEnd
+		);
+		console.log(inventory);
+		console.log(`Empty Slot count: ${inventory.filter((r) => r === null).length}`);
 	});
 });
