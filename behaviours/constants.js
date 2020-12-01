@@ -40,7 +40,7 @@ const essentialItems = [
 	{type: 'regex', regex: new RegExp('planks$', 'i'), maxSlots: 1},
 	{type: 'regex', regex: new RegExp('_log$', 'i'), maxSlots: 1},
 	{type: 'name', name: 'dirt', maxSlots: 1},
-	{type: 'name', name: 'cobblestone', maxSlots: 1},
+	{type: 'name', name: 'cobblestone', maxSlots: 2},
 	{type: 'name', name: 'iron_ingot', maxSlots: 1},
 	{type: 'name', name: 'torch', maxSlots: 1},
 	{type: 'name', name: 'coal', maxSlots: 1},
