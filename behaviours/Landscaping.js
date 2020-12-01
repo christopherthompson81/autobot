@@ -540,6 +540,10 @@ class Landscaping {
 			if (callback) callback();
 			return;
 		}
+		// overwrite the callback to return home if the lava lake is huge
+		if (lavaPositions.length === cobblestoneCount) {
+			callback = this.bot.autobot.navigator.returnHome;
+		}
 		// sort by y
 		lavaPositions = lavaPositions.sort((a, b) => b.y - a.y);
 		// Make a placeQueue

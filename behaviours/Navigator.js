@@ -205,6 +205,7 @@ class Navigator {
 	}
 
 	canSeeWater() {
+		if (this.active) return false;
 		if (this.bot.autobot.landscaping.fillingWater) return false;
 		return this.canSeeBlockType(this.bot.mcData.blocksByName.water.id);
 	}
@@ -222,6 +223,7 @@ class Navigator {
 	}
 
 	canSeeLava() {
+		if (this.active) return false;
 		if (this.bot.autobot.landscaping.fillingLava) return false;
 		return this.canSeeBlockType(this.bot.mcData.blocksByName.lava.id);
 	}

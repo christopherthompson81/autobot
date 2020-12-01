@@ -325,7 +325,7 @@ class Autocraft {
 					const targetCount = Math.floor(current.count / recipe.result.count);
 					this.bot.craft(recipe, targetCount, craftingTable, (err) => {
 						if (err) {
-							this.sendCraftingError(err, recipe, targetCount, craftingTable, callback);
+							this.sendCraftingError(err, recipe, targetCount, craftingTable, this.callback);
 							//console.log(err, JSON.stringify(recipe), current.count, craftingTable);
 							return;
 						}
