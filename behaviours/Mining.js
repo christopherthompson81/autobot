@@ -185,8 +185,7 @@ class Mining {
 				const harvestTools = Object.keys(current.harvestTools);
 				if (!tool || !harvestTools.includes(tool.type.toString())) {
 					this.sendNoSuitableTool(current, tool);
-					this.digQueue = remainder;
-					this.digNext();
+					this.mineVeinNext(remainder, callback);
 					return;
 				}
 			}

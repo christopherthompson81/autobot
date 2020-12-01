@@ -330,7 +330,7 @@ class Autocraft {
 							return;
 						}
 						this.craftingQueue = remainder;
-						this.autoCraftNext();
+						sleep(100).then(this.autoCraftNext());
 					});
 				}
 			}

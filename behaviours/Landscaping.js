@@ -496,9 +496,9 @@ class Landscaping {
 			if (callback) callback();
 			return;
 		}
-		//waterPositions = sortByDistanceFromBot(this.bot, waterPositions);
+		waterPositions = sortByDistanceFromBot(this.bot, waterPositions);
 		// Turn the block into a body
-		//waterPositions = this.blockToWaterBody(waterPositions[0], [waterPositions[0]], cobblestoneCount);
+		waterPositions = this.blockToWaterBody(waterPositions[0], [waterPositions[0]], cobblestoneCount);
 		waterPositions = waterPositions.sort((a, b) => b.y - a.y);
 		// Make a placeQueue
 		const placeQueue = [];
