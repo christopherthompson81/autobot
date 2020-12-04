@@ -215,9 +215,7 @@ class Navigator {
 		if (cobblestoneCount === 0) return;
 		this.bot.pathfinder.setGoal(null);
 		this.bot.autobot.behaviourSelect.resetAllBehaviours(() => {
-			this.bot.autobot.landscaping.fillWaterBody(this.bot.entity.position, () => {
-				this.returnHome();
-			});
+			this.bot.autobot.landscaping.fillWaterBody(this.bot.entity.position, this.returnHome);
 		});
 		
 	}

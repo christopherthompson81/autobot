@@ -122,7 +122,8 @@ class GetUnstuck {
 	// 5). All behaviours after 4 are the same as 4.
 	selectOnStuckBehaviour(progress, goal) {
 		if (this.bot.isInWater) {
-			this.fillWaterSource();
+			this.bot.autobot.navigator.handleWater();
+			return;
 		}
 		if (progress.errorCount > 0 && progress.errorCount <= 1) {
 			this.backupAndContinue(goal, progress);
@@ -237,29 +238,6 @@ class GetUnstuck {
 	}
 
 	// TODO: Add a logger for super-stuck events. Record surroundings, inventory, and pathfinding data to a file.
-
-	fillWaterSource() {
-		const waterPositions = this.bot.findBlocks({
-			point: this.bot.entity.position,
-			matching: (b) => {
-				if (b.type === this.bot.mcData.blocksByName.water.id) {
-					if (b.stateId === 34) {
-						return true;
-					}
-				}
-				return false;
-			},
-			maxDistance: 35,
-			count: 100,
-		}, true);
-		if (waterPositions.length > 0) {
-			this.bot.autobot.landscaping.fillWaterBody(waterPositions[0])
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
 }
 
 module.exports = GetUnstuck;
