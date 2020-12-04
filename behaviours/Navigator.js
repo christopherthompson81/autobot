@@ -22,6 +22,9 @@ class Navigator {
 			totalDistance: 0,
 			movementLoopNotified: false,
 		};
+		this.idlePos = new Vec3(0, 0, 0);
+		this.idleTime = Date.now();
+		this.idleNotified = false;
 	}
 
 	resetBehaviour() {
@@ -37,6 +40,9 @@ class Navigator {
 			totalDistance: 0,
 			movementLoopNotified: false,
 		};
+		this.idlePos = new Vec3(0, 0, 0);
+		this.idleTime = Date.now();
+		this.idleNotified = false;
 	}
 
 	setGoalProgress() {
@@ -283,7 +289,22 @@ class Navigator {
 		return (footBlock.skyLight === 0 && torches.length === 0);
 	}
 
+	isIdle() {
+		if (this.idlePos.equals(this.bot.entity.position)) {
+			if (Date.now() > this.idleTime + (60 * 1000)) {
+				return true;
+			}
+		}
+		else {
+			this.idlePos = this.bot.entity.position;
+			this.idleTime = Date.now();
+		}
+		return false;
+	}
+
 	monitorMovement () {
+		// Check if the bot is idle for over one minute
+		if (this.isIdle()) this.sendBotIdle();
 		// Bail if not pathfinding
 		if (!this.bot.pathfinder.isMoving() || !this.goal) return;
 		// Test if stuck
@@ -342,6 +363,19 @@ class Navigator {
 		const tool = bestHarvestTool(this.bot, block);
 		const blockBreakTime = breakTime(this.bot, block, tool);
 		this.bot.emit('autobot.navigator.excessiveBreakTime', block, blockBreakTime);
+	}
+
+	sendBotIdle() {
+		if (!this.idleNotified) {
+			this.idleNotifed = true;
+			const eventName = 'autobot.navigator.botIdle';
+			let result = {
+				error: true,
+				resultCode: "botIdle",
+				description: "Bot has not moved in over one minute"
+			};
+			this.bot.emit(eventName, result);
+		}
 	}
 
 	sendReachedNextPoint() {
