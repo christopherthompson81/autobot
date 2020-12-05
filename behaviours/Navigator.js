@@ -291,7 +291,7 @@ class Navigator {
 
 	isIdle() {
 		if (this.idlePos.equals(this.bot.entity.position)) {
-			if (Date.now() > this.idleTime + (60 * 1000)) {
+			if (Date.now() > this.idleTime + (120 * 1000)) {
 				return true;
 			}
 		}
