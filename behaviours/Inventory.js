@@ -56,45 +56,23 @@ class Inventory {
 		return null;
 	}
 
-	haveSword() {
+	haveItem(regex) {
 		const inventoryDict = this.getInventoryDictionary();
-		if (Object.keys(inventoryDict).some(id => id.match(/_sword$/))) {
+		if (Object.keys(inventoryDict).some(id => id.match(regex))) {
 			return true;
 		}
 		return false;
 	}
 
-	havePickaxe() {
-		const inventoryDict = this.getInventoryDictionary();
-		if (Object.keys(inventoryDict).some(id => id.match(/_pickaxe$/))) {
-			return true;
-		}
-		return false;
-	}
+	haveSword() { return this.haveItem(/_sword$/); }
 
-	haveAxe() {
-		const inventoryDict = this.getInventoryDictionary();
-		if (Object.keys(inventoryDict).some(id => id.match(/_axe$/))) {
-			return true;
-		}
-		return false;
-	}
+	havePickaxe() { return this.haveItem(/_pickaxe$/); }
 
-	haveShovel() {
-		const inventoryDict = this.getInventoryDictionary();
-		if (Object.keys(inventoryDict).some(id => id.match(/_shovel$/))) {
-			return true;
-		}
-		return false;
-	}
+	haveAxe() { return this.haveItem(/_axe$/); }
 
-	haveHoe() {
-		const inventoryDict = this.getInventoryDictionary();
-		if (Object.keys(inventoryDict).some(id => id.match(/_hoe$/))) {
-			return true;
-		}
-		return false;
-	}
+	haveShovel() { return this.haveItem(/_shovel$/); }
+
+	haveHoe() { return this.haveItem(/_hoe$/); }
 
 	/*
 	equipByName(itemName, callback) {

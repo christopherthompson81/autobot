@@ -1,4 +1,3 @@
-
 /*
 Example of using the kitchen-sink behaviour autobot
 */
