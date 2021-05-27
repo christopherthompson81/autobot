@@ -6,6 +6,7 @@ const sleep = require('./autoBotLib').sleep;
 const oreBlockTypes = require('./constants').oreBlocks;
 const { GoalGetToBlock } = require('../pathfinder/pathfinder').goals;
 const storage = require('node-persist');
+const debounce = require('../general/debounce').debounce;
 
 class Mining {
 	constructor(bot) {
@@ -252,7 +253,7 @@ class Mining {
 		storage.getItem('badTargets').then((pBadTargets) => {
 			if (!pBadTargets) {
 				pBadTargets = this.badTargets ? this.badTargets : [];
-				storage.setItem('badTargets', pBadTargets);
+				debounce(() => storage.setItem('badTargets', pBadTargets));
 			}
 			const badTargets = pBadTargets.map(t => new Vec3(t.x, t.y, t.z));
 			callback(badTargets);
@@ -261,7 +262,7 @@ class Mining {
 
 	pushBadTarget(position) {
 		this.badTargets.push(position);
-		storage.setItem('badTargets', this.badTargets);
+		debounce(() => storage.setItem('badTargets', this.badTargets));
 	}
 
 	sendNoPickaxe(callback) {
