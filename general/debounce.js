@@ -15,4 +15,4 @@ function debounce(func, timeout = 300) {
 	};
 }
 
-module.exports = debounce;
+exports.debounce = debounce;
